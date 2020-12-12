@@ -1,0 +1,12 @@
+.*
+!.gitignore
+!.gitmodules
+
+# Qt stuff
+*.pro.user*
+*.qbs.user*
+
+# Common test directory
+test_dir
+# Build directory
+build
