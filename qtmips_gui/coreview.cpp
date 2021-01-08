@@ -284,14 +284,14 @@ QGraphicsSimpleTextItem *CoreViewScene::new_label(const QString &str, qreal x, q
 
 CoreViewSceneSimple::CoreViewSceneSimple(machine::QtMipsMachine *machine) : CoreViewScene(machine) {
     NEW_I(inst_prim, 230, 60, instruction_executed, QColor(255, 173, 230));
-    if (machine->config().delay_slot()) {
+    if (machine->config().branch_unit() == machine::MachineConfig::BU_DELAY_SLOT) {
         NEW(Latch, latch_if_id, 158, 250, machine, 220);
         NEW_I(inst_fetch,  79, 60, instruction_fetched, QColor(255, 173, 173));
     }
 
     coreview::Connection *con;
     // Fetch stage
-    if (machine->config().delay_slot()) {
+    if (machine->config().branch_unit() == machine::MachineConfig::BU_DELAY_SLOT) {
         struct coreview::Latch::ConnectorPair lp_ft_inst = latch_if_id->new_connector(mem_program->connector_instruction()->y() - latch_if_id->y());
         new_bus(mem_program->connector_instruction(), lp_ft_inst.in);
         struct coreview::Latch::ConnectorPair lp_ft_pc = latch_if_id->new_connector(210);

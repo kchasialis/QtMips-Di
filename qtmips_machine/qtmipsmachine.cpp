@@ -94,10 +94,13 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
 
     if (cc.pipelined())
         cr = new CorePipelined(regs, cch_program, cch_data, cc.hazard_unit(),
+                               cc.branch_unit(), cc.bht_bits(),
                                min_cache_row_size, cop0st);
     else
-        cr = new CoreSingle(regs, cch_program, cch_data, cc.delay_slot(),
+        cr = new CoreSingle(regs, cch_program, cch_data,
+                            cc.branch_unit() == machine::MachineConfig::BU_DELAY_SLOT,
                             min_cache_row_size, cop0st);
+
     connect(this, SIGNAL(set_interrupt_signal(uint,bool)),
             cop0st, SLOT(set_interrupt_signal(uint,bool)));
 

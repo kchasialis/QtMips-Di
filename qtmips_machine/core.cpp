@@ -37,6 +37,8 @@
 #include "programloader.h"
 #include "utils.h"
 
+#include <QDebug>
+
 using namespace machine;
 
 Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
@@ -566,6 +568,31 @@ void Core::writeback(const struct dtMemory &dt) {
         regs->write_gp(dt.rwrite, dt.towrite_val);
 }
 
+bool Core::branch_result(const Core::dtDecode &dt) {
+    bool branch;
+
+    if (dt.bjr_req_rt) {
+        branch = dt.val_rs == dt.val_rt;
+    } else if (!dt.bgt_blez) {
+        branch = (std::int32_t)dt.val_rs < 0;
+    } else {
+        branch = (std::int32_t)dt.val_rs <= 0;
+    }
+
+    if (dt.bj_not)
+        branch = !branch;
+
+    return branch;
+}
+
+uint32_t Core::branch_target(const Instruction &inst, uint32_t inst_addr) {
+    std::int32_t rel_offset = inst.immediate() << 2;
+    if (rel_offset & (1 << 17))
+        rel_offset -= 1 << 18;
+
+    return inst_addr + rel_offset + 4;
+}
+
 bool Core::handle_pc(const struct dtDecode &dt) {
     bool branch = false;
     emit instruction_program_counter(dt.inst, dt.inst_addr, EXCAUSE_NONE, dt.is_valid);
@@ -584,31 +611,18 @@ bool Core::handle_pc(const struct dtDecode &dt) {
         return true;
     }
 
-    if (dt.branch) {
-        if (dt.bjr_req_rt) {
-            branch = dt.val_rs == dt.val_rt;
-        } else if (!dt.bgt_blez) {
-            branch = (std::int32_t)dt.val_rs < 0;
-        } else {
-            branch = (std::int32_t)dt.val_rs <= 0;
-        }
-
-        if (dt.bj_not)
-            branch = !branch;
-    }
+    if (dt.branch)
+        branch = branch_result(dt);
 
     emit fetch_jump_value(false);
     emit fetch_jump_reg_value(false);
     emit fetch_branch_value(branch);
 
-    if (branch) {
-        std::int32_t rel_offset = dt.inst.immediate() << 2;
-        if (rel_offset & (1 << 17))
-            rel_offset -= 1 << 18;
-        regs->pc_abs_jmp(dt.inst_addr + rel_offset + 4);
-    } else {
+    if (branch)
+        regs->pc_abs_jmp(branch_target(dt.inst, dt.inst_addr));
+    else
         regs->pc_inc();
-    }
+
     return branch;
 }
 
@@ -748,9 +762,33 @@ void CoreSingle::do_reset() {
 
 CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
                              enum MachineConfig::HazardUnit hazard_unit,
-                             unsigned int min_cache_row_size, Cop0State *cop0state) :
+                             enum MachineConfig::BranchUnit branch_unit,
+                             int8_t bp_bits, unsigned int min_cache_row_size,
+                             Cop0State *cop0state) :
     Core(regs, mem_program, mem_data, min_cache_row_size, cop0state) {
+
     this->hazard_unit = hazard_unit;
+    this->branch_unit = branch_unit;
+    switch (branch_unit) {
+    case MachineConfig::BU_NONE:
+        // This is not allowed on a pipelined core.
+        SANITY_ASSERT(0, "Branch unit is none in a pipelined mode");
+        break;
+    case MachineConfig::BU_DELAY_SLOT:
+        this->bp = nullptr;
+        break;
+    case MachineConfig::BU_ONE_BIT_BP:
+        this->bp = new OneBitBranchPredictor(bp_bits);
+        break;
+    case MachineConfig::BU_TWO_BIT_BP:
+        this->bp = new TwoBitBranchPredictor(bp_bits);
+        break;
+    default:
+        // This is a bug.
+        SANITY_ASSERT(0, "Branch unit has an unknown value in a pipelined mode");
+        break;
+    }
+
     reset();
 }
 
@@ -893,13 +931,47 @@ void CorePipelined::do_step(bool skip_break) {
     if (!stall && !dt_d.stop_if) {
         dt_d.stall = false;
         dt_f = fetch(skip_break);
-        if (handle_pc(dt_d)) {
-            dt_f.in_delay_slot = true;
+        qDebug() << "fetched" << dt_f.inst.to_str(dt_f.inst_addr);
+        if (bp == nullptr) {
+            // Means we have delay slot enabled.
+            if (handle_pc(dt_d)) {
+                dt_f.in_delay_slot = true;
+            } else {
+                if (dt_d.nb_skip_ds) {
+                    dtFetchInit(dt_f);
+                    emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
+                    emit fetch_inst_addr_value(STAGEADDR_NONE);
+                }
+            }
         } else {
-            if (dt_d.nb_skip_ds) {
-                dtFetchInit(dt_f);
-                emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
-                emit fetch_inst_addr_value(STAGEADDR_NONE);
+            // NOTE: it seems to work for some examples
+            // we should see what happens and how it interacts
+            // with other hazards.
+            if (dt_f.inst.flags() & IMF_BRANCH) {
+                // We fetched a branch instruction.
+                bool branch_taken = bp->predict(dt_f.inst);
+                if (branch_taken)
+                    regs->pc_abs_jmp(branch_target(dt_f.inst, dt_f.inst_addr));
+                else
+                    regs->pc_inc();
+            } else if (dt_d.branch) {
+                // Branch is now on ID and can be evaluated.
+                bool branch_taken = branch_result(dt_d);
+                qDebug() << branch_taken << bp->current_prediction() << "WTF";
+                if (branch_taken != bp->current_prediction()) {
+                    // Prediction was wrong.
+                    // Flush fetch stage & move pc accordingly.
+                    handle_pc(dt_d);
+                    dtFetchInit(dt_f);
+                    emit instruction_fetched(dt_f.inst, dt_f.inst_addr,
+                                             dt_f.excause, dt_f.is_valid);
+                    emit fetch_inst_addr_value(STAGEADDR_NONE);
+                } else {
+                    regs->pc_inc();
+                }
+                bp->update_bht(branch_taken);
+            } else {
+                handle_pc(dt_d);
             }
         }
     } else {
@@ -912,7 +984,6 @@ void CorePipelined::do_step(bool skip_break) {
         } else {
             dtFetchInit(dt_f);
         }
-        // emit instruction_decoded(dt_d.inst, dt_d.inst_addr, dt_d.excause, dt_d.is_valid);
     }
     if (stall || dt_d.stop_if) {
         stall_c++;
@@ -946,4 +1017,125 @@ bool StopExceptionHandler::handle_exception(Core *core, Registers *regs,
     (void)jump_branch_pc; (void)in_delay_slot, (void)core;
 #endif
     return true;
-};
+}
+
+
+
+BranchPredictor::BranchPredictor(std::uint8_t bht_bits) {
+    this->bht_bits = bht_bits;
+    this->bht_size = power_of_2(this->bht_bits);
+    this->bht = new std::uint8_t[this->bht_size]();
+    this->predictions = 0;
+    this->correct_predictions = 0;
+}
+
+BranchPredictor::~BranchPredictor() {
+    delete[] this->bht;
+}
+
+bool BranchPredictor::current_prediction() const {
+    return current_p;
+}
+
+size_t BranchPredictor::bht_idx(const Instruction &branch_instr) {
+    std::uint32_t instr_bits = branch_instr.data();
+    // MIPS instructions always contain 2 bits for byte offset.
+    std::uint32_t pos = (instr_bits >> 2) & mask_bits(bht_bits);
+
+    last_pos_predicted = pos;
+    predictions++;
+
+    return pos;
+}
+
+OneBitBranchPredictor::OneBitBranchPredictor(uint8_t bht_bits) : BranchPredictor(bht_bits) {}
+
+bool OneBitBranchPredictor::predict(const Instruction &branch_instr) {
+    size_t idx = bht_idx(branch_instr);
+    current_p = (bht[idx] == FSMStates::TAKEN) ? true : false;
+
+    return current_p;
+}
+
+void OneBitBranchPredictor::update_bht(bool branch_taken) {
+    // If we predicted the wrong result, update the table.
+    // Else, keep it as is.
+    switch (bht[last_pos_predicted]) {
+    case FSMStates::NOT_TAKEN:
+        if (!branch_taken) {
+           correct_predictions++;
+        } else {
+            bht[last_pos_predicted] = FSMStates::TAKEN;
+        }
+        break;
+    case FSMStates::TAKEN:
+        if (branch_taken) {
+           correct_predictions++;
+        } else {
+            bht[last_pos_predicted] = FSMStates::NOT_TAKEN;
+        }
+        break;
+    default:
+        // This should never happen, it means we have a bug.
+        assert(0);
+    }
+}
+
+void OneBitBranchPredictor::print_current_state() {
+    QMap<std::uint8_t, QString> print_map;
+
+    print_map.insert(FSMStates::NOT_TAKEN, "Not Taken");
+    print_map.insert(FSMStates::TAKEN, "Taken");
+
+    qDebug() << print_map[bht[last_pos_predicted]];
+}
+
+TwoBitBranchPredictor::TwoBitBranchPredictor(uint8_t bht_bits) : BranchPredictor(bht_bits) {}
+
+bool TwoBitBranchPredictor::predict(const Instruction &branch_instr) {
+    size_t idx = bht_idx(branch_instr);
+    current_p = (bht[idx] == FSMStates::WEAKLY_T || bht[idx] == FSMStates::STRONGLY_T) ?
+              true : false;
+
+    return current_p;
+}
+
+void TwoBitBranchPredictor::update_bht(bool branch_taken) {
+    switch (bht[last_pos_predicted]) {
+    case FSMStates::STRONGLY_NT:
+        bht[last_pos_predicted] = !branch_taken ?
+                                  FSMStates::STRONGLY_NT : FSMStates::WEAKLY_NT;
+        if (!branch_taken) correct_predictions++;
+        break;
+    case FSMStates::WEAKLY_NT:
+        bht[last_pos_predicted] = !branch_taken ?
+                                  FSMStates::STRONGLY_NT : FSMStates::WEAKLY_T;
+        if (!branch_taken) correct_predictions++;
+        break;
+    case FSMStates::WEAKLY_T:
+        bht[last_pos_predicted] = branch_taken ?
+                                  FSMStates::STRONGLY_T : FSMStates::WEAKLY_NT;
+        if (branch_taken) correct_predictions++;
+        break;
+    case FSMStates::STRONGLY_T:
+        bht[last_pos_predicted] = branch_taken ?
+                                  FSMStates::STRONGLY_T : FSMStates::WEAKLY_T;
+
+        if (branch_taken) correct_predictions++;
+        break;
+    default:
+        // This should never happen, it means we have a bug.
+        assert(0);
+    }
+}
+
+void TwoBitBranchPredictor::print_current_state() {
+    QMap<std::uint8_t, QString> print_map;
+
+    print_map.insert(FSMStates::STRONGLY_NT, "Strongly Not Taken");
+    print_map.insert(FSMStates::WEAKLY_NT, "Weakly Not Taken");
+    print_map.insert(FSMStates::WEAKLY_T, "Weakly Taken");
+    print_map.insert(FSMStates::STRONGLY_T, "Strongly Taken");
+
+    qDebug() << print_map[bht[last_pos_predicted]];
+}

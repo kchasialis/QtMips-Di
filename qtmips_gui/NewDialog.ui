@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>558</width>
-    <height>323</height>
+    <width>583</width>
+    <height>433</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,7 +29,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -46,6 +46,12 @@
            <widget class="QRadioButton" name="preset_no_pipeline">
             <property name="text">
              <string>No pipeline no cache</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
             </property>
            </widget>
           </item>
@@ -134,10 +140,7 @@
       <attribute name="title">
        <string>Core</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <property name="sizeConstraint">
-        <enum>QLayout::SetDefaultConstraint</enum>
-       </property>
+      <layout class="QVBoxLayout" name="verticalLayout_8">
        <item>
         <widget class="QCheckBox" name="pipelined">
          <property name="text">
@@ -146,14 +149,98 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="delay_slot">
-         <property name="text">
-          <string>Delay slot</string>
+        <widget class="QGroupBox" name="branch_unit">
+         <property name="title">
+          <string>Branch unit</string>
          </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QRadioButton" name="none">
+            <property name="text">
+             <string>None</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="delay_slot">
+            <property name="text">
+             <string>Delay slot</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="branch_predictor">
+            <property name="text">
+             <string>Branch predictor</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="predictor_bits_label">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>77</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Predictor bits</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="predictor_bits">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="editable">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="bht_bits_label">
+            <property name="text">
+             <string>BHT bits</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="bht_bits">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="editable">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
        <item>
         <widget class="QGroupBox" name="hazard_unit">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="title">
           <string>Hazard unit</string>
          </property>
@@ -185,7 +272,7 @@
         </widget>
        </item>
        <item>
-        <spacer name="verticalSpacer">
+        <spacer name="verticalSpacer_5">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>

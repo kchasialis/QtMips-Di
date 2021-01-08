@@ -41,7 +41,8 @@ using namespace machine;
 //////////////////////////////////////////////////////////////////////////////
 /// Default config of MachineConfig
 #define DF_PIPELINE false
-#define DF_DELAYSLOT true
+#define DF_BUNIT BU_DELAY_SLOT
+#define DF_BP_BITS -1
 #define DF_HUNIT HU_STALL_FORWARD
 #define DF_EXEC_PROTEC false
 #define DF_WRITE_PROTEC false
@@ -181,7 +182,8 @@ bool MachineConfigCache::operator!=(const MachineConfigCache &c) const {
 
 MachineConfig::MachineConfig() {
     pipeline = DF_PIPELINE;
-    delayslot = DF_DELAYSLOT;
+    bunit = DF_BUNIT;
+    bp_bits = DF_BP_BITS;
     hunit = DF_HUNIT;
     exec_protect = DF_EXEC_PROTEC;
     write_protect = DF_WRITE_PROTEC;
@@ -202,7 +204,8 @@ MachineConfig::MachineConfig() {
 
 MachineConfig::MachineConfig(const MachineConfig *cc) {
     pipeline = cc->pipelined();
-    delayslot = cc->delay_slot();
+    bunit = cc->branch_unit();
+    bp_bits = cc->bht_bits();
     hunit = cc->hazard_unit();
     exec_protect = cc->memory_execute_protection();
     write_protect = cc->memory_write_protection();
@@ -225,7 +228,8 @@ MachineConfig::MachineConfig(const MachineConfig *cc) {
 
 MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) {
     pipeline = sts->value(N("Pipelined"), DF_PIPELINE).toBool();
-    delayslot = sts->value(N("DelaySlot"), DF_DELAYSLOT).toBool();
+    bunit = (enum BranchUnit)sts->value(N("BranchUnit"), DF_BUNIT).toUInt();
+    bp_bits = sts->value(N("BP_BITS"), DF_BP_BITS).toInt();
     hunit = (enum HazardUnit)sts->value(N("HazardUnit"), DF_HUNIT).toUInt();
     exec_protect = sts->value(N("MemoryExecuteProtection"), DF_EXEC_PROTEC).toBool();
     write_protect = sts->value(N("MemoryWriteProtection"), DF_WRITE_PROTEC).toBool();
@@ -246,7 +250,8 @@ MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) {
 
 void MachineConfig::store(QSettings *sts, const QString &prefix) {
     sts->setValue(N("Pipelined"), pipelined());
-    sts->setValue(N("DelaySlot"), delay_slot());
+    sts->setValue(N("BranchUnit"), (unsigned)branch_unit());
+    sts->setValue(N("BP_BITS"), bht_bits());
     sts->setValue(N("HazardUnit"), (unsigned)hazard_unit());
     sts->setValue(N("MemoryRead"), memory_access_time_read());
     sts->setValue(N("MemoryWrite"), memory_access_time_write());
@@ -267,11 +272,13 @@ void MachineConfig::store(QSettings *sts, const QString &prefix) {
 
 void MachineConfig::preset(enum ConfigPresets p) {
     // Note: we set just a minimal subset to get preset (preserving as much of hidden configuration as possible)
+    set_branch_unit(BranchUnit::BU_DELAY_SLOT);
+    set_bht_bits(-1);
+
     switch (p) {
     case CP_SINGLE:
     case CP_SINGLE_CACHE:
         set_pipelined(false);
-        set_delay_slot(true);
         break;
     case CP_PIPE_NO_HAZARD:
         set_pipelined(true);
@@ -297,10 +304,6 @@ void MachineConfig::set_pipelined(bool v) {
     pipeline = v;
 }
 
-void MachineConfig::set_delay_slot(bool v) {
-    delayslot = v;
-}
-
 void MachineConfig::set_hazard_unit(enum MachineConfig::HazardUnit hu)  {
     hunit = hu;
 }
@@ -316,6 +319,14 @@ bool MachineConfig::set_hazard_unit(QString hukind) {
         return false;
     set_hazard_unit(hukind_map.value(hukind));
     return true;
+}
+
+void MachineConfig::set_branch_unit(MachineConfig::BranchUnit bu) {
+    bunit = bu;
+}
+
+void MachineConfig::set_bht_bits(int8_t b) {
+    bp_bits = b;
 }
 
 void MachineConfig::set_memory_execute_protection(bool v) {
@@ -382,9 +393,14 @@ bool MachineConfig::pipelined() const {
     return pipeline;
 }
 
-bool MachineConfig::delay_slot() const {
-    // Delay slot is always on when pipeline is enabled
-    return pipeline || delayslot;
+// When pipelined, delay_slot or branch predictor are only possible options.
+// When not pipelined, none and delay_slot are only possible options.
+enum MachineConfig::BranchUnit MachineConfig::branch_unit() const {
+    return bunit;
+}
+
+int8_t MachineConfig::bht_bits() const {
+    return bp_bits;
 }
 
 enum MachineConfig::HazardUnit MachineConfig::hazard_unit() const {
@@ -459,7 +475,8 @@ MachineConfigCache *MachineConfig::access_cache_data() {
 bool MachineConfig::operator==(const MachineConfig &c) const {
 #define CMP(GETTER) (GETTER)() == (c.GETTER)()
     return CMP(pipelined) && \
-            CMP(delay_slot) && \
+            CMP(branch_unit) && \
+            CMP(bht_bits) && \
             CMP(hazard_unit) && \
             CMP(memory_execute_protection) && \
             CMP(memory_write_protection) && \

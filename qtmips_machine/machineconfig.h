@@ -111,15 +111,26 @@ public:
         HU_STALL_FORWARD
     };
 
+
+    enum BranchUnit {
+        BU_NONE, // Neither delay slot nor branch predictor
+        BU_DELAY_SLOT, // Delay slot approach
+        BU_ONE_BIT_BP, // 1-bit branch predictor
+        BU_TWO_BIT_BP // 2-bit branch predictor
+    };
+
     // Configure if CPU is pipelined
     // In default disabled.
     void set_pipelined(bool);
-    // Configure if cpu should simulate delay slot in non-pipelined core
-    // In default enabled. When disabled it also automatically disables pipelining.
-    void set_delay_slot(bool);
     // Hazard unit
     void set_hazard_unit(enum HazardUnit);
     bool set_hazard_unit(QString hukind);
+    // Branch unit
+    // When pipelined, delay slot or branch predictor are only possible options.
+    // When not pipelined, none and delay slot are only possible options.
+    void set_branch_unit(enum BranchUnit);
+    // Branch history table lookup bits
+    void set_bht_bits(std::int8_t bht_bits);
     // Protect data memory from execution. Only program sections can be executed.
     void set_memory_execute_protection(bool);
     // Protect program memory from accidental writes.
@@ -144,7 +155,8 @@ public:
     void set_cache_data(const MachineConfigCache&);
 
     bool pipelined() const;
-    bool delay_slot() const;
+    enum BranchUnit branch_unit() const;
+    std::int8_t bht_bits() const;
     enum HazardUnit hazard_unit() const;
     bool memory_execute_protection() const;
     bool memory_write_protection() const;
@@ -169,7 +181,9 @@ public:
     bool operator !=(const MachineConfig &c) const;
 
 private:
-    bool pipeline, delayslot;
+    bool pipeline;
+    enum BranchUnit bunit;
+    std::int8_t bp_bits;
     enum HazardUnit hunit;
     bool exec_protect, write_protect;
     unsigned mem_acc_read, mem_acc_write, mem_acc_burst;

@@ -36,6 +36,7 @@
 #include "newdialog.h"
 #include "mainwindow.h"
 #include "qtmipsexception.h"
+#include <QDebug>
 
 #ifdef __EMSCRIPTEN__
 #include <QFileInfo>
@@ -57,6 +58,12 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     ui_cache_d = new Ui::NewDialogCache();
     ui_cache_d->setupUi(ui->tab_cache_data);
 
+    ui->predictor_bits->addItem("1");
+    ui->predictor_bits->addItem("2");
+    for (size_t i = 7 ; i <= 12 ; i++) {
+        ui->bht_bits->addItem(QString::number(i));
+    }
+
     connect(ui->pushButton_start_empty, SIGNAL(clicked(bool)), this, SLOT(create_empty()));
     connect(ui->pushButton_load, SIGNAL(clicked(bool)), this, SLOT(create()));
     connect(ui->pushButton_cancel, SIGNAL(clicked(bool)), this, SLOT(cancel()));
@@ -69,10 +76,14 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     connect(ui->reset_at_compile, SIGNAL(clicked(bool)), this, SLOT(reset_at_compile_change(bool)));
 
     connect(ui->pipelined, SIGNAL(clicked(bool)), this, SLOT(pipelined_change(bool)));
-    connect(ui->delay_slot, SIGNAL(clicked(bool)), this, SLOT(delay_slot_change(bool)));
     connect(ui->hazard_unit, SIGNAL(clicked(bool)), this, SLOT(hazard_unit_change()));
     connect(ui->hazard_stall, SIGNAL(clicked(bool)), this, SLOT(hazard_unit_change()));
     connect(ui->hazard_stall_forward, SIGNAL(clicked(bool)), this, SLOT(hazard_unit_change()));
+    connect(ui->branch_predictor, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
+    connect(ui->predictor_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
+    connect(ui->bht_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
+    connect(ui->delay_slot, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
+    connect(ui->none, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
 
     connect(ui->mem_protec_exec, SIGNAL(clicked(bool)), this, SLOT(mem_protec_exec_change(bool)));
     connect(ui->mem_protec_write, SIGNAL(clicked(bool)), this, SLOT(mem_protec_write_change(bool)));
@@ -192,18 +203,41 @@ void NewDialog::pipelined_change(bool val) {
 	switch2custom();
 }
 
-void NewDialog::delay_slot_change(bool val) {
-    config->set_delay_slot(val);
-	switch2custom();
-}
-
 void NewDialog::hazard_unit_change() {
     if (ui->hazard_unit->isChecked()) {
         config->set_hazard_unit(ui->hazard_stall->isChecked() ? machine::MachineConfig::HU_STALL : machine::MachineConfig::HU_STALL_FORWARD);
 	} else {
         config->set_hazard_unit(machine::MachineConfig::HU_NONE);
 	}
-	switch2custom();
+    switch2custom();
+}
+
+void NewDialog::branch_unit_change() {
+    if (ui->branch_predictor->isChecked()) {
+        QString predictor_bits = ui->predictor_bits->currentText();
+        QString bht_bits = ui->bht_bits->currentText();
+        config->set_branch_unit(predictor_bits.toShort() == 1 ?
+                                  machine::MachineConfig::BU_ONE_BIT_BP :
+                                  machine::MachineConfig::BU_TWO_BIT_BP);
+        config->set_bht_bits(bht_bits.toShort());
+    }
+    else if (ui->delay_slot->isChecked()) {
+        config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
+        config->set_bht_bits(-1);
+    }
+    else {
+        config->set_branch_unit(machine::MachineConfig::BU_NONE);
+        config->set_bht_bits(-1);
+    }
+
+    //NOTE: remove when we're sure it works
+    if (config->pipelined()) {
+        assert(config->branch_unit() != machine::MachineConfig::BU_NONE);
+    } else {
+        assert(config->branch_unit() == machine::MachineConfig::BU_NONE
+               || config->branch_unit() == machine::MachineConfig::BU_DELAY_SLOT);
+    }
+    switch2custom();
 }
 
 void NewDialog::mem_protec_exec_change(bool v) {
@@ -281,10 +315,13 @@ void NewDialog::config_gui() {
     ui->reset_at_compile->setChecked(config->reset_at_compile());
     // Core
     ui->pipelined->setChecked(config->pipelined());
-    ui->delay_slot->setChecked(config->delay_slot());
     ui->hazard_unit->setChecked(config->hazard_unit() != machine::MachineConfig::HU_NONE);
     ui->hazard_stall->setChecked(config->hazard_unit() == machine::MachineConfig::HU_STALL);
     ui->hazard_stall_forward->setChecked(config->hazard_unit() == machine::MachineConfig::HU_STALL_FORWARD);
+    ui->branch_predictor->setChecked(config->branch_unit() == machine::MachineConfig::BU_ONE_BIT_BP
+                                     || config->branch_unit() == machine::MachineConfig::BU_TWO_BIT_BP);
+    ui->delay_slot->setChecked(config->branch_unit() == machine::MachineConfig::BU_DELAY_SLOT);
+    ui->none->setChecked(config->branch_unit() == machine::MachineConfig::BU_NONE);
     // Memory
     ui->mem_protec_exec->setChecked(config->memory_execute_protection());
     ui->mem_protec_write->setChecked(config->memory_write_protection());
@@ -303,8 +340,13 @@ void NewDialog::config_gui() {
     ui->osemu_fs_root->setText(config->osemu_fs_root());
 
     // Disable various sections according to configuration
-    ui->delay_slot->setEnabled(!config->pipelined());
     ui->hazard_unit->setEnabled(config->pipelined());
+    ui->none->setEnabled(!config->pipelined());
+    ui->branch_predictor->setEnabled(config->pipelined());
+    ui->bht_bits->setEnabled(ui->branch_predictor->isChecked());
+    ui->bht_bits_label->setEnabled(ui->branch_predictor->isChecked());
+    ui->predictor_bits->setEnabled(ui->branch_predictor->isChecked());
+    ui->predictor_bits_label->setEnabled(ui->branch_predictor->isChecked());
 }
 
 unsigned NewDialog::preset_number() {
@@ -333,6 +375,7 @@ void NewDialog::load_settings() {
 
     // Load preset
     unsigned preset = settings->value("Preset", 1).toUInt();
+    ui->delay_slot->click();
     if (preset != 0) {
         auto p = (enum machine::ConfigPresets)(preset - 1);
         config->preset(p);

@@ -65,8 +65,8 @@ private slots:
     void elf_change(QString val);
     void set_preset();
     void pipelined_change(bool);
-    void delay_slot_change(bool);
     void hazard_unit_change();
+    void branch_unit_change();
     void mem_protec_exec_change(bool);
     void mem_protec_write_change(bool);
     void mem_time_read_change(int);
