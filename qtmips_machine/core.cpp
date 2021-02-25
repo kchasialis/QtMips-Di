@@ -611,8 +611,9 @@ bool Core::handle_pc(const struct dtDecode &dt) {
         return true;
     }
 
-    if (dt.branch)
+    if (dt.branch) {
         branch = branch_result(dt);
+    }
 
     emit fetch_jump_value(false);
     emit fetch_jump_reg_value(false);
@@ -797,6 +798,7 @@ void CorePipelined::do_step(bool skip_break) {
     bool branch_stall = false;
     bool excpt_in_progress = false;
     std::uint32_t jump_branch_pc = dt_m.inst_addr;
+    static std::uint32_t pc_before_prediction = 0;
 
     // Process stages
     writeback(dt_m);
@@ -931,7 +933,6 @@ void CorePipelined::do_step(bool skip_break) {
     if (!stall && !dt_d.stop_if) {
         dt_d.stall = false;
         dt_f = fetch(skip_break);
-        qDebug() << "fetched" << dt_f.inst.to_str(dt_f.inst_addr);
         if (bp == nullptr) {
             // Means we have delay slot enabled.
             if (handle_pc(dt_d)) {
@@ -949,6 +950,7 @@ void CorePipelined::do_step(bool skip_break) {
             // with other hazards.
             if (dt_f.inst.flags() & IMF_BRANCH) {
                 // We fetched a branch instruction.
+                pc_before_prediction = regs->read_pc();
                 bool branch_taken = bp->predict(dt_f.inst);
                 if (branch_taken)
                     regs->pc_abs_jmp(branch_target(dt_f.inst, dt_f.inst_addr));
@@ -957,15 +959,19 @@ void CorePipelined::do_step(bool skip_break) {
             } else if (dt_d.branch) {
                 // Branch is now on ID and can be evaluated.
                 bool branch_taken = branch_result(dt_d);
-                qDebug() << branch_taken << bp->current_prediction() << "WTF";
                 if (branch_taken != bp->current_prediction()) {
                     // Prediction was wrong.
                     // Flush fetch stage & move pc accordingly.
-                    handle_pc(dt_d);
                     dtFetchInit(dt_f);
                     emit instruction_fetched(dt_f.inst, dt_f.inst_addr,
                                              dt_f.excause, dt_f.is_valid);
                     emit fetch_inst_addr_value(STAGEADDR_NONE);
+
+                    if (branch_taken) {
+                        regs->pc_abs_jmp(branch_target(dt_d.inst, dt_d.inst_addr));
+                    } else {
+                        regs->pc_abs_jmp(pc_before_prediction + 4);
+                    }
                 } else {
                     regs->pc_inc();
                 }
@@ -1086,8 +1092,6 @@ void OneBitBranchPredictor::print_current_state() {
 
     print_map.insert(FSMStates::NOT_TAKEN, "Not Taken");
     print_map.insert(FSMStates::TAKEN, "Taken");
-
-    qDebug() << print_map[bht[last_pos_predicted]];
 }
 
 TwoBitBranchPredictor::TwoBitBranchPredictor(uint8_t bht_bits) : BranchPredictor(bht_bits) {}
@@ -1136,6 +1140,4 @@ void TwoBitBranchPredictor::print_current_state() {
     print_map.insert(FSMStates::WEAKLY_NT, "Weakly Not Taken");
     print_map.insert(FSMStates::WEAKLY_T, "Weakly Taken");
     print_map.insert(FSMStates::STRONGLY_T, "Strongly Taken");
-
-    qDebug() << print_map[bht[last_pos_predicted]];
 }
