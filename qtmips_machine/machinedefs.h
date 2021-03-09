@@ -40,7 +40,7 @@
 
 namespace machine {
 
-enum AccessControl {
+enum class AccessControl {
     AC_NONE,
     AC_BYTE,
     AC_HALFWORD,
@@ -57,7 +57,7 @@ enum AccessControl {
     AC_LAST_REGULAR = AC_HALFWORD_UNSIGNED,
 };
 
-enum ExceptionCause {
+enum class ExceptionCause {
     EXCAUSE_NONE     =  0,  // Use zero as default value when no exception is pending
     EXCAUSE_INT      =  1,  // Int is 0 on real CPU and in Cause regsiter
     EXCAUSE_ADDRL    =  4,
@@ -72,7 +72,7 @@ enum ExceptionCause {
     EXCAUSE_COUNT    = 15,
 };
 
-enum AluOp : std::uint8_t {
+enum class AluOp : std::uint8_t {
     ALU_OP_NOP,
     ALU_OP_SLL,
     ALU_OP_SRL,
@@ -133,7 +133,7 @@ enum AluOp : std::uint8_t {
     ALU_OP_LAST // First impossible operation (just to be sure that we don't overflow)
 };
 
-enum LocationStatus {
+enum class LocationStatus {
     LOCSTAT_NONE      = 0,
     LOCSTAT_CACHED    = 1 << 0,
     LOCSTAT_DIRTY     = 1 << 1,

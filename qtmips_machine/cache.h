@@ -46,73 +46,80 @@ namespace machine {
 class Cache : public MemoryAccess {
     Q_OBJECT
 public:
-    Cache(MemoryAccess *m, const MachineConfigCache *c, unsigned memory_access_penalty_r = 1,
-          unsigned memory_access_penalty_w = 1, unsigned memory_access_penalty_b = 0);
+    Cache(MemoryAccess *m, const MachineConfigCache &cc, std::uint32_t upper_access_penalty_r,
+          std::uint32_t upper_access_penalty_w, std::uint32_t upper_access_penalty_b);
     ~Cache();
 
     bool wword(std::uint32_t address, std::uint32_t value) override;
     std::uint32_t rword(std::uint32_t address, bool debug_access = false) const override;
     virtual std::uint32_t get_change_counter() const override;
+    virtual MemoryType type() const override;
 
-    void flush(); // flush cache
-    void sync() override; // Same as flush
+    void flush(); // flush cache.
+    void sync() override; // Same as flush.
 
-    unsigned hit() const; // Number of recorded hits
-    unsigned miss() const; // Number of recorded misses
-    unsigned memory_reads() const; // Number backing/main memory reads
-    unsigned memory_writes() const; // Number backing/main memory writes
-    unsigned stalled_cycles() const; // Number of wasted cycles in memory waitin statistic
-    double speed_improvement() const; // Speed improvement in percents in comare with no used cache
-    double hit_rate() const; // Usage efficiency in percents
+    std::uint32_t hit() const; // Number of recorded hits.
+    std::uint32_t miss() const; // Number of recorded misses.
+    std::uint32_t mu_reads() const; // Number of reads on the upper level (L* or memory).
+    std::uint32_t mu_writes() const; // Number of writes on the upper level (L* or memory).
+    std::uint32_t stalled_cycles() const; // Number of wasted cycles in upper level.
+    double speed_improvement() const; // Speed improvement in percents in comare with no used cache.
+    double hit_rate() const; // Usage efficiency in percents.
 
-    void reset(); // Reset whole state of cache
+    void reset(); // Reset whole state of cache.
 
     const MachineConfigCache &config() const;
     enum LocationStatus location_status(std::uint32_t address) const override;
 
 signals:
-    void hit_update(unsigned) const;
-    void miss_update(unsigned) const;
-    void statistics_update(unsigned stalled_cycles, double speed_improv, double hit_rate) const;
-    void cache_update(unsigned associat, unsigned set, unsigned col, bool valid, bool dirty,
+    void hit_update(std::uint32_t) const;
+    void miss_update(std::uint32_t) const;
+    void statistics_update(std::uint32_t stalled_cycles, double speed_improv, double hit_rate) const;
+    void cache_update(std::uint32_t associat, std::uint32_t set, std::uint32_t col, bool valid, bool dirty,
                       std::uint32_t tag, const std::uint32_t *data, bool write) const;
-    void memory_writes_update(unsigned) const;
-    void memory_reads_update(unsigned) const;
+    void level2_cache_reads_update(std::uint32_t) const;
+    void level2_cache_writes_update(std::uint32_t) const;
+    void memory_writes_update(std::uint32_t) const;
+    void memory_reads_update(std::uint32_t) const;
 
 private:
     MachineConfigCache cnf;
-    MemoryAccess *mem;
-    unsigned access_pen_r, access_pen_w, access_pen_b;
+    MemoryAccess *mem_upper;
+    std::uint32_t access_pen_r, access_pen_w, access_pen_b;
     std::uint32_t uncached_start;
     std::uint32_t uncached_last;
+    MemoryType cache_type;
+    mutable std::uint32_t read_hits, read_misses, write_hits, write_misses;
+    mutable std::uint32_t mem_upper_reads, mem_upper_writes;
+    mutable std::uint32_t burst_reads, burst_writes;
+    mutable std::uint32_t change_counter;
 
     struct cache_data {
         bool valid, dirty;
         std::uint32_t tag;
         std::uint32_t *data;
     };
-    mutable struct cache_data **dt;
+    mutable cache_data **dt;
 
     union {
-        unsigned int ** lru; // Access time
-        unsigned **lfu; // Access count
+        std::uint32_t **lru; // Access time
+        std::uint32_t **lfu; // Access count
     } replc; // Data used for replacement policy
 
-    mutable unsigned hit_read, miss_read, hit_write, miss_write; // Hit and miss counters
-    mutable unsigned mem_reads, mem_writes, burst_reads, burst_writes; // Dirrect access to memory
-    mutable std::uint32_t change_counter;
-
+    void emit_mem_upper_signal(bool read) const;
     std::uint32_t debug_rword(std::uint32_t address) const;
     bool access(std::uint32_t address, std::uint32_t *data, bool write, std::uint32_t value = 0) const;
-    void kick(unsigned associat_indx, unsigned row) const;
-    std::uint32_t base_address(std::uint32_t tag, unsigned row) const;
+    void kick(std::uint32_t associat_indx, std::uint32_t row) const;
+    std::uint32_t base_address(std::uint32_t tag, std::uint32_t row) const;
     void update_statistics() const;
     inline void compute_row_col_tag(std::uint32_t &row, std::uint32_t &col,
                                std::uint32_t &tag, std::uint32_t address) const {
+        std::uint32_t ssize, index;
+
         address = address >> 2;
-        std::uint32_t ssize = cnf.blocks() * cnf.sets();
+        ssize = cnf.blocks() * cnf.sets();
         tag = address / ssize;
-        std::uint32_t index = address % ssize;
+        index = address % ssize;
         row = index / cnf.blocks();
         col = index % cnf.blocks();
     }

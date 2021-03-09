@@ -56,6 +56,7 @@
 #include "coreview/and.h"
 #include "coreview/value.h"
 #include "coreview/multitext.h"
+#include "coreview/predictor.h"
 
 class CoreViewScene : public QGraphicsScene {
     Q_OBJECT
@@ -80,6 +81,7 @@ protected:
     coreview::Alu *alu;
     coreview::LogicBlock *peripherals;
     coreview::LogicBlock *terminal;
+    coreview::Predictor *predictor;
     struct {
         coreview::ProgramCounter *pc;
         coreview::Latch *latch;

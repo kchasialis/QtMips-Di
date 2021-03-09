@@ -47,6 +47,12 @@ namespace machine {
 class MemoryAccess : public QObject {
     Q_OBJECT
 public:
+    enum class MemoryType {
+        L1_CACHE,
+        L2_CACHE,
+        DRAM
+    };
+
     // Note: hword and word methods are throwing away lowest bits so unaligned access is ignored without error.
     bool write_byte(std::uint32_t offset, std::uint8_t value);
     bool write_hword(std::uint32_t offset, std::uint16_t value);
@@ -70,6 +76,7 @@ signals:
 protected:
     virtual bool wword(std::uint32_t offset, std::uint32_t value) = 0;
     virtual std::uint32_t rword(std::uint32_t offset, bool debug_access = false) const = 0;
+    virtual MemoryType type() const = 0;
 
 private:
     static int sh_nth(std::uint32_t offset);
@@ -84,6 +91,7 @@ public:
     bool wword(std::uint32_t offset, std::uint32_t value) override;
     std::uint32_t rword(std::uint32_t offsetbool, bool debug_access = false) const override;
     virtual std::uint32_t get_change_counter() const override;
+    virtual MemoryType type() const override;
     void merge(MemorySection&);
 
     std::uint32_t length() const;
@@ -115,12 +123,12 @@ public:
     bool wword(std::uint32_t address, std::uint32_t value) override;
     std::uint32_t rword(std::uint32_t address, bool debug_access = false) const override;
     virtual std::uint32_t get_change_counter() const override;
+    virtual MemoryType type() const override;
 
     bool operator==(const Memory&) const;
     bool operator!=(const Memory&) const;
 
     const union MemoryTree *get_memorytree_root() const;
-
 private:
     union MemoryTree *mt_root;
     std::uint32_t change_counter;

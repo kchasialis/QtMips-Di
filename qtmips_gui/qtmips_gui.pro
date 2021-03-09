@@ -33,6 +33,7 @@ QMAKE_CXXFLAGS_DEBUG += -ggdb
 DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
+    coreview/predictor.cpp \
         main.cpp \
         mainwindow.cpp \
         newdialog.cpp \
@@ -86,6 +87,7 @@ SOURCES += \
     textsignalaction.cpp
 
 HEADERS += \
+    coreview/predictor.h \
         mainwindow.h \
         newdialog.h \
         coreview.h \

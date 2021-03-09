@@ -79,6 +79,7 @@ CoreViewScene::CoreViewScene(machine::QtMipsMachine *machine) : QGraphicsScene()
 
     // Elements //
     // Primary points
+    NEW(Predictor, predictor, 50, 410);
     NEW(ProgramMemory, mem_program, 90, 240, machine);
     NEW(DataMemory, mem_data, 580, 258, machine);
     NEW(Registers, regs, 230, 240);
@@ -184,8 +185,9 @@ CoreViewScene::CoreViewScene(machine::QtMipsMachine *machine) : QGraphicsScene()
 
     coreview::Value *val;
     // Fetch stage values
-    NEW_V(25, 440,  fetch_branch_value, false, 1);
-    NEW_V(360, 93,  fetch_jump_reg_value, false, 1);
+    NEW_V(50, 410, fetch_predict_branch, false, 8, 0, 10);
+    NEW_V(25, 440, fetch_branch_value, false, 1);
+    NEW_V(360, 93, fetch_jump_reg_value, false, 1);
     // Decode stage values
     NEW_V(200, 200, decode_instruction_value); // Instruction
     NEW_V(360, 250, decode_reg1_value); // Register output 1

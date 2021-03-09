@@ -42,7 +42,7 @@
 using namespace machine;
 
 Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
-           unsigned int min_cache_row_size, Cop0State *cop0state) :
+           std::uint32_t min_cache_row_size, Cop0State *cop0state) :
            ex_handlers(), hw_breaks() {
     cycle_c = 0;
     stall_c = 0;
@@ -125,20 +125,20 @@ bool Core::is_hwbreak(std::uint32_t address) {
     return hwbrk != nullptr;
 }
 
-void Core::set_stop_on_exception(enum ExceptionCause excause, bool value) {
-    stop_on_exception[excause] = value;
+void Core::set_stop_on_exception(ExceptionCause excause, bool value) {
+    stop_on_exception[(int)excause] = value;
 }
 
-bool Core::get_stop_on_exception(enum ExceptionCause excause) const {
-    return stop_on_exception[excause];
+bool Core::get_stop_on_exception(ExceptionCause excause) const {
+    return stop_on_exception[(int)excause];
 }
 
-void Core::set_step_over_exception(enum ExceptionCause excause, bool value) {
-    step_over_exception[excause] = value;
+void Core::set_step_over_exception(ExceptionCause excause, bool value) {
+    step_over_exception[(int)excause] = value;
 }
 
-bool Core::get_step_over_exception(enum ExceptionCause excause) const {
-    return step_over_exception[excause];
+bool Core::get_step_over_exception(ExceptionCause excause) const {
+    return step_over_exception[(int)excause];
 }
 
 void Core::register_exception_handler(ExceptionCause excause, ExceptionHandler *exhandler)
@@ -203,7 +203,7 @@ void Core::set_c0_userlocal(std::uint32_t address) {
     }
 }
 
-enum ExceptionCause  Core::memory_special(enum AccessControl memctl,
+ExceptionCause  Core::memory_special(AccessControl memctl,
                        int mode, bool memread, bool memwrite,
                        std::uint32_t &towrite_val,
                        std::uint32_t rt_value, std::uint32_t mem_addr) {
@@ -265,7 +265,7 @@ enum ExceptionCause  Core::memory_special(enum AccessControl memctl,
 
 
 struct Core::dtFetch Core::fetch(bool skip_break) {
-    enum ExceptionCause excause = EXCAUSE_NONE;
+    ExceptionCause excause = EXCAUSE_NONE;
     std::uint32_t inst_addr = regs->read_pc();
     Instruction inst(mem_program->read_word(inst_addr));
 
@@ -294,10 +294,10 @@ struct Core::dtFetch Core::fetch(bool skip_break) {
 
 struct Core::dtDecode Core::decode(const struct dtFetch &dt) {
     uint8_t rwrite;
-    enum InstructionFlags flags;
-    enum AluOp alu_op;
-    enum AccessControl mem_ctl;
-    enum ExceptionCause excause = dt.excause;
+    InstructionFlags flags;
+    AluOp alu_op;
+    AccessControl mem_ctl;
+    ExceptionCause excause = dt.excause;
 
     dt.inst.flags_alu_op_mem_ctl(flags, alu_op, mem_ctl);
 
@@ -394,7 +394,7 @@ struct Core::dtDecode Core::decode(const struct dtFetch &dt) {
 
 struct Core::dtExecute Core::execute(const struct dtDecode &dt) {
     bool discard;
-    enum ExceptionCause excause = dt.excause;
+    ExceptionCause excause = dt.excause;
     std::uint32_t alu_val = 0;
 
     // Handle conditional move (we have to change regwrite signal if conditional is not met)
@@ -507,7 +507,7 @@ struct Core::dtExecute Core::execute(const struct dtDecode &dt) {
 struct Core::dtMemory Core::memory(const struct dtExecute &dt) {
     std::uint32_t towrite_val = dt.alu_val;
     std::uint32_t mem_addr = dt.alu_val;
-    enum ExceptionCause excause = dt.excause;
+    ExceptionCause excause = dt.excause;
     bool memread = dt.memread;
     bool memwrite = dt.memwrite;
     bool regwrite = dt.regwrite;
@@ -762,8 +762,8 @@ void CoreSingle::do_reset() {
 }
 
 CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
-                             enum MachineConfig::HazardUnit hazard_unit,
-                             enum MachineConfig::BranchUnit branch_unit,
+                             MachineConfig::HazardUnit hazard_unit,
+                             MachineConfig::BranchUnit branch_unit,
                              int8_t bp_bits, unsigned int min_cache_row_size,
                              Cop0State *cop0state) :
     Core(regs, mem_program, mem_data, min_cache_row_size, cop0state) {

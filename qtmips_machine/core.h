@@ -141,14 +141,14 @@ class Core : public QObject {
     Q_OBJECT
 public:
     Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
-         unsigned int min_cache_row_size = 1, Cop0State *cop0state = nullptr);
+         std::uint32_t min_cache_row_size = 1, Cop0State *cop0state = nullptr);
     ~Core();
 
     void step(bool skip_break = false); // Do single step
     void reset(); // Reset core (only core, memory and registers has to be reseted separately)
 
-    unsigned cycles() const; // Returns number of executed cycles
-    unsigned stalls() const; // Returns number of stall cycles
+    std::uint32_t cycles() const; // Returns number of executed cycles
+    std::uint32_t stalls() const; // Returns number of stall cycles
 
     Registers *get_regs();
     Cop0State *get_cop0state();
@@ -165,7 +165,7 @@ public:
 
     void set_c0_userlocal(std::uint32_t address);
 
-    enum ForwardFrom {
+    enum class ForwardFrom {
         FORWARD_NONE   = 0b00,
         FORWARD_FROM_W = 0b01,
         FORWARD_FROM_M = 0b10,
@@ -179,6 +179,7 @@ signals:
     void instruction_writeback(const machine::Instruction &inst, std::uint32_t inst_addr, ExceptionCause excause, bool valid);
     void instruction_program_counter(const machine::Instruction &inst, std::uint32_t inst_addr, ExceptionCause excause, bool valid);
 
+    void fetch_predict_branch(std::uint32_t);
     void fetch_inst_addr_value(std::uint32_t);
     void fetch_jump_reg_value(std::uint32_t);
     void fetch_jump_value(std::uint32_t);
@@ -260,7 +261,7 @@ protected:
     struct dtFetch {
         Instruction inst; // Loaded instruction
         uint32_t inst_addr; // Address of instruction
-        enum ExceptionCause excause;
+        ExceptionCause excause;
         bool in_delay_slot;
         bool is_valid;
     };
@@ -283,8 +284,8 @@ protected:
         bool nb_skip_ds; // Skip delay slot if branch is not taken
         bool forward_m_d_rs; // forwarding required for beq, bne, blez, bgtz, jr nad jalr
         bool forward_m_d_rt; // forwarding required for beq, bne
-        enum AluOp aluop; // Decoded ALU operation
-        enum AccessControl memctl; // Decoded memory access type
+        AluOp aluop; // Decoded ALU operation
+        AccessControl memctl; // Decoded memory access type
         std::uint8_t num_rs; // Number of the register s
         std::uint8_t num_rt; // Number of the register t
         std::uint8_t num_rd; // Number of the register d
@@ -295,7 +296,7 @@ protected:
         ForwardFrom ff_rs;
         ForwardFrom ff_rt;
         uint32_t inst_addr; // Address of instruction
-        enum ExceptionCause excause;
+        ExceptionCause excause;
         bool in_delay_slot;
         bool stall;
         bool stop_if;
@@ -306,12 +307,12 @@ protected:
         bool memread;
         bool memwrite;
         bool regwrite;
-        enum AccessControl memctl;
+        AccessControl memctl;
         std::uint32_t val_rt;
         std::uint8_t rwrite; // Writeback register (multiplexed between rt and rd according to regd)
         std::uint32_t alu_val; // Result of ALU execution
         uint32_t inst_addr; // Address of instruction
-        enum ExceptionCause excause;
+        ExceptionCause excause;
         bool in_delay_slot;
         bool stop_if;
         bool is_valid;
@@ -324,7 +325,7 @@ protected:
         std::uint32_t towrite_val;
         std::uint32_t mem_addr; // Address used to access memory
         uint32_t inst_addr; // Address of instruction
-        enum ExceptionCause excause;
+        ExceptionCause excause;
         bool in_delay_slot;
         bool stop_if;
         bool is_valid;
@@ -340,7 +341,7 @@ protected:
                                 std::uint32_t inst_addr);
     bool handle_pc(const struct dtDecode&);
 
-    enum ExceptionCause memory_special(enum AccessControl memctl,
+    ExceptionCause memory_special(enum AccessControl memctl,
                            int mode, bool memread, bool memwrite,
                            std::uint32_t &towrite_val,
                            std::uint32_t rt_value, std::uint32_t mem_addr);
@@ -352,16 +353,16 @@ protected:
     void dtMemoryInit(struct dtMemory &dt);
 
 protected:
-    unsigned int stall_c;
+    std::uint32_t stall_c;
 private:
     struct hwBreak{
         hwBreak(std::uint32_t addr);
         std::uint32_t addr;
-        unsigned int flags;
-        unsigned int count;
+        std::uint32_t flags;
+        std::uint32_t count;
     };
-    unsigned int cycle_c;
-    unsigned int min_cache_row_size;
+    std::uint32_t cycle_c;
+    std::uint32_t min_cache_row_size;
     std::uint32_t hwr_userlocal;
     QMap<std::uint32_t, hwBreak *> hw_breaks;
     bool stop_on_exception[EXCAUSE_COUNT];
@@ -371,7 +372,7 @@ private:
 class CoreSingle : public Core {
 public:
     CoreSingle(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data, bool jmp_delay_slot,
-               unsigned int min_cache_row_size = 1, Cop0State *cop0state = nullptr);
+               std::uint32_t min_cache_row_size = 1, Cop0State *cop0state = nullptr);
     ~CoreSingle();
 
 protected:
@@ -386,9 +387,9 @@ private:
 class CorePipelined : public Core {
 public:
     CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
-                  enum MachineConfig::HazardUnit hazard_unit = MachineConfig::HU_STALL_FORWARD,
-                  enum MachineConfig::BranchUnit branch_unit = MachineConfig::BU_DELAY_SLOT,
-                  int8_t bp_bits = -1, unsigned int min_cache_row_size = 1,
+                  MachineConfig::HazardUnit hazard_unit = MachineConfig::HU_STALL_FORWARD,
+                  MachineConfig::BranchUnit branch_unit = MachineConfig::BU_DELAY_SLOT,
+                  int8_t bp_bits = -1, std::uint32_t min_cache_row_size = 1,
                   Cop0State *cop0state = nullptr);
 
 protected:

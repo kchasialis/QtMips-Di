@@ -61,7 +61,7 @@ protected:
 private:
     unsigned wid;
     unsigned base;
-    bool vertical;
+    unsigned vertical;
     QChar fillchr;
     bool frame;
 };

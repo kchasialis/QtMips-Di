@@ -46,13 +46,16 @@ using namespace machine;
 #define DF_HUNIT HU_STALL_FORWARD
 #define DF_EXEC_PROTEC false
 #define DF_WRITE_PROTEC false
-#define DF_MEM_ACC_READ 10
-#define DF_MEM_ACC_WRITE 10
-#define DF_MEM_ACC_BURST 0
 #define DF_ELF QString("")
 //////////////////////////////////////////////////////////////////////////////
 /// Default config of MachineConfigCache
 #define DFC_EN false
+#define DFC_MEM_ACC_READ 80
+#define DFC_MEM_ACC_WRITE 80
+#define DFC_MEM_ACC_BURST 0
+#define DFC_L2_ACC_READ 5
+#define DFC_L2_ACC_WRITE 5
+#define DFC_L2_ACC_BURST 0
 #define DFC_SETS 1
 #define DFC_BLOCKS 1
 #define DFC_ASSOC 1
@@ -60,89 +63,185 @@ using namespace machine;
 #define DFC_WRITE WP_THROUGH_NOALLOC
 //////////////////////////////////////////////////////////////////////////////
 
-MachineConfigCache::MachineConfigCache() {
-    en = DFC_EN;
+MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct) {
+    switch (ct) {
+    case MemoryAccess::MemoryType::L1_CACHE:
+        upper_mem_time_read = DFC_L2_ACC_READ;
+        upper_mem_time_write = DFC_L2_ACC_WRITE;
+        upper_mem_time_burst = DFC_L2_ACC_BURST;
+        break;
+    case MemoryAccess::MemoryType::L2_CACHE:
+        upper_mem_time_read = DFC_MEM_ACC_READ;
+        upper_mem_time_write = DFC_MEM_ACC_WRITE;
+        upper_mem_time_burst = DFC_MEM_ACC_BURST;
+        break;
+    case MemoryAccess::MemoryType::DRAM:
+    default:
+        SANITY_ASSERT(0, "This needs debugging.");
+    }
+
     n_sets = DFC_SETS;
     n_blocks = DFC_BLOCKS;
     d_associativity = DFC_ASSOC;
     replac_pol = DFC_REPLAC;
     write_pol = DFC_WRITE;
+    cache_type = ct;
 }
 
-MachineConfigCache::MachineConfigCache(const MachineConfigCache *cc) {
-    en = cc->enabled();
-    n_sets = cc->sets();
-    n_blocks = cc->blocks();
-    d_associativity = cc->associativity();
-    replac_pol = cc->replacement_policy();
-    write_pol = cc->write_policy();
+MachineConfigCache::MachineConfigCache(const MachineConfigCache& cc) {
+    upper_mem_time_read = cc.upper_mem_access_read();
+    upper_mem_time_write = cc.upper_mem_access_write();
+    upper_mem_time_burst = cc.upper_mem_access_burst();
+    n_sets = cc.sets();
+    n_blocks = cc.blocks();
+    d_associativity = cc.associativity();
+    replac_pol = cc.replacement_policy();
+    write_pol = cc.write_policy();
+    cache_type = cc.type();
 }
 
 #define N(STR) (prefix + QString(STR))
 
-MachineConfigCache::MachineConfigCache(const QSettings *sts, const QString &prefix) {
-    en = sts->value(N("Enabled"), DFC_EN).toBool();
+MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct, const QSettings *sts, const QString &prefix) {
+    cache_type = (MemoryAccess::MemoryType)sts->value(N("CacheType"), ct).toUInt();
+    switch (cache_type) {
+    case MemoryAccess::MemoryType::L1_CACHE:
+        upper_mem_time_read = sts->value(N("UpperAccessTimeRead"), DFC_L2_ACC_READ).toUInt();
+        upper_mem_time_write = sts->value(N("UpperAccessTimeWrite"), DFC_L2_ACC_WRITE).toUInt();
+        upper_mem_time_burst = sts->value(N("UpperAccessTimeBurst"), DFC_L2_ACC_BURST).toUInt();
+        break;
+    case MemoryAccess::MemoryType::L2_CACHE:
+        upper_mem_time_read = sts->value(N("UpperAccessTimeRead"), DFC_MEM_ACC_READ).toUInt();
+        upper_mem_time_write = sts->value(N("UpperAccessTimeWrite"), DFC_MEM_ACC_WRITE).toUInt();
+        upper_mem_time_burst = sts->value(N("UpperAccessTimeBurst"), DFC_MEM_ACC_BURST).toUInt();
+        break;
+    case MemoryAccess::MemoryType::DRAM:
+    default:
+        SANITY_ASSERT(0, "This needs debugging.");
+    }
+
     n_sets = sts->value(N("Sets"), DFC_SETS).toUInt();
     n_blocks = sts->value(N("Blocks"), DFC_BLOCKS).toUInt();
     d_associativity = sts->value(N("Associativity"), DFC_ASSOC).toUInt();
-    replac_pol = (enum ReplacementPolicy)sts->value(N("Replacement"), DFC_REPLAC).toUInt();
-    write_pol = (enum WritePolicy)sts->value(N("Write"), DFC_WRITE).toUInt();
+    replac_pol = (ReplacementPolicy)sts->value(N("Replacement"), DFC_REPLAC).toUInt();
+    write_pol = (WritePolicy)sts->value(N("Write"), DFC_WRITE).toUInt();
 }
 
 void MachineConfigCache::store(QSettings *sts, const QString &prefix) {
-    sts->setValue(N("Enabled"), enabled());
+    sts->setValue(N("UpperAccessTimeRead"), upper_mem_access_read(););
+    sts->setValue(N("UpperAccessTimeWrite"), upper_mem_access_write());
+    sts->setValue(N("UpperAccessTimeBurst"), upper_mem_access_burst());
     sts->setValue(N("Sets"), sets());
     sts->setValue(N("Blocks"), blocks());
     sts->setValue(N("Associativity"), associativity());
-    sts->setValue(N("Replacement"), (unsigned)replacement_policy());
-    sts->setValue(N("Write"), (unsigned)write_policy());
+    sts->setValue(N("Replacement"), (std::uint32_t)replacement_policy());
+    sts->setValue(N("Write"), (std::uint32_t)write_policy());
+    sts->setValue(N("CacheType"), (std::uint32_t)type());
 }
 
 #undef N
 
-void MachineConfigCache::preset(enum ConfigPresets p) {
+void MachineConfigCache::preset(ConfigPresets p) {
+    bool is_level1;
+
+    switch (type()) {
+    case MemoryAccess::MemoryType::L1_CACHE:
+        // Default settings for L1.
+        is_level1 = true;
+        set_upper_mem_access_read(DFC_L2_ACC_READ);
+        set_upper_mem_access_write(DFC_L2_ACC_WRITE);
+        set_upper_mem_access_burst(DFC_L2_ACC_BURST);
+        break;
+    case MemoryAccess::MemoryType::L2_CACHE:
+        is_level1 = false;
+        set_upper_mem_access_read(DFC_MEM_ACC_READ);
+        set_upper_mem_access_write(DFC_MEM_ACC_WRITE);
+        set_upper_mem_access_burst(DFC_MEM_ACC_BURST);
+        break;
+    case MemoryAccess::MemoryType::DRAM:
+    default:
+        SANITY_ASSERT(0, "This needs debugging.");
+    }
+
     switch (p) {
     case CP_PIPE:
     case CP_SINGLE_CACHE:
-        set_enabled(true);
-        set_sets(4);
-        set_blocks(2);
-        set_associativity(2);
-        set_replacement_policy(RP_RAND);
-        set_write_policy(WP_THROUGH_NOALLOC);
+        if (is_level1) {
+            // Default settings for L1.
+            set_enabled(true);
+            set_sets(4);
+            set_blocks(2);
+            set_associativity(2);
+            set_replacement_policy(RP_RAND);
+            set_write_policy(WP_THROUGH_NOALLOC);
+        } else {
+            // By default L2 is not enabled.
+            set_enabled(false);
+        }
         break;
     case CP_SINGLE:
     case CP_PIPE_NO_HAZARD:
         set_enabled(false);
+        break;
+    default:
+        SANITY_ASSERT(0, "Unhandled config preset.");
     }
 }
 
-void MachineConfigCache::set_enabled(bool v) {
-    en = v;
+void MachineConfigCache::set_enabled(bool e) {
+    en = e;
 }
 
-void MachineConfigCache::set_sets(unsigned v) {
-    n_sets = v > 0 ? v : 1;
+void MachineConfigCache::set_upper_mem_access_read(std::uint32_t ar) {
+    upper_mem_time_read = ar;
 }
 
-void MachineConfigCache::set_blocks(unsigned v) {
-    n_blocks = v > 0 ? v : 1;
+void MachineConfigCache::set_upper_mem_access_write(std::uint32_t aw) {
+    upper_mem_time_write = aw;
 }
 
-void MachineConfigCache::set_associativity(unsigned v) {
-    d_associativity = v > 0 ? v : 1;
+void MachineConfigCache::set_upper_mem_access_burst(std::uint32_t ab) {
+    upper_mem_time_burst = ab;
 }
 
-void MachineConfigCache::set_replacement_policy(enum ReplacementPolicy v) {
-    replac_pol = v;
+void MachineConfigCache::set_sets(std::uint32_t s) {
+    n_sets = s > 0 ? s : 1;
 }
 
-void MachineConfigCache::set_write_policy(enum WritePolicy v) {
-    write_pol = v;
+void MachineConfigCache::set_blocks(std::uint32_t b) {
+    n_blocks = b > 0 ? b : 1;
+}
+
+void MachineConfigCache::set_associativity(std::uint32_t a) {
+    d_associativity = a > 0 ? a : 1;
+}
+
+void MachineConfigCache::set_replacement_policy(ReplacementPolicy rp) {
+    replac_pol = rp;
+}
+
+void MachineConfigCache::set_write_policy(WritePolicy wp) {
+    write_pol = wp;
+}
+
+void MachineConfigCache::set_type(MemoryAccess::MemoryType ct) {
+    cache_type = ct;
 }
 
 bool MachineConfigCache::enabled() const {
     return en;
+}
+
+std::uint32_t MachineConfigCache::upper_mem_access_read() const {
+    return upper_mem_time_read;
+}
+
+std::uint32_t MachineConfigCache::upper_mem_access_write() const {
+    return upper_mem_time_write;
+}
+
+std::uint32_t MachineConfigCache::upper_mem_access_burst() const {
+    return upper_mem_time_burst;
 }
 
 unsigned MachineConfigCache::sets() const {
@@ -157,17 +256,24 @@ unsigned MachineConfigCache::associativity() const {
     return d_associativity;
 }
 
-enum MachineConfigCache::ReplacementPolicy MachineConfigCache::replacement_policy() const {
+MachineConfigCache::ReplacementPolicy MachineConfigCache::replacement_policy() const {
     return replac_pol;
 }
 
-enum MachineConfigCache::WritePolicy MachineConfigCache::write_policy() const {
+MachineConfigCache::WritePolicy MachineConfigCache::write_policy() const {
     return write_pol;
+}
+
+MemoryAccess::MemoryType MachineConfigCache::type() const {
+    return cache_type;
 }
 
 bool MachineConfigCache::operator==(const MachineConfigCache &c) const {
 #define CMP(GETTER) (GETTER)() == (c.GETTER)()
     return CMP(enabled) && \
+            CMP(upper_mem_access_read) && \
+            CMP(upper_mem_access_write) && \
+            CMP(upper_mem_access_burst) && \
             CMP(sets) && \
             CMP(blocks) && \
             CMP(associativity) && \
@@ -180,16 +286,13 @@ bool MachineConfigCache::operator!=(const MachineConfigCache &c) const {
     return !operator==(c);
 }
 
-MachineConfig::MachineConfig() {
+MachineConfig::MachineConfig() : {
     pipeline = DF_PIPELINE;
     bunit = DF_BUNIT;
     bp_bits = DF_BP_BITS;
     hunit = DF_HUNIT;
     exec_protect = DF_EXEC_PROTEC;
     write_protect = DF_WRITE_PROTEC;
-    mem_acc_read = DF_MEM_ACC_READ;
-    mem_acc_write = DF_MEM_ACC_WRITE;
-    mem_acc_burst = DF_MEM_ACC_BURST;
     osem_enable = true;
     osem_known_syscall_stop = true;
     osem_unknown_syscall_stop = true;
@@ -198,44 +301,40 @@ MachineConfig::MachineConfig() {
     osem_fs_root = "";
     res_at_compile = true;
     elf_path = DF_ELF;
-    cch_program = MachineConfigCache();
-    cch_data = MachineConfigCache();
+    l1_data = MachineConfigCache(MemoryAccess::MemoryType::L1_CACHE);
+    l1_program = MachineConfigCache(MemoryAccess::MemoryType::L1_CACHE);
+    l2_unified = MachineConfigCache(MemoryAccess::MemoryType::L2_CACHE);
 }
 
-MachineConfig::MachineConfig(const MachineConfig *cc) {
-    pipeline = cc->pipelined();
-    bunit = cc->branch_unit();
-    bp_bits = cc->bht_bits();
-    hunit = cc->hazard_unit();
-    exec_protect = cc->memory_execute_protection();
-    write_protect = cc->memory_write_protection();
-    mem_acc_read = cc->memory_access_time_read();
-    mem_acc_write = cc->memory_access_time_write();
-    mem_acc_burst = cc->memory_access_time_burst();
-    osem_enable = cc->osemu_enable();
-    osem_known_syscall_stop = cc->osemu_known_syscall_stop();
-    osem_unknown_syscall_stop = cc->osemu_unknown_syscall_stop();
-    osem_interrupt_stop = cc->osemu_interrupt_stop();
-    osem_exception_stop = cc->osemu_exception_stop();
-    osem_fs_root = cc->osemu_fs_root();
-    res_at_compile = cc->reset_at_compile();
-    elf_path = cc->elf();
-    cch_program = cc->cache_program();
-    cch_data = cc->cache_data();
+MachineConfig::MachineConfig(const MachineConfig& cc) {
+    this->pipeline = cc.pipelined();
+    this->bunit = cc.branch_unit();
+    this->bp_bits = cc.bht_bits();
+    this->hunit = cc.hazard_unit();
+    this->exec_protect = cc.memory_execute_protection();
+    this->write_protect = cc.memory_write_protection();
+    this->osem_enable = cc.osemu_enable();
+    this->osem_known_syscall_stop = cc.osemu_known_syscall_stop();
+    this->osem_unknown_syscall_stop = cc.osemu_unknown_syscall_stop();
+    this->osem_interrupt_stop = cc.osemu_interrupt_stop();
+    this->osem_exception_stop = cc.osemu_exception_stop();
+    this->osem_fs_root = cc.osemu_fs_root();
+    this->res_at_compile = cc.reset_at_compile();
+    this->elf_path = cc.elf();
+    this->l1_data = cc.l1_data_cache();
+    this->l1_program = cc.l1_program_cache();
+    this->l2_unified = cc.l2_unified_cache();
 }
 
 #define N(STR) (prefix + QString(STR))
 
 MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) {
     pipeline = sts->value(N("Pipelined"), DF_PIPELINE).toBool();
-    bunit = (enum BranchUnit)sts->value(N("BranchUnit"), DF_BUNIT).toUInt();
-    bp_bits = sts->value(N("BP_BITS"), DF_BP_BITS).toInt();
-    hunit = (enum HazardUnit)sts->value(N("HazardUnit"), DF_HUNIT).toUInt();
+    bunit = (BranchUnit)sts->value(N("BranchUnit"), DF_BUNIT).toUInt();
+    bp_bits = sts->value(N("BPbits"), DF_BP_BITS).toInt();
+    hunit = (HazardUnit)sts->value(N("HazardUnit"), DF_HUNIT).toUInt();
     exec_protect = sts->value(N("MemoryExecuteProtection"), DF_EXEC_PROTEC).toBool();
     write_protect = sts->value(N("MemoryWriteProtection"), DF_WRITE_PROTEC).toBool();
-    mem_acc_read = sts->value(N("MemoryRead"), DF_MEM_ACC_READ).toUInt();
-    mem_acc_write = sts->value(N("MemoryWrite"), DF_MEM_ACC_WRITE).toUInt();
-    mem_acc_burst = sts->value(N("MemoryBurts"), DF_MEM_ACC_BURST).toUInt();
     osem_enable = sts->value(N("OsemuEnable"), true).toBool();
     osem_known_syscall_stop = sts->value(N("OsemuKnownSyscallStop"), true).toBool();
     osem_unknown_syscall_stop = sts->value(N("OsemuUnknownSyscallStop"), true).toBool();
@@ -244,18 +343,16 @@ MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) {
     osem_fs_root = sts->value(N("OsemuFilesystemRoot"), "").toString();
     res_at_compile = sts->value(N("ResetAtCompile"), true).toBool();
     elf_path = sts->value(N("Elf"), DF_ELF).toString();
-    cch_program = MachineConfigCache(sts, N("ProgramCache_"));
-    cch_data = MachineConfigCache(sts, N("DataCache_"));
+    l1_data = MachineConfigCache(MemoryAccess::MemoryType::L1_CACHE, sts, N("L1DataCache_"));
+    l1_program = MachineConfigCache(MemoryAccess::MemoryType::L1_CACHE, sts, N("L1ProgramCache_"));
+    l2_unified = MachineConfigCache(MemoryAccess::MemoryType::L2_CACHE, sts, N("L2UnifiedCache_"));
 }
 
 void MachineConfig::store(QSettings *sts, const QString &prefix) {
     sts->setValue(N("Pipelined"), pipelined());
     sts->setValue(N("BranchUnit"), (unsigned)branch_unit());
-    sts->setValue(N("BP_BITS"), bht_bits());
+    sts->setValue(N("BPbits"), bht_bits());
     sts->setValue(N("HazardUnit"), (unsigned)hazard_unit());
-    sts->setValue(N("MemoryRead"), memory_access_time_read());
-    sts->setValue(N("MemoryWrite"), memory_access_time_write());
-    sts->setValue(N("MemoryBurts"), memory_access_time_burst());
     sts->setValue(N("OsemuEnable"), osemu_enable());
     sts->setValue(N("OsemuKnownSyscallStop"), osemu_known_syscall_stop());
     sts->setValue(N("OsemuUnknownSyscallStop"), osemu_unknown_syscall_stop());
@@ -263,9 +360,10 @@ void MachineConfig::store(QSettings *sts, const QString &prefix) {
     sts->setValue(N("OsemuExceptionStop"), osemu_exception_stop());
     sts->setValue(N("OsemuFilesystemRoot"), osemu_fs_root());
     sts->setValue(N("ResetAtCompile"), reset_at_compile());
-    sts->setValue(N("Elf"), elf_path);
-    cch_program.store(sts, N("ProgramCache_"));
-    cch_data.store(sts, N("DataCache_"));
+    sts->setValue(N("Elf"), elf());
+    l1_data.store(sts, N("L1DataCache_"));
+    l1_program.store(sts, N("L1ProgramCache_"));
+    l2_unified.store(sts, N("L2UnifiedCache_"));
 }
 
 #undef N
@@ -292,12 +390,10 @@ void MachineConfig::preset(enum ConfigPresets p) {
     // Some common configurations
     set_memory_execute_protection(DF_EXEC_PROTEC);
     set_memory_write_protection(DF_WRITE_PROTEC);
-    set_memory_access_time_read(DF_MEM_ACC_READ);
-    set_memory_access_time_write(DF_MEM_ACC_WRITE);
-    set_memory_access_time_burst(DF_MEM_ACC_BURST);
 
-    access_cache_program()->preset(p);
-    access_cache_data()->preset(p);
+    access_l1_data_cache()->preset(p);
+    access_l1_program_cache()->preset(p);
+    access_l2_unified_cache()->preset(p);
 }
 
 void MachineConfig::set_pipelined(bool v) {
@@ -317,7 +413,9 @@ bool MachineConfig::set_hazard_unit(QString hukind) {
     };
     if (!hukind_map.contains(hukind))
         return false;
+
     set_hazard_unit(hukind_map.value(hukind));
+
     return true;
 }
 
@@ -329,64 +427,68 @@ void MachineConfig::set_bht_bits(int8_t b) {
     bp_bits = b;
 }
 
-void MachineConfig::set_memory_execute_protection(bool v) {
-    exec_protect = v;
+void MachineConfig::set_memory_execute_protection(bool ep) {
+    exec_protect = ep;
 }
 
-void MachineConfig::set_memory_write_protection(bool v) {
-    write_protect = v;
+void MachineConfig::set_memory_write_protection(bool wp) {
+    write_protect = wp;
 }
 
-void MachineConfig::set_memory_access_time_read(unsigned v) {
-    mem_acc_read = v;
+void MachineConfig::set_memory_access_time_read(std::uint32_t ar) {
+    mem_acc_read = ar;
 }
 
-void MachineConfig::set_memory_access_time_write(unsigned v) {
-    mem_acc_write = v;
+void MachineConfig::set_memory_access_time_write(std::uint32_t aw) {
+    mem_acc_write = aw;
 }
 
-void MachineConfig::set_memory_access_time_burst(unsigned v) {
-    mem_acc_burst = v;
+void MachineConfig::set_memory_access_time_burst(std::uint32_t ab) {
+    mem_acc_burst = ab;
 }
 
-void MachineConfig::set_osemu_enable(bool v) {
-    osem_enable = v;
+void MachineConfig::set_osemu_enable(bool e) {
+    osem_enable = e;
 }
 
-void MachineConfig::set_osemu_known_syscall_stop(bool v) {
-    osem_known_syscall_stop = v;
+void MachineConfig::set_osemu_known_syscall_stop(bool ks) {
+    osem_known_syscall_stop = ks;
 }
 
-void MachineConfig::set_osemu_unknown_syscall_stop(bool v) {
-    osem_unknown_syscall_stop = v;
+void MachineConfig::set_osemu_unknown_syscall_stop(bool us) {
+    osem_unknown_syscall_stop = us;
 }
 
-void MachineConfig::set_osemu_interrupt_stop(bool v) {
-    osem_interrupt_stop = v;
+void MachineConfig::set_osemu_interrupt_stop(bool is) {
+    osem_interrupt_stop = is;
 }
 
-void MachineConfig::set_osemu_exception_stop(bool v) {
-    osem_exception_stop = v;
+void MachineConfig::set_osemu_exception_stop(bool es) {
+    osem_exception_stop = es;
 }
 
-void MachineConfig::set_osemu_fs_root(QString v) {
-    osem_fs_root = v;
+void MachineConfig::set_osemu_fs_root(QString r) {
+    osem_fs_root = r;
 }
 
-void MachineConfig::set_reset_at_compile(bool v) {
-    res_at_compile = v;
+void MachineConfig::set_reset_at_compile(bool r) {
+    res_at_compile = r;
 }
 
 void MachineConfig::set_elf(QString path) {
     elf_path = path;
 }
 
-void MachineConfig::set_cache_program(const MachineConfigCache &c) {
-    cch_program = c;
+void MachineConfig::set_l1_data_cache(const MachineConfigCache& l1_d) {
+    l1_data = l1_d;
 }
 
-void MachineConfig::set_cache_data(const MachineConfigCache &c) {
-    cch_data = c;
+void MachineConfig::set_l1_program_cache(const MachineConfigCache& l1_p) {
+    l1_program = l1_p;
+}
+
+void MachineConfig::set_l2_cache(const MachineConfigCache& l2) {
+    l2_unified = l2;
 }
 
 bool MachineConfig::pipelined() const {
@@ -414,18 +516,6 @@ bool MachineConfig::memory_execute_protection() const {
 
 bool MachineConfig::memory_write_protection() const {
     return write_protect;
-}
-
-unsigned MachineConfig::memory_access_time_read() const {
-    return mem_acc_read > 1 ? mem_acc_read : 1;
-}
-
-unsigned MachineConfig::memory_access_time_write() const {
-    return mem_acc_write > 1 ? mem_acc_write : 1;
-}
-
-unsigned MachineConfig::memory_access_time_burst() const {
-    return mem_acc_burst;
 }
 
 bool MachineConfig::osemu_enable() const {
@@ -456,20 +546,40 @@ QString MachineConfig::elf() const {
     return elf_path;
 }
 
-const MachineConfigCache &MachineConfig::cache_program() const {
-    return cch_program;
+bool MachineConfig::l1_data_enabled() const {
+    return l1_data != nullptr;
 }
 
-const MachineConfigCache &MachineConfig::cache_data() const {
-    return cch_data;
+bool MachineConfig::l1_program_enabled() const {
+    return l1_program != nullptr;
 }
 
-MachineConfigCache *MachineConfig::access_cache_program() {
-    return &cch_program;
+bool MachineConfig::l2_unified_enabled() const {
+    return l2_unified != nullptr;
 }
 
-MachineConfigCache *MachineConfig::access_cache_data() {
-    return &cch_data;
+const MachineConfigCache &MachineConfig::l1_data_cache() const {
+    return l1_data;
+}
+
+const MachineConfigCache &MachineConfig::l1_program_cache() const {
+    return l1_program;
+}
+
+const MachineConfigCache &MachineConfig::l2_unified_cache() const {
+    return l2_unified;
+}
+
+MachineConfigCache *MachineConfig::access_l1_data_cache() {
+    return &l1_data;
+}
+
+MachineConfigCache *MachineConfig::access_l1_program_cache() {
+    return &l1_program;
+}
+
+MachineConfigCache *MachineConfig::access_l2_unified_cache() {
+    return &l2_unified;
 }
 
 bool MachineConfig::operator==(const MachineConfig &c) const {
@@ -480,12 +590,10 @@ bool MachineConfig::operator==(const MachineConfig &c) const {
             CMP(hazard_unit) && \
             CMP(memory_execute_protection) && \
             CMP(memory_write_protection) && \
-            CMP(memory_access_time_read) && \
-            CMP(memory_access_time_write) && \
-            CMP(memory_access_time_burst) && \
             CMP(elf) && \
-            CMP(cache_program) && \
-            CMP(cache_data);
+            CMP(l1_data_cache) && \
+            CMP(l1_program_cache) && \
+            CMP(l2_unified_cache);
 #undef CMP
 }
 

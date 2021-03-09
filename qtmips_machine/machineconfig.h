@@ -38,61 +38,73 @@
 
 #include <QString>
 #include <QSettings>
+#include "memory.h"
 
 namespace machine {
 
-enum ConfigPresets {
-    CP_SINGLE, // No pipeline cpu without cache
-    CP_SINGLE_CACHE, // No pipeline cpu with cache
-    CP_PIPE_NO_HAZARD, // Pipelined cpu without hazard unit and without cache
-    CP_PIPE // Full pipelined cpu
+// TODO: add more options regarding L2.
+enum class ConfigPresets {
+    CP_SINGLE, // No pipeline cpu without cache.
+    CP_SINGLE_CACHE, // No pipeline cpu with a L1+L2 cache.
+    CP_PIPE_NO_HAZARD, // Pipelined cpu without hazard unit and without cache.
+    CP_PIPE // Full pipelined cpu with a L1+L2 cache.
 };
 
 class MachineConfigCache {
 public:
-    MachineConfigCache();
+    MachineConfigCache(MemoryAccess::MemoryType ct = MemoryAccess::MemoryType::L1_CACHE);
     MachineConfigCache(const MachineConfigCache *cc);
-    MachineConfigCache(const QSettings*, const QString &prefix = "");
+    MachineConfigCache(MemoryAccess::MemoryType ct, const QSettings*, const QString &prefix = "");
 
     void store(QSettings*, const QString &prefix = "");
 
     void preset(enum ConfigPresets);
 
-    enum ReplacementPolicy {
+    enum class ReplacementPolicy {
         RP_RAND, // Random
         RP_LRU, // Least recently used
         RP_LFU // Least frequently used
     };
 
-    enum WritePolicy {
+    enum class WritePolicy {
         WP_THROUGH_NOALLOC, // Write through
         WP_THROUGH_ALLOC, // Write through
         WP_BACK // Write back
     };
 
     // If cache should be used or not
-    void set_enabled(bool);
-    void set_sets(unsigned); // Number of sets
-    void set_blocks(unsigned); // Number of blocks
-    void set_associativity(unsigned); // Degree of associativity
-    void set_replacement_policy(enum ReplacementPolicy);
-    void set_write_policy(enum WritePolicy);
+    void set_enabled(bool e);
+    void set_upper_mem_access_read(std::uint32_t ar);
+    void set_upper_mem_access_write(std::uint32_t aw);
+    void set_upper_mem_access_burst(std::uint32_t ab);
+    void set_sets(std::uint32_t s); // Number of sets
+    void set_blocks(std::uint32_t b); // Number of blocks
+    void set_associativity(std::uint32_t a); // Degree of associativity
+    void set_replacement_policy(ReplacementPolicy rp);
+    void set_write_policy(WritePolicy wp);
+    void set_type(MemoryAccess::MemoryType ct);
 
     bool enabled() const;
-    unsigned sets() const;
-    unsigned blocks() const;
-    unsigned associativity() const;
-    enum ReplacementPolicy replacement_policy() const;
-    enum WritePolicy write_policy() const;
+    std::uint32_t upper_mem_access_read() const;
+    std::uint32_t upper_mem_access_write() const;
+    std::uint32_t upper_mem_access_burst() const;
+    std::uint32_t sets() const;
+    std::uint32_t blocks() const;
+    std::uint32_t associativity() const;
+    ReplacementPolicy replacement_policy() const;
+    WritePolicy write_policy() const;
+    MemoryAccess::MemoryType type() const;
 
     bool operator ==(const MachineConfigCache &c) const;
     bool operator !=(const MachineConfigCache &c) const;
 
 private:
     bool en;
-    unsigned n_sets, n_blocks, d_associativity;
-    enum ReplacementPolicy replac_pol;
-    enum WritePolicy write_pol;
+    std::uint32_t upper_mem_time_read, upper_mem_time_write, upper_mem_time_burst;
+    std::uint32_t n_sets, n_blocks, d_associativity;
+    ReplacementPolicy replac_pol;
+    WritePolicy write_pol;
+    MemoryAccess::MemoryType cache_type;
 };
 
 class MachineConfig {
@@ -111,7 +123,6 @@ public:
         HU_STALL_FORWARD
     };
 
-
     enum BranchUnit {
         BU_NONE, // Neither delay slot nor branch predictor
         BU_DELAY_SLOT, // Delay slot approach
@@ -123,36 +134,33 @@ public:
     // In default disabled.
     void set_pipelined(bool);
     // Hazard unit
-    void set_hazard_unit(enum HazardUnit);
-    bool set_hazard_unit(QString hukind);
+    void set_hazard_unit(HazardUnit);
+    bool set_hazard_unit(QString);
     // Branch unit
     // When pipelined, delay slot or branch predictor are only possible options.
     // When not pipelined, none and delay slot are only possible options.
-    void set_branch_unit(enum BranchUnit);
+    void set_branch_unit(BranchUnit);
     // Branch history table lookup bits
-    void set_bht_bits(std::int8_t bht_bits);
+    void set_bht_bits(std::int8_t);
     // Protect data memory from execution. Only program sections can be executed.
     void set_memory_execute_protection(bool);
     // Protect program memory from accidental writes.
     void set_memory_write_protection(bool);
-    // Set memory access times. Passed value is in cycles.
-    void set_memory_access_time_read(unsigned);
-    void set_memory_access_time_write(unsigned);
-    void set_memory_access_time_burst(unsigned);
     // Operating system and exceptions setup
     void set_osemu_enable(bool);
     void set_osemu_known_syscall_stop(bool);
     void set_osemu_unknown_syscall_stop(bool);
     void set_osemu_interrupt_stop(bool);
     void set_osemu_exception_stop(bool);
-    void set_osemu_fs_root(QString v);
+    void set_osemu_fs_root(QString);
     // reset machine befor internal compile/reload after external make
     void set_reset_at_compile(bool);
     // Set path to source elf file. This has to be set before core is initialized.
-    void set_elf(QString path);
+    void set_elf(QString);
     // Configure cache
-    void set_cache_program(const MachineConfigCache&);
-    void set_cache_data(const MachineConfigCache&);
+    void set_l1_data_cache(const MachineConfigCache&);
+    void set_l1_program_cache(const MachineConfigCache&);
+    void set_l2_unified_cache(const MachineConfigCache&);
 
     bool pipelined() const;
     enum BranchUnit branch_unit() const;
@@ -160,9 +168,6 @@ public:
     enum HazardUnit hazard_unit() const;
     bool memory_execute_protection() const;
     bool memory_write_protection() const;
-    unsigned memory_access_time_read() const;
-    unsigned memory_access_time_write() const;
-    unsigned memory_access_time_burst() const;
     bool osemu_enable() const;
     bool osemu_known_syscall_stop() const;
     bool osemu_unknown_syscall_stop() const;
@@ -171,28 +176,32 @@ public:
     QString osemu_fs_root() const;
     bool reset_at_compile() const;
     QString elf() const;
-    const MachineConfigCache &cache_program() const;
-    const MachineConfigCache &cache_data() const;
+    const MachineConfigCache &l1_data_cache() const;
+    const MachineConfigCache &l1_program_cache() const;
+    const MachineConfigCache &l2_unified_cache() const;
 
-    MachineConfigCache *access_cache_program();
-    MachineConfigCache *access_cache_data();
+    MachineConfigCache *access_l1_data_cache();
+    MachineConfigCache *access_l1_program_cache();
+    MachineConfigCache *access_l2_unified_cache();
 
-    bool operator ==(const MachineConfig &c) const;
-    bool operator !=(const MachineConfig &c) const;
+    bool operator ==(const MachineConfig&) const;
+    bool operator !=(const MachineConfig&) const;
 
 private:
     bool pipeline;
-    enum BranchUnit bunit;
+    BranchUnit bunit;
     std::int8_t bp_bits;
-    enum HazardUnit hunit;
+    HazardUnit hunit;
     bool exec_protect, write_protect;
-    unsigned mem_acc_read, mem_acc_write, mem_acc_burst;
     bool osem_enable, osem_known_syscall_stop, osem_unknown_syscall_stop;
     bool osem_interrupt_stop, osem_exception_stop;
     bool res_at_compile;
     QString osem_fs_root;
     QString elf_path;
-    MachineConfigCache cch_program, cch_data;
+    // L1 cache is split to data/program cache.
+    MachineConfigCache l1_data, l1_program;
+    // L2 cache is unified.
+    MachineConfigCache l2_unified;
 };
 
 }

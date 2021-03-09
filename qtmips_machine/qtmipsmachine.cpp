@@ -41,7 +41,9 @@ using namespace machine;
 
 QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool load_executable) :
                              QObject(), mcnf(&cc) {
-    MemoryAccess *cpu_mem;
+    MemoryAccess *cpu_mem, *mem_upper;
+    std::uint32_t min_cache_row_size;
+
     stat = ST_READY;
     symtab = nullptr;
 
@@ -78,26 +80,35 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
     perip_lcd_display = new LcdDisplay();
     addressapce_insert_range(perip_lcd_display, 0xffe00000, 0xffe4afff, true);
 
-    cch_program = new Cache(cpu_mem, &cc.cache_program(), cc.memory_access_time_read(),
+    /* If L2 cache is enabled, make it the upper level of L1, else use DRAM.  */
+    if (cc.l2_unified_cache().enabled()) {
+        l2_unified = new Cache(cpu_mem, cc.l2_unified_cache());
+        mem_upper = l2_unified;
+    } else {
+        l2_unified = nullptr;
+        mem_upper = cpu_mem;
+    }
+
+    l1_data = new Cache(mem_upper, cc.l1_data_cache(), cc.memory_access_time_read(),
                             cc.memory_access_time_write(), cc.memory_access_time_burst());
-    cch_data = new Cache(cpu_mem, &cc.cache_data(), cc.memory_access_time_read(),
+    l1_program = new Cache(mem_upper, cc.l1_program_cache(), cc.memory_access_time_read(),
                          cc.memory_access_time_write(), cc.memory_access_time_burst());
 
-    unsigned int min_cache_row_size = 16;
-    if (cc.cache_data().enabled())
-        min_cache_row_size = cc.cache_data().blocks() * 4;
-    if (cc.cache_program().enabled() &&
-        cc.cache_program().blocks() < min_cache_row_size)
-        min_cache_row_size = cc.cache_program().blocks() * 4;
+    min_cache_row_size = 16;
+    if (cc.l1_data_cache().enabled())
+        min_cache_row_size = cc.l1_data_cache().blocks() * 4;
+    if (cc.l1_program_cache().enabled() &&
+        cc.l1_program_cache().blocks() < min_cache_row_size)
+        min_cache_row_size = cc.l1_program_cache().blocks() * 4;
 
     cop0st = new Cop0State();
 
     if (cc.pipelined())
-        cr = new CorePipelined(regs, cch_program, cch_data, cc.hazard_unit(),
-                               cc.branch_unit(), cc.bht_bits(),
-                               min_cache_row_size, cop0st);
+        cr = new CorePipelined(regs, m_program, m_data, cc.hazard_unit(),
+                               cc.branch_unit(), cc.bht_bits(), min_cache_row_size,
+                               cop0st);
     else
-        cr = new CoreSingle(regs, cch_program, cch_data,
+        cr = new CoreSingle(regs, m_program, m_data,
                             cc.branch_unit() == machine::MachineConfig::BU_DELAY_SLOT,
                             min_cache_row_size, cop0st);
 
@@ -135,12 +146,12 @@ QtMipsMachine::~QtMipsMachine() {
     if (mem != nullptr)
         delete mem;
     mem = nullptr;
-    if (cch_program != nullptr)
-        delete cch_program;
-    cch_program = nullptr;
-    if (cch_data != nullptr)
-        delete cch_data;
-    cch_data = nullptr;
+    if (m_program != nullptr)
+        delete m_program;
+    m_program = nullptr;
+    if (m_data != nullptr)
+        delete m_data;
+    m_data = nullptr;
     if (physaddrspace != nullptr)
         delete physaddrspace;
     physaddrspace = nullptr;
@@ -177,23 +188,23 @@ Memory *QtMipsMachine::memory_rw() {
     return mem;
 }
 
-const Cache *QtMipsMachine::cache_program() {
-    return cch_program;
+const MemoryAccess &QtMipsMachine::memory_program() {
+    return *m_program;
 }
 
-const Cache *QtMipsMachine::cache_data() {
-    return cch_data;
+const MemoryAccess &QtMipsMachine::memory_data() {
+    return *m_data;
 }
 
-Cache *QtMipsMachine::cache_data_rw() {
-    return cch_data;
+MemoryAccess *QtMipsMachine::memory_data_rw() {
+    return m_data;
 }
 
-void QtMipsMachine::cache_sync() {
-    if (cch_program != nullptr)
-        cch_program->sync();
-    if (cch_data != nullptr)
-        cch_data->sync();
+void QtMipsMachine::mem_sync() {
+    if (m_program != nullptr)
+        m_program->sync();
+    if (m_data != nullptr)
+        m_data->sync();
 }
 
 const PhysAddrSpace *QtMipsMachine::physical_address_space() {
@@ -226,9 +237,9 @@ const SymbolTable *QtMipsMachine::symbol_table(bool create) {
     return symbol_table_rw(create);
 }
 
-void QtMipsMachine::set_symbol(QString name, std::uint32_t value,
-                               std::uint32_t size, unsigned char info,
-                               unsigned char other) {
+void QtMipsMachine::set_symbol(QString name, size_t value,
+                               std::uint32_t size, std::uint8_t info,
+                               std::uint8_t other) {
     if (symtab == nullptr)
         symtab = new SymbolTable;
     symtab->set_symbol(name, value, size, info, other);
@@ -317,8 +328,8 @@ void QtMipsMachine::restart() {
     regs->reset();
     if (mem_program_only != nullptr)
         mem->reset(*mem_program_only);
-    cch_program->reset();
-    cch_data->reset();
+    m_program->reset();
+    m_data->reset();
     cr->reset();
     set_status(ST_READY);
 }

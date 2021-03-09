@@ -163,6 +163,10 @@ std::uint32_t MemorySection::get_change_counter() const {
     return 0;
 }
 
+MemoryAccess::MemoryType MemorySection::type() const {
+    return MemoryType::DRAM;
+}
+
 std::uint32_t MemorySection::length() const {
     return len;
 }
@@ -278,6 +282,10 @@ std::uint32_t Memory::rword(std::uint32_t address, bool debug_access) const {
 
 std::uint32_t Memory::get_change_counter() const {
     return change_counter;
+}
+
+MemoryAccess::MemoryType MemorySection::type() const {
+    return MemoryType::DRAM;
 }
 
 bool Memory::operator==(const Memory&m) const {
