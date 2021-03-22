@@ -381,8 +381,8 @@ struct Core::dtDecode Core::decode(const struct dtFetch &dt) {
         .val_rt = val_rt,
         .immediate_val = immediate_val,
         .rwrite = rwrite,
-        .ff_rs = FORWARD_NONE,
-        .ff_rt = FORWARD_NONE,
+        .ff_rs = ForwardFrom::FORWARD_NONE,
+        .ff_rt = ForwardFrom::FORWARD_NONE,
         .inst_addr = dt.inst_addr,
         .excause = excause,
         .in_delay_slot = dt.in_delay_slot,
@@ -467,8 +467,8 @@ struct Core::dtExecute Core::execute(const struct dtDecode &dt) {
     emit execute_alu_value(alu_val);
     emit execute_reg1_value(dt.val_rs);
     emit execute_reg2_value(dt.val_rt);
-    emit execute_reg1_ff_value(dt.ff_rs);
-    emit execute_reg2_ff_value(dt.ff_rt);
+    emit execute_reg1_ff_value((uint32_t) dt.ff_rs);
+    emit execute_reg2_ff_value((uint32_t) dt.ff_rt);
     emit execute_immediate_value(dt.immediate_val);
     emit execute_regw_value(dt.regwrite);
     emit execute_memtoreg_value(dt.memread);
@@ -482,7 +482,7 @@ struct Core::dtExecute Core::execute(const struct dtDecode &dt) {
     emit execute_rd_num_value(dt.num_rd);
     if (dt.stall)
         emit execute_stall_forward_value(1);
-    else if (dt.ff_rs != FORWARD_NONE || dt.ff_rt != FORWARD_NONE)
+    else if (dt.ff_rs != ForwardFrom::FORWARD_NONE || dt.ff_rt != ForwardFrom::FORWARD_NONE)
         emit execute_stall_forward_value(2);
     else
         emit execute_stall_forward_value(0);
@@ -658,8 +658,8 @@ void Core::dtDecodeInit(struct dtDecode &dt) {
     dt.val_rt = 0;
     dt.rwrite = 0;
     dt.immediate_val = 0;
-    dt.ff_rs = FORWARD_NONE;
-    dt.ff_rt = FORWARD_NONE;
+    dt.ff_rs = ForwardFrom::FORWARD_NONE;
+    dt.ff_rt = ForwardFrom::FORWARD_NONE;
     dt.excause = EXCAUSE_NONE;
     dt.in_delay_slot = false;
     dt.stall = false;
@@ -833,8 +833,8 @@ void CorePipelined::do_step(bool skip_break) {
         return;
     }
 
-    dt_d.ff_rs = FORWARD_NONE;
-    dt_d.ff_rt = FORWARD_NONE;
+    dt_d.ff_rs = ForwardFrom::FORWARD_NONE;
+    dt_d.ff_rt = ForwardFrom::FORWARD_NONE;
 
     if (hazard_unit != MachineConfig::HU_NONE) {
         // Note: We make exception with $0 as that has no effect when written and is used in nop instruction
@@ -852,11 +852,11 @@ void CorePipelined::do_step(bool skip_break) {
                 // Forward result value
                 if (dt_d.alu_req_rs && dt_m.rwrite == dt_d.num_rs) {
                     dt_d.val_rs = dt_m.towrite_val;
-                    dt_d.ff_rs = FORWARD_FROM_W;
+                    dt_d.ff_rs = ForwardFrom::FORWARD_FROM_W;
                 }
                 if (dt_d.alu_req_rt && dt_m.rwrite == dt_d.num_rt) {
                     dt_d.val_rt = dt_m.towrite_val;
-                    dt_d.ff_rt = FORWARD_FROM_W;
+                    dt_d.ff_rt = ForwardFrom::FORWARD_FROM_W;
                 }
             } else
                 stall = true;
@@ -870,11 +870,11 @@ void CorePipelined::do_step(bool skip_break) {
                     // Forward result value
                     if (dt_d.alu_req_rs && dt_e.rwrite == dt_d.num_rs) {
                         dt_d.val_rs = dt_e.alu_val;
-                        dt_d.ff_rs = FORWARD_FROM_M;
+                        dt_d.ff_rs = ForwardFrom::FORWARD_FROM_M;
                      }
                     if (dt_d.alu_req_rt && dt_e.rwrite == dt_d.num_rt) {
                         dt_d.val_rt = dt_e.alu_val;
-                        dt_d.ff_rt = FORWARD_FROM_M;
+                        dt_d.ff_rt = ForwardFrom::FORWARD_FROM_M;
                     }
                 }
             } else

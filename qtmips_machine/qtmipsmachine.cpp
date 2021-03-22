@@ -40,7 +40,7 @@
 using namespace machine;
 
 QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool load_executable) :
-                             QObject(), mcnf(&cc) {
+                             QObject(), mcnf(cc) {
     MemoryAccess *cpu_mem, *mem_upper;
     std::uint32_t min_cache_row_size;
 
@@ -82,17 +82,24 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
 
     /* If L2 cache is enabled, make it the upper level of L1, else use DRAM.  */
     if (cc.l2_unified_cache().enabled()) {
-        l2_unified = new Cache(cpu_mem, cc.l2_unified_cache());
+        l2_unified = new Cache(cpu_mem, cc.l2_unified_cache(),
+                               cc.l2_unified_cache().upper_mem_access_read(),
+                               cc.l2_unified_cache().upper_mem_access_write(),
+                               cc.l2_unified_cache().upper_mem_access_burst());
         mem_upper = l2_unified;
     } else {
         l2_unified = nullptr;
         mem_upper = cpu_mem;
     }
 
-    l1_data = new Cache(mem_upper, cc.l1_data_cache(), cc.memory_access_time_read(),
-                            cc.memory_access_time_write(), cc.memory_access_time_burst());
-    l1_program = new Cache(mem_upper, cc.l1_program_cache(), cc.memory_access_time_read(),
-                         cc.memory_access_time_write(), cc.memory_access_time_burst());
+    l1_data = new Cache(mem_upper, cc.l1_data_cache(),
+                        cc.l1_data_cache().upper_mem_access_read(),
+                        cc.l1_data_cache().upper_mem_access_write(),
+                        cc.l1_data_cache().upper_mem_access_burst());
+    l1_program = new Cache(mem_upper, cc.l1_program_cache(),
+                           cc.l1_program_cache().upper_mem_access_read(),
+                           cc.l1_program_cache().upper_mem_access_write(),
+                           cc.l1_program_cache().upper_mem_access_burst());
 
     min_cache_row_size = 16;
     if (cc.l1_data_cache().enabled())
@@ -104,11 +111,11 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
     cop0st = new Cop0State();
 
     if (cc.pipelined())
-        cr = new CorePipelined(regs, m_program, m_data, cc.hazard_unit(),
+        cr = new CorePipelined(regs, l1_program, l1_data, cc.hazard_unit(),
                                cc.branch_unit(), cc.bht_bits(), min_cache_row_size,
                                cop0st);
     else
-        cr = new CoreSingle(regs, m_program, m_data,
+        cr = new CoreSingle(regs, l1_program, l1_data,
                             cc.branch_unit() == machine::MachineConfig::BU_DELAY_SLOT,
                             min_cache_row_size, cop0st);
 
@@ -146,12 +153,15 @@ QtMipsMachine::~QtMipsMachine() {
     if (mem != nullptr)
         delete mem;
     mem = nullptr;
-    if (m_program != nullptr)
-        delete m_program;
-    m_program = nullptr;
-    if (m_data != nullptr)
-        delete m_data;
-    m_data = nullptr;
+    if (l1_program != nullptr)
+        delete l1_program;
+    l1_program = nullptr;
+    if (l1_data != nullptr)
+        delete l1_data;
+    l1_data = nullptr;
+    if (l2_unified != nullptr)
+        delete l2_unified;
+    l2_unified = nullptr;
     if (physaddrspace != nullptr)
         delete physaddrspace;
     physaddrspace = nullptr;
@@ -188,23 +198,33 @@ Memory *QtMipsMachine::memory_rw() {
     return mem;
 }
 
-const MemoryAccess &QtMipsMachine::memory_program() {
-    return *m_program;
+const Cache *QtMipsMachine::l1_program_cache() const {
+    return l1_program;
 }
 
-const MemoryAccess &QtMipsMachine::memory_data() {
-    return *m_data;
+const Cache *QtMipsMachine::l1_data_cache() const {
+    return l1_data;
 }
 
-MemoryAccess *QtMipsMachine::memory_data_rw() {
-    return m_data;
+const Cache *QtMipsMachine::l2_unified_cache() const {
+    return l2_unified;
+}
+
+Cache *QtMipsMachine::l1_data_cache_rw() const {
+    return l1_data;
+}
+
+Cache *QtMipsMachine::l2_unified_cache_rw() const {
+    return l2_unified;
 }
 
 void QtMipsMachine::mem_sync() {
-    if (m_program != nullptr)
-        m_program->sync();
-    if (m_data != nullptr)
-        m_data->sync();
+    if (l1_program != nullptr)
+        l1_program->sync();
+    if (l1_data != nullptr)
+        l1_data->sync();
+    if (l2_unified != nullptr)
+        l2_unified->sync();
 }
 
 const PhysAddrSpace *QtMipsMachine::physical_address_space() {
@@ -227,18 +247,18 @@ LcdDisplay *QtMipsMachine::peripheral_lcd_display() {
     return perip_lcd_display;
 }
 
+const SymbolTable *QtMipsMachine::symbol_table(bool create) {
+    return symbol_table_rw(create);
+}
+
 SymbolTable *QtMipsMachine::symbol_table_rw(bool create) {
     if (create && (symtab == nullptr))
         symtab = new SymbolTable;
     return symtab;
 }
 
-const SymbolTable *QtMipsMachine::symbol_table(bool create) {
-    return symbol_table_rw(create);
-}
-
-void QtMipsMachine::set_symbol(QString name, size_t value,
-                               std::uint32_t size, std::uint8_t info,
+void QtMipsMachine::set_symbol(QString name, std::uint32_t value,
+                               size_t size, std::uint8_t info,
                                std::uint8_t other) {
     if (symtab == nullptr)
         symtab = new SymbolTable;
@@ -328,8 +348,9 @@ void QtMipsMachine::restart() {
     regs->reset();
     if (mem_program_only != nullptr)
         mem->reset(*mem_program_only);
-    m_program->reset();
-    m_data->reset();
+    l1_program->reset();
+    l1_data->reset();
+    l2_unified->reset();
     cr->reset();
     set_status(ST_READY);
 }

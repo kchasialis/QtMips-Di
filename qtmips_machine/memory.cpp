@@ -122,9 +122,13 @@ std::uint32_t MemoryAccess::read_ctl(enum AccessControl ctl, std::uint32_t offse
 
 void MemoryAccess::sync() { }
 
-enum LocationStatus MemoryAccess::location_status(std::uint32_t address) const {
+LocationStatus MemoryAccess::location_status(std::uint32_t address) const {
     (void)address;
     return LOCSTAT_NONE;
+}
+
+MemoryAccess::MemoryType MemoryAccess::type() const {
+    return MemoryType::DRAM;
 }
 
 MemorySection::MemorySection(std::uint32_t length) {
@@ -284,7 +288,7 @@ std::uint32_t Memory::get_change_counter() const {
     return change_counter;
 }
 
-MemoryAccess::MemoryType MemorySection::type() const {
+MemoryAccess::MemoryType Memory::type() const {
     return MemoryType::DRAM;
 }
 

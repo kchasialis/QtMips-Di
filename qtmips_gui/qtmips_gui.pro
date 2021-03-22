@@ -4,8 +4,11 @@ qtHaveModule(printsupport): DEFINES += QTMIPS_WITH_PRINTING=1
 
 TARGET = qtmips_gui
 CONFIG += c++11
+CONFIG += sdk_no_version_check
 
 TEMPLATE = app
+
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x050800
 
 win32:CONFIG(release, debug|release): LIBS_SUBDIR = release
 else:win32:CONFIG(debug, debug|release): LIBS_SUBDIR = debug

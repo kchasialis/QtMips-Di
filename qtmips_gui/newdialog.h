@@ -43,6 +43,7 @@
 #include "ui_NewDialog.h"
 #include "ui_NewDialogCache.h"
 #include "machineconfig.h"
+#include "memory.h"
 
 class NewDialogCacheHandler;
 
@@ -83,7 +84,8 @@ private slots:
 
 private:
     Ui::NewDialog *ui;
-    Ui::NewDialogCache *ui_cache_p, *ui_cache_d;
+    Ui::NewDialogCache *ui_l1_p_cache, *ui_l1_d_cache;
+    Ui::NewDialogCache *ui_l2_cache;
     QSettings *settings;
 
     machine::MachineConfig *config;
@@ -92,7 +94,8 @@ private:
     unsigned preset_number();
     void load_settings();
     void store_settings();
-	NewDialogCacheHandler *cache_handler_p, *cache_handler_d;
+    NewDialogCacheHandler *l1_p_cache_handler, *l1_d_cache_handler;
+    NewDialogCacheHandler *l2_u_cache_handler;
 };
 
 class NewDialogCacheHandler : QObject {
@@ -111,6 +114,9 @@ private slots:
 	void degreeassociativity();
 	void replacement(int);
 	void writeback(int);
+    void access_read(int);
+    void access_write(int);
+    void access_burst(int);
 
 private:
 	NewDialog *nd;

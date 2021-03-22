@@ -135,9 +135,9 @@ QVariant ProgramModel::data(const QModelIndex &index, int role) const {
         if (!get_row_address(address, index.row()) ||
             machine == nullptr)
             return QVariant();
-        if (index.column() == 2 && machine->cache_program() != nullptr) {
+        if (index.column() == 2 && machine->l1_program_cache() != nullptr) {
             machine::LocationStatus loc_stat;
-            loc_stat = machine->cache_program()->location_status(address);
+            loc_stat = machine->l1_program_cache()->location_status(address);
             if (loc_stat & machine::LOCSTAT_CACHED) {
                 QBrush bgd(Qt::lightGray);
                 return bgd;
@@ -187,8 +187,8 @@ void ProgramModel::update_all() {
     mem = mem_access();
     if (mem != nullptr) {
         memory_change_counter = mem->get_change_counter();
-        if (machine->cache_program() != nullptr)
-            cache_program_change_counter = machine->cache_program()->get_change_counter();
+        if (machine->l1_program_cache() != nullptr)
+            cache_program_change_counter = machine->l1_program_cache()->get_change_counter();
     }
     stages_need_update = false;
     emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1));
@@ -203,8 +203,8 @@ void ProgramModel::check_for_updates() {
 
     if (memory_change_counter != mem->get_change_counter())
         need_update = true;
-    if (machine->cache_data() != nullptr) {
-        if (cache_program_change_counter != machine->cache_program()->get_change_counter())
+    if (machine->l1_data_cache() != nullptr) {
+        if (cache_program_change_counter != machine->l1_data_cache()->get_change_counter())
             need_update = true;
     }
     if (!need_update)

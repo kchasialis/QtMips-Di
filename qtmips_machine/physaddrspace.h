@@ -72,7 +72,7 @@ private:
          bool owned;
     };
     QMap<std::uint32_t, RangeDesc *> ranges_by_addr;
-    QMap<MemoryAccess *, RangeDesc *> ranges_by_access;
+    QMultiMap<MemoryAccess *, RangeDesc *> ranges_by_access;
     RangeDesc *find_range(std::uint32_t address) const;
     mutable std::uint32_t change_counter;
 };

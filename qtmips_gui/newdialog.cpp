@@ -51,12 +51,21 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
 
     ui = new Ui::NewDialog();
     ui->setupUi(this);
-    ui_cache_p = new Ui::NewDialogCache();
-    ui_cache_p->setupUi(ui->tab_cache_program);
-    ui_cache_p->writeback_policy->hide();
-    ui_cache_p->label_writeback->hide();
-    ui_cache_d = new Ui::NewDialogCache();
-    ui_cache_d->setupUi(ui->tab_cache_data);
+
+    ui_l1_p_cache = new Ui::NewDialogCache();
+    ui_l1_p_cache->setupUi(ui->tab_l1_program_cache);
+    ui_l1_p_cache->writeback_policy->hide();
+    ui_l1_p_cache->label_writeback->hide();
+    // We assume L1 caches access time = CPU time and cannot be altered.
+    ui_l1_p_cache->access_time->hide();
+
+    ui_l1_d_cache = new Ui::NewDialogCache();
+    ui_l1_d_cache->setupUi(ui->tab_l1_data_cache);
+    // We assume L1 caches access time = CPU time and cannot be altered.
+    ui_l1_p_cache->access_time->hide();
+
+    ui_l2_cache = new Ui::NewDialogCache();
+    ui_l2_cache->setupUi(ui->tab_l2_unified_cache);
 
     ui->predictor_bits->addItem("1");
     ui->predictor_bits->addItem("2");
@@ -87,9 +96,9 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
 
     connect(ui->mem_protec_exec, SIGNAL(clicked(bool)), this, SLOT(mem_protec_exec_change(bool)));
     connect(ui->mem_protec_write, SIGNAL(clicked(bool)), this, SLOT(mem_protec_write_change(bool)));
-    connect(ui->mem_time_read, SIGNAL(valueChanged(int)), this, SLOT(mem_time_read_change(int)));
-    connect(ui->mem_time_write, SIGNAL(valueChanged(int)), this, SLOT(mem_time_write_change(int)));
-    connect(ui->mem_time_burst, SIGNAL(valueChanged(int)), this, SLOT(mem_time_burst_change(int)));
+    connect(ui->mem_access_read, SIGNAL(valueChanged(int)), this, SLOT(mem_time_read_change(int)));
+    connect(ui->mem_access_write, SIGNAL(valueChanged(int)), this, SLOT(mem_time_write_change(int)));
+    connect(ui->mem_access_burst, SIGNAL(valueChanged(int)), this, SLOT(mem_time_burst_change(int)));
 
     connect(ui->osemu_enable, SIGNAL(clicked(bool)), this, SLOT(osemu_enable_change(bool)));
     connect(ui->osemu_known_syscall_stop, SIGNAL(clicked(bool)), this, SLOT(osemu_known_syscall_stop_change(bool)));
@@ -99,8 +108,9 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     connect(ui->osemu_fs_root_browse, SIGNAL(clicked(bool)), this, SLOT(browse_osemu_fs_root()));
     connect(ui->osemu_fs_root, SIGNAL(textChanged(QString)), this, SLOT(osemu_fs_root_change(QString)));
 
-	cache_handler_d = new NewDialogCacheHandler(this, ui_cache_d);
-	cache_handler_p = new NewDialogCacheHandler(this, ui_cache_p);
+    l1_p_cache_handler = new NewDialogCacheHandler(this, ui_l1_p_cache);
+    l1_d_cache_handler = new NewDialogCacheHandler(this, ui_l1_d_cache);
+    l2_u_cache_handler = new NewDialogCacheHandler(this, ui_l2_cache);
 
     // TODO remove this block when protections are implemented
     ui->mem_protec_exec->setVisible(false);
@@ -110,8 +120,9 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
 }
 
 NewDialog::~NewDialog() {
-    delete ui_cache_d;
-    delete ui_cache_p;
+    delete l1_p_cache_handler;
+    delete l1_d_cache_handler;
+    delete l2_u_cache_handler;
     delete ui;
     // Settings is freed by parent
     delete config;
@@ -251,22 +262,22 @@ void NewDialog::mem_protec_write_change(bool v) {
 }
 
 void NewDialog::mem_time_read_change(int v) {
-    if (config->memory_access_time_read() != (unsigned)v) {
-        config->set_memory_access_time_read(v);
+    if (config->l2_unified_cache().upper_mem_access_read() != (unsigned)v) {
+        config->access_l2_unified_cache()->set_upper_mem_access_read(v);
         switch2custom();
     }
 }
 
 void NewDialog::mem_time_write_change(int v) {
-    if (config->memory_access_time_write() != (unsigned)v) {
-        config->set_memory_access_time_write(v);
+    if (config->l2_unified_cache().upper_mem_access_write() != (unsigned)v) {
+        config->access_l2_unified_cache()->set_upper_mem_access_write(v);
         switch2custom();
     }
 }
 
 void NewDialog::mem_time_burst_change(int v) {
-    if (config->memory_access_time_burst() != (unsigned)v) {
-        config->set_memory_access_time_burst(v);
+    if (config->l2_unified_cache().upper_mem_access_burst() != (unsigned)v) {
+        config->access_l2_unified_cache()->set_upper_mem_access_burst(v);
         switch2custom();
     }
 }
@@ -295,7 +306,7 @@ void NewDialog::browse_osemu_fs_root() {
     QFileDialog osemu_fs_root_dialog(this);
     osemu_fs_root_dialog.setFileMode(QFileDialog::DirectoryOnly);
     if (osemu_fs_root_dialog.exec()) {
-        QString path = osemu_fs_root_dialog.selectedFiles()[0];
+        QString path = osemu_fs_root_dialog.selectedFiles().at(0);
         ui->osemu_fs_root->setText(path);
         config->set_osemu_fs_root(path);
     }
@@ -325,12 +336,13 @@ void NewDialog::config_gui() {
     // Memory
     ui->mem_protec_exec->setChecked(config->memory_execute_protection());
     ui->mem_protec_write->setChecked(config->memory_write_protection());
-    ui->mem_time_read->setValue(config->memory_access_time_read());
-    ui->mem_time_write->setValue(config->memory_access_time_write());
-    ui->mem_time_burst->setValue(config->memory_access_time_burst());
+    ui->mem_access_read->setValue(config->l2_unified_cache().upper_mem_access_read());
+    ui->mem_access_write->setValue(config->l2_unified_cache().upper_mem_access_write());
+    ui->mem_access_burst->setValue(config->l2_unified_cache().upper_mem_access_burst());
     // Cache
-	cache_handler_d->config_gui();
-	cache_handler_p->config_gui();
+    l1_d_cache_handler->config_gui();
+    l1_p_cache_handler->config_gui();
+    l2_u_cache_handler->config_gui();
     // Operating system and exceptions
     ui->osemu_enable->setChecked(config->osemu_enable());
     ui->osemu_known_syscall_stop->setChecked(config->osemu_known_syscall_stop());
@@ -352,13 +364,13 @@ void NewDialog::config_gui() {
 unsigned NewDialog::preset_number() {
     enum machine::ConfigPresets preset;
     if (ui->preset_no_pipeline->isChecked())
-        preset = machine::CP_SINGLE;
+        preset = machine::ConfigPresets::CP_SINGLE;
     else if (ui->preset_no_pipeline_cache->isChecked())
-        preset = machine::CP_SINGLE_CACHE;
+        preset = machine::ConfigPresets::CP_SINGLE_CACHE;
     else if (ui->preset_pipelined_bare->isChecked())
-        preset = machine::CP_PIPE_NO_HAZARD;
+        preset = machine::ConfigPresets::CP_PIPE_NO_HAZARD;
     else if (ui->preset_pipelined->isChecked())
-        preset = machine::CP_PIPE;
+        preset = machine::ConfigPresets::CP_PIPE;
     else
         return 0;
     return (unsigned)preset + 1;
@@ -370,8 +382,9 @@ void NewDialog::load_settings() {
 
     // Load config
     config = new machine::MachineConfig(settings);
-	cache_handler_d->set_config(config->access_cache_data());
-	cache_handler_p->set_config(config->access_cache_program());
+    l1_d_cache_handler->set_config(config->access_l1_data_cache());
+    l1_p_cache_handler->set_config(config->access_l1_program_cache());
+    l2_u_cache_handler->set_config(config->access_l2_unified_cache());
 
     // Load preset
     unsigned preset = settings->value("Preset", 1).toUInt();
@@ -380,16 +393,16 @@ void NewDialog::load_settings() {
         auto p = (enum machine::ConfigPresets)(preset - 1);
         config->preset(p);
         switch (p) {
-        case machine::CP_SINGLE:
+        case machine::ConfigPresets::CP_SINGLE:
             ui->preset_no_pipeline->setChecked(true);
             break;
-        case machine::CP_SINGLE_CACHE:
+        case machine::ConfigPresets::CP_SINGLE_CACHE:
             ui->preset_no_pipeline_cache->setChecked(true);
             break;
-        case machine::CP_PIPE_NO_HAZARD:
+        case machine::ConfigPresets::CP_PIPE_NO_HAZARD:
             ui->preset_pipelined_bare->setChecked(true);
             break;
-        case machine::CP_PIPE:
+        case machine::ConfigPresets::CP_PIPE:
             ui->preset_pipelined->setChecked(true);
             break;
         }
@@ -421,6 +434,9 @@ NewDialogCacheHandler::NewDialogCacheHandler(NewDialog *nd, Ui::NewDialogCache *
 	connect(ui->degree_of_associativity, SIGNAL(editingFinished()), this, SLOT(degreeassociativity()));
 	connect(ui->replacement_policy, SIGNAL(activated(int)), this, SLOT(replacement(int)));
 	connect(ui->writeback_policy, SIGNAL(activated(int)), this, SLOT(writeback(int)));
+    connect(ui->l2_access_read, SIGNAL(valueChanged(int)), this, SLOT(access_read(int)));
+    connect(ui->l2_access_write, SIGNAL(valueChanged(int)), this, SLOT(access_write(int)));
+    connect(ui->l2_access_burst, SIGNAL(valueChanged(int)), this, SLOT(access_burst(int)));
 }
 
 void NewDialogCacheHandler::set_config(machine::MachineConfigCache *config) {
@@ -434,6 +450,9 @@ void NewDialogCacheHandler::config_gui() {
     ui->degree_of_associativity->setValue(config->associativity());
     ui->replacement_policy->setCurrentIndex((int)config->replacement_policy());
     ui->writeback_policy->setCurrentIndex((int)config->write_policy());
+    ui->l2_access_read->setValue(config->upper_mem_access_read());
+    ui->l2_access_write->setValue(config->upper_mem_access_write());
+    ui->l2_access_burst->setValue(config->upper_mem_access_burst());
 }
 
 void NewDialogCacheHandler::enabled(bool val) {
@@ -464,4 +483,25 @@ void NewDialogCacheHandler::replacement(int val) {
 void NewDialogCacheHandler::writeback(int val) {
 	config->set_write_policy((enum machine::MachineConfigCache::WritePolicy)val);
 	nd->switch2custom();
+}
+
+void NewDialogCacheHandler::access_read(int val) {
+    if (config->type() == machine::MemoryAccess::MemoryType::L1_CACHE) {
+        config->set_upper_mem_access_read(val);
+        nd->switch2custom();
+    }
+}
+
+void NewDialogCacheHandler::access_write(int val) {
+    if (config->type() == machine::MemoryAccess::MemoryType::L1_CACHE) {
+        config->set_upper_mem_access_write(val);
+        nd->switch2custom();
+    }
+}
+
+void NewDialogCacheHandler::access_burst(int val) {
+    if (config->type() == machine::MemoryAccess::MemoryType::L1_CACHE) {
+        config->set_upper_mem_access_burst(val);
+        nd->switch2custom();
+    }
 }

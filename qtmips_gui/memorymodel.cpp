@@ -110,8 +110,8 @@ QVariant MemoryModel::data(const QModelIndex &index, int role) const {
         mem = mem_access();
         if (mem == nullptr)
             return QString("");
-        if ((access_through_cache > 0) && (machine->cache_data() != nullptr))
-            mem = machine->cache_data();
+        if ((access_through_cache > 0) && (machine->l1_data_cache() != nullptr))
+            mem = machine->l1_data_cache();
         address += cellSizeBytes() * (index.column() - 1);
         if (address < index0_offset)
             return QString("");
@@ -149,9 +149,9 @@ QVariant MemoryModel::data(const QModelIndex &index, int role) const {
             machine == nullptr || index.column() == 0)
             return QVariant();
         address += cellSizeBytes() * (index.column() - 1);
-        if (machine->cache_data() != nullptr) {
+        if (machine->l1_data_cache() != nullptr) {
             machine::LocationStatus loc_stat;
-            loc_stat = machine->cache_data()->location_status(address);
+            loc_stat = machine->l1_data_cache()->location_status(address);
             if (loc_stat & machine::LOCSTAT_DIRTY) {
                 QBrush bgd(Qt::yellow);
                 return bgd;
@@ -197,8 +197,8 @@ void MemoryModel::update_all() {
     mem = mem_access();
     if (mem != nullptr) {
         memory_change_counter = mem->get_change_counter();
-        if (machine->cache_data() != nullptr)
-            cache_data_change_counter = machine->cache_data()->get_change_counter();
+        if (machine->l1_data_cache() != nullptr)
+            cache_data_change_counter = machine->l1_data_cache()->get_change_counter();
     }
     emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1));
 }
@@ -212,8 +212,8 @@ void MemoryModel::check_for_updates() {
 
     if (memory_change_counter != mem->get_change_counter())
         need_update = true;
-    if (machine->cache_data() != nullptr) {
-        if (cache_data_change_counter != machine->cache_data()->get_change_counter())
+    if (machine->l1_data_cache() != nullptr) {
+        if (cache_data_change_counter != machine->l1_data_cache()->get_change_counter())
             need_update = true;
     }
     if (!need_update)
@@ -267,8 +267,8 @@ bool MemoryModel::setData(const QModelIndex & index, const QVariant & value, int
         mem = mem_access_rw();
         if (mem == nullptr)
             return false;
-        if ((access_through_cache > 0) && (machine->cache_data_rw() != nullptr))
-            mem = machine->cache_data_rw();
+        if ((access_through_cache > 0) && (machine->l1_data_cache_rw() != nullptr))
+            mem = machine->l1_data_cache_rw();
         address += cellSizeBytes() * (index.column() - 1);
         switch (cell_size) {
         case CELLSIZE_BYTE:

@@ -75,7 +75,7 @@ Cache::Cache(MemoryAccess *m, const MachineConfigCache& cc, std::uint32_t upper_
     }
     // Allocate replacement policy data
     switch (cnf.replacement_policy()) {
-    case MachineConfigCache::RP_LFU:
+    case MachineConfigCache::ReplacementPolicy::RP_LFU:
         replc.lfu = new std::uint32_t *[cnf.sets()];
         for (size_t row = 0; row < cnf.sets(); row++) {
             replc.lfu[row] = new std::uint32_t[cnf.associativity()];
@@ -83,7 +83,7 @@ Cache::Cache(MemoryAccess *m, const MachineConfigCache& cc, std::uint32_t upper_
                  replc.lfu[row][i] = 0;
         }
         break;
-    case MachineConfigCache::RP_LRU:
+    case MachineConfigCache::ReplacementPolicy::RP_LRU:
         replc.lru = new std::uint32_t*[cnf.sets()];
         for (size_t row = 0; row < cnf.sets(); row++) {
             replc.lru[row] = new std::uint32_t[cnf.associativity()];
@@ -91,7 +91,7 @@ Cache::Cache(MemoryAccess *m, const MachineConfigCache& cc, std::uint32_t upper_
                 replc.lru[row][i] = i;
         }
         break;
-    case MachineConfigCache::RP_RAND:
+    case MachineConfigCache::ReplacementPolicy::RP_RAND:
     default:
         break;
     }
@@ -112,14 +112,14 @@ Cache::~Cache(){
     }
 
     switch (cnf.replacement_policy()) {
-    case MachineConfigCache::RP_LFU:
+    case MachineConfigCache::ReplacementPolicy::RP_LFU:
         if (replc.lfu == nullptr)
             break;
         for (std::uint32_t row = 0; row < cnf.sets(); row++)
             delete[] replc.lfu[row];
         delete [] replc.lfu;
         break;
-    case MachineConfigCache::RP_LRU:
+    case MachineConfigCache::ReplacementPolicy::RP_LRU:
         if (replc.lru == nullptr)
             break;
         for (std::uint32_t row = 0; row < cnf.sets(); row++)
@@ -145,7 +145,7 @@ bool Cache::wword(std::uint32_t address, std::uint32_t value) {
 
     changed = access(address, &data, true, value);
 
-    if (cnf.write_policy() != MachineConfigCache::WP_BACK) {
+    if (cnf.write_policy() != MachineConfigCache::WritePolicy::WP_BACK) {
         mem_upper_writes++;
         emit_mem_upper_signal(false);
         update_statistics();
@@ -241,7 +241,7 @@ double Cache::speed_improvement() const {
 
     lookup_time = read_hits + read_misses;
 
-    if (cnf.write_policy() == MachineConfigCache::WP_BACK)
+    if (cnf.write_policy() == MachineConfigCache::WritePolicy::WP_BACK)
         lookup_time += write_hits + write_misses;
 
     mem_access_time = mem_upper_reads * access_pen_r +
@@ -307,7 +307,7 @@ enum LocationStatus Cache::location_status(std::uint32_t address) const {
         for (std::uint32_t indx = 0; indx < cnf.associativity(); indx++) {
             if (dt[indx][row].valid && dt[indx][row].tag == tag) {
                 if (dt[indx][row].dirty &&
-                    cnf.write_policy() == MachineConfigCache::WP_BACK)
+                    cnf.write_policy() == MachineConfigCache::WritePolicy::WP_BACK)
                     return (enum LocationStatus)(LOCSTAT_CACHED | LOCSTAT_DIRTY);
                 else
                     return (enum LocationStatus)LOCSTAT_CACHED;
@@ -327,7 +327,7 @@ void Cache::emit_mem_upper_signal(bool read) const {
         if (read)
             emit level2_cache_reads_update(mem_upper_reads);
         else
-            emit level2_cache_writes_upadte(mem_upper_writes);
+            emit level2_cache_writes_update(mem_upper_writes);
         break;
     case MemoryType::DRAM:
         if (read)
@@ -367,7 +367,8 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
     // Need to find new block
     if (indx >= cnf.associativity()) {
         // if write through we do not need to allocate cache line does not allocate
-        if (write && cnf.write_policy() == MachineConfigCache::WP_THROUGH_NOALLOC) {
+        if (write && cnf.write_policy() ==
+                MachineConfigCache::WritePolicy::WP_THROUGH_NOALLOC) {
             write_misses++;
             emit miss_update(miss());
             update_statistics();
@@ -375,13 +376,13 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
         }
         // We have to kick something
         switch (cnf.replacement_policy()) {
-        case MachineConfigCache::RP_RAND:
+        case MachineConfigCache::ReplacementPolicy::RP_RAND:
             indx = rand() % cnf.associativity();
             break;
-        case MachineConfigCache::RP_LRU:
+        case MachineConfigCache::ReplacementPolicy::RP_LRU:
             indx = replc.lru[row][0];
             break;
-        case MachineConfigCache::RP_LFU:
+        case MachineConfigCache::ReplacementPolicy::RP_LFU:
             {
                 std::uint32_t lowest = replc.lfu[row][0];
                 indx = 0;
@@ -437,7 +438,7 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
 
     // Update replcement data
     switch (cnf.replacement_policy()) {
-    case MachineConfigCafche::RP_LRU:
+    case MachineConfigCache::ReplacementPolicy::RP_LRU:
     {
         std::uint32_t next_asi = indx;
         int i = cnf.associativity() - 1;
@@ -451,7 +452,7 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
         }
         break;
     }
-    case MachineConfigCache::RP_LFU:
+    case MachineConfigCache::ReplacementPolicy::RP_LFU:
         if (cd.valid)
             replc.lfu[row][indx]++;
         else
@@ -482,7 +483,7 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
 void Cache::kick(std::uint32_t associat_indx, std::uint32_t row) const {
     cache_data &cd = dt[associat_indx][row];
 
-    if (cd.dirty && cnf.write_policy() == MachineConfigCache::WP_BACK) {
+    if (cd.dirty && cnf.write_policy() == MachineConfigCache::WritePolicy::WP_BACK) {
         for (size_t i = 0; i < cnf.blocks(); i++) {
             mem_upper->write_word(base_address(cd.tag, row) + (4*i), cd.data[i]);
         }
@@ -496,7 +497,7 @@ void Cache::kick(std::uint32_t associat_indx, std::uint32_t row) const {
     cd.dirty = false;
 
     switch (cnf.replacement_policy()) {
-    case MachineConfigCache::RP_LRU:
+    case MachineConfigCache::ReplacementPolicy::RP_LRU:
     {
         std::uint32_t next_asi = associat_indx;
         std::uint32_t tmp_asi = replc.lru[row][0];
@@ -510,10 +511,10 @@ void Cache::kick(std::uint32_t associat_indx, std::uint32_t row) const {
         }
         break;
     }
-    case MachineConfigCache::RP_LFU:
+    case MachineConfigCache::ReplacementPolicy::RP_LFU:
         replc.lfu[row][associat_indx] = 0;
         break;
-    defamem_uppert:
+    default:
         break;
     }
 }

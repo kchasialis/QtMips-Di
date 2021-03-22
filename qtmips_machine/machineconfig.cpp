@@ -59,8 +59,8 @@ using namespace machine;
 #define DFC_SETS 1
 #define DFC_BLOCKS 1
 #define DFC_ASSOC 1
-#define DFC_REPLAC RP_RAND
-#define DFC_WRITE WP_THROUGH_NOALLOC
+#define DFC_REPLAC ReplacementPolicy::RP_RAND
+#define DFC_WRITE WritePolicy::WP_THROUGH_NOALLOC
 //////////////////////////////////////////////////////////////////////////////
 
 MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct) {
@@ -88,7 +88,7 @@ MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct) {
     cache_type = ct;
 }
 
-MachineConfigCache::MachineConfigCache(const MachineConfigCache& cc) {
+MachineConfigCache::MachineConfigCache(const MachineConfigCache& cc) noexcept {
     upper_mem_time_read = cc.upper_mem_access_read();
     upper_mem_time_write = cc.upper_mem_access_write();
     upper_mem_time_burst = cc.upper_mem_access_burst();
@@ -103,7 +103,7 @@ MachineConfigCache::MachineConfigCache(const MachineConfigCache& cc) {
 #define N(STR) (prefix + QString(STR))
 
 MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct, const QSettings *sts, const QString &prefix) {
-    cache_type = (MemoryAccess::MemoryType)sts->value(N("CacheType"), ct).toUInt();
+    cache_type = (MemoryAccess::MemoryType)sts->value(N("CacheType"), (int32_t) ct).toUInt();
     switch (cache_type) {
     case MemoryAccess::MemoryType::L1_CACHE:
         upper_mem_time_read = sts->value(N("UpperAccessTimeRead"), DFC_L2_ACC_READ).toUInt();
@@ -123,12 +123,12 @@ MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct, const QSetti
     n_sets = sts->value(N("Sets"), DFC_SETS).toUInt();
     n_blocks = sts->value(N("Blocks"), DFC_BLOCKS).toUInt();
     d_associativity = sts->value(N("Associativity"), DFC_ASSOC).toUInt();
-    replac_pol = (ReplacementPolicy)sts->value(N("Replacement"), DFC_REPLAC).toUInt();
-    write_pol = (WritePolicy)sts->value(N("Write"), DFC_WRITE).toUInt();
+    replac_pol = (ReplacementPolicy)sts->value(N("Replacement"), (int32_t) DFC_REPLAC).toUInt();
+    write_pol = (WritePolicy)sts->value(N("Write"), (int32_t) DFC_WRITE).toUInt();
 }
 
 void MachineConfigCache::store(QSettings *sts, const QString &prefix) {
-    sts->setValue(N("UpperAccessTimeRead"), upper_mem_access_read(););
+    sts->setValue(N("UpperAccessTimeRead"), upper_mem_access_read());
     sts->setValue(N("UpperAccessTimeWrite"), upper_mem_access_write());
     sts->setValue(N("UpperAccessTimeBurst"), upper_mem_access_burst());
     sts->setValue(N("Sets"), sets());
@@ -164,23 +164,23 @@ void MachineConfigCache::preset(ConfigPresets p) {
     }
 
     switch (p) {
-    case CP_PIPE:
-    case CP_SINGLE_CACHE:
+    case ConfigPresets::CP_PIPE:
+    case ConfigPresets::CP_SINGLE_CACHE:
         if (is_level1) {
             // Default settings for L1.
             set_enabled(true);
             set_sets(4);
             set_blocks(2);
             set_associativity(2);
-            set_replacement_policy(RP_RAND);
-            set_write_policy(WP_THROUGH_NOALLOC);
+            set_replacement_policy(ReplacementPolicy::RP_RAND);
+            set_write_policy(WritePolicy::WP_THROUGH_NOALLOC);
         } else {
             // By default L2 is not enabled.
             set_enabled(false);
         }
         break;
-    case CP_SINGLE:
-    case CP_PIPE_NO_HAZARD:
+    case ConfigPresets::CP_SINGLE:
+    case ConfigPresets::CP_PIPE_NO_HAZARD:
         set_enabled(false);
         break;
     default:
@@ -286,7 +286,7 @@ bool MachineConfigCache::operator!=(const MachineConfigCache &c) const {
     return !operator==(c);
 }
 
-MachineConfig::MachineConfig() : {
+MachineConfig::MachineConfig() {
     pipeline = DF_PIPELINE;
     bunit = DF_BUNIT;
     bp_bits = DF_BP_BITS;
@@ -306,7 +306,7 @@ MachineConfig::MachineConfig() : {
     l2_unified = MachineConfigCache(MemoryAccess::MemoryType::L2_CACHE);
 }
 
-MachineConfig::MachineConfig(const MachineConfig& cc) {
+MachineConfig::MachineConfig(const MachineConfig& cc) noexcept {
     this->pipeline = cc.pipelined();
     this->bunit = cc.branch_unit();
     this->bp_bits = cc.bht_bits();
@@ -374,15 +374,15 @@ void MachineConfig::preset(enum ConfigPresets p) {
     set_bht_bits(-1);
 
     switch (p) {
-    case CP_SINGLE:
-    case CP_SINGLE_CACHE:
+    case ConfigPresets::CP_SINGLE:
+    case ConfigPresets::CP_SINGLE_CACHE:
         set_pipelined(false);
         break;
-    case CP_PIPE_NO_HAZARD:
+    case ConfigPresets::CP_PIPE_NO_HAZARD:
         set_pipelined(true);
         set_hazard_unit(MachineConfig::HU_NONE);
         break;
-    case CP_PIPE:
+    case ConfigPresets::CP_PIPE:
         set_pipelined(true);
         set_hazard_unit(MachineConfig::HU_STALL_FORWARD);
         break;
@@ -435,18 +435,6 @@ void MachineConfig::set_memory_write_protection(bool wp) {
     write_protect = wp;
 }
 
-void MachineConfig::set_memory_access_time_read(std::uint32_t ar) {
-    mem_acc_read = ar;
-}
-
-void MachineConfig::set_memory_access_time_write(std::uint32_t aw) {
-    mem_acc_write = aw;
-}
-
-void MachineConfig::set_memory_access_time_burst(std::uint32_t ab) {
-    mem_acc_burst = ab;
-}
-
 void MachineConfig::set_osemu_enable(bool e) {
     osem_enable = e;
 }
@@ -487,7 +475,7 @@ void MachineConfig::set_l1_program_cache(const MachineConfigCache& l1_p) {
     l1_program = l1_p;
 }
 
-void MachineConfig::set_l2_cache(const MachineConfigCache& l2) {
+void MachineConfig::set_l2_unified_cache(const MachineConfigCache& l2) {
     l2_unified = l2;
 }
 
@@ -544,18 +532,6 @@ bool MachineConfig::reset_at_compile() const {
 
 QString MachineConfig::elf() const {
     return elf_path;
-}
-
-bool MachineConfig::l1_data_enabled() const {
-    return l1_data != nullptr;
-}
-
-bool MachineConfig::l1_program_enabled() const {
-    return l1_program != nullptr;
-}
-
-bool MachineConfig::l2_unified_enabled() const {
-    return l2_unified != nullptr;
 }
 
 const MachineConfigCache &MachineConfig::l1_data_cache() const {

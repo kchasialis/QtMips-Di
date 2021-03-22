@@ -66,9 +66,11 @@ public:
     const Cop0State *cop0state();
     const Memory *memory();
     Memory *memory_rw();
-    const MemoryAccess &QtMipsMachine::memory_program() const;
-    const MemoryAccess &QtMipsMachine::memory_data() const;
-    MemoryAccess *QtMipsMachine::memory_data_rw();
+    const Cache *l1_program_cache() const;
+    const Cache *l1_data_cache() const;
+    const Cache *l2_unified_cache() const;
+    Cache *l1_data_cache_rw() const;
+    Cache *l2_unified_cache_rw() const;
     void mem_sync();
     const  PhysAddrSpace *physical_address_space();
     PhysAddrSpace *physical_address_space_rw();

@@ -96,7 +96,7 @@ protected:
     }
 
     // returns 2^exponent
-    constexpr size_t power_of_2(std::uint32_t exponent) {
+    constexpr size_t power_of_2(std::uint32_t exponent) const {
         return exponent == 0 ? 1 : 2 * power_of_2(exponent - 1);
     }
 

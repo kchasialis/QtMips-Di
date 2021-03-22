@@ -72,7 +72,7 @@ void InstructionView::paint(QPainter *painter, const QStyleOptionGraphicsItem *o
             painter->setBrush(QBrush(QColor(240, 240, 240)));
     else
         painter->setBrush(QBrush(QColor(255, 100, 100)));
-    painter->drawRoundRect(-WIDTH/2, 0, WIDTH, HEIGHT, ROUND, ROUND);
+    painter->drawRoundedRect(-WIDTH/2, 0, WIDTH, HEIGHT, ROUND, ROUND);
 }
 
 void InstructionView::instruction_update(const machine::Instruction &i,

@@ -71,7 +71,7 @@ void MultiText::paint(QPainter *painter, const QStyleOptionGraphicsItem *option 
     else
         painter->setBrush(QBrush(QColor(240, 240, 240)));
 
-    painter->drawRoundRect(-WIDTH/2, 0, WIDTH, HEIGHT, ROUND, ROUND);
+    painter->drawRoundedRect(-WIDTH/2, 0, WIDTH, HEIGHT, ROUND, ROUND);
 }
 
 void MultiText::multitext_update(std::uint32_t value) {

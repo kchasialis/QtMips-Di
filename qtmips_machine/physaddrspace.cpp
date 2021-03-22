@@ -100,7 +100,7 @@ bool PhysAddrSpace::insert_range(MemoryAccess *mem_acces, std::uint32_t start_ad
             return false;
     }
     ranges_by_addr.insert(last_addr, p_range);
-    ranges_by_access.insertMulti(mem_acces, p_range);
+    ranges_by_access.insert(mem_acces, p_range);
     connect(mem_acces, SIGNAL(external_change_notify(const MemoryAccess*,std::uint32_t,std::uint32_t,bool)),
             this, SLOT(range_external_change(const MemoryAccess*,std::uint32_t,std::uint32_t,bool)));
     return true;

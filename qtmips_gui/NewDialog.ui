@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>583</width>
-    <height>433</height>
+    <height>449</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,7 +29,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -319,7 +319,7 @@
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QSpinBox" name="mem_time_read">
+           <widget class="QSpinBox" name="mem_access_read">
             <property name="minimum">
              <number>1</number>
             </property>
@@ -336,7 +336,7 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QSpinBox" name="mem_time_write">
+           <widget class="QSpinBox" name="mem_access_write">
             <property name="minimum">
              <number>1</number>
             </property>
@@ -353,7 +353,7 @@
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QSpinBox" name="mem_time_burst">
+           <widget class="QSpinBox" name="mem_access_burst">
             <property name="minimum">
              <number>0</number>
             </property>
@@ -380,14 +380,19 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_cache_program">
+     <widget class="QWidget" name="tab_l1_program_cache">
       <attribute name="title">
-       <string>Program cache</string>
+       <string>L1 Program Cache</string>
       </attribute>
      </widget>
-     <widget class="QWidget" name="tab_cache_data">
+     <widget class="QWidget" name="tab_l1_data_cache">
       <attribute name="title">
-       <string>Data cache</string>
+       <string>L1 Data Cache</string>
+      </attribute>
+     </widget>
+     <widget class="QWidget" name="tab_l2_unified_cache">
+      <attribute name="title">
+       <string>L2 Cache</string>
       </attribute>
      </widget>
      <widget class="QWidget" name="tab_os_emulation">

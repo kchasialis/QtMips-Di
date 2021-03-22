@@ -67,6 +67,7 @@ public:
 
     virtual void sync();
     virtual enum LocationStatus location_status(std::uint32_t offset) const;
+    virtual MemoryType type() const;
     virtual std::uint32_t get_change_counter() const = 0;
 
 signals:
@@ -76,7 +77,6 @@ signals:
 protected:
     virtual bool wword(std::uint32_t offset, std::uint32_t value) = 0;
     virtual std::uint32_t rword(std::uint32_t offset, bool debug_access = false) const = 0;
-    virtual MemoryType type() const = 0;
 
 private:
     static int sh_nth(std::uint32_t offset);

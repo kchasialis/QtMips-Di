@@ -36,11 +36,12 @@
 #ifndef MACHINEDEFS_H
 #define MACHINEDEFS_H
 
+#include <iostream>
 #include <stdint.h>
 
 namespace machine {
 
-enum class AccessControl {
+enum AccessControl {
     AC_NONE,
     AC_BYTE,
     AC_HALFWORD,
@@ -57,7 +58,7 @@ enum class AccessControl {
     AC_LAST_REGULAR = AC_HALFWORD_UNSIGNED,
 };
 
-enum class ExceptionCause {
+enum ExceptionCause {
     EXCAUSE_NONE     =  0,  // Use zero as default value when no exception is pending
     EXCAUSE_INT      =  1,  // Int is 0 on real CPU and in Cause regsiter
     EXCAUSE_ADDRL    =  4,
@@ -72,7 +73,7 @@ enum class ExceptionCause {
     EXCAUSE_COUNT    = 15,
 };
 
-enum class AluOp : std::uint8_t {
+enum AluOp : std::uint8_t {
     ALU_OP_NOP,
     ALU_OP_SLL,
     ALU_OP_SRL,
@@ -133,7 +134,7 @@ enum class AluOp : std::uint8_t {
     ALU_OP_LAST // First impossible operation (just to be sure that we don't overflow)
 };
 
-enum class LocationStatus {
+enum LocationStatus {
     LOCSTAT_NONE      = 0,
     LOCSTAT_CACHED    = 1 << 0,
     LOCSTAT_DIRTY     = 1 << 1,

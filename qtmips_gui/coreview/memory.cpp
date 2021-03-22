@@ -114,7 +114,7 @@ void Memory::set_type(const QString &text) {
     type.setPos(WIDTH/2 - box.width()/2, HEIGHT - (HEIGHT - CACHE_HEIGHT)/2 - box.height());
 }
 
-ProgramMemory::ProgramMemory(machine::QtMipsMachine *machine) : Memory(machine->config().cache_program().enabled(), machine->cache_program()) {
+ProgramMemory::ProgramMemory(machine::QtMipsMachine *machine) : Memory(machine->config().l1_program_cache().enabled(), machine->l1_program_cache()) {
     set_type("Program");
 
     con_address = new Connector(Connector::AX_X);
@@ -141,7 +141,7 @@ const Connector *ProgramMemory::connector_instruction() const {
     return con_inst;
 }
 
-DataMemory::DataMemory(machine::QtMipsMachine *machine) : Memory(machine->config().cache_data().enabled(), machine->cache_data()) {
+DataMemory::DataMemory(machine::QtMipsMachine *machine) : Memory(machine->config().l1_data_cache().enabled(), machine->l1_data_cache()) {
     set_type("Data");
 
     con_address = new Connector(Connector::AX_X);

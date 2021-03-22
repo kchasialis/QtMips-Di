@@ -166,7 +166,7 @@ CacheViewBlock::CacheViewBlock(const machine::Cache *cache, unsigned block , boo
     font.setPixelSize(FontSize::SIZE7);
 
     validity = new QGraphicsSimpleTextItem*[rows];
-    if (cache->config().write_policy() == machine::MachineConfigCache::WP_BACK)
+    if (cache->config().write_policy() == machine::MachineConfigCache::WritePolicy::WP_BACK)
         dirty = new QGraphicsSimpleTextItem*[rows];
     else
         dirty = nullptr;
@@ -207,7 +207,7 @@ CacheViewBlock::CacheViewBlock(const machine::Cache *cache, unsigned block , boo
     QRectF box = l_validity->boundingRect();
     l_validity->setPos(wd + (VD_WIDTH - box.width())/2, -1 - box.height());
     wd += VD_WIDTH;
-    if (cache->config().write_policy() == machine::MachineConfigCache::WP_BACK) {
+    if (cache->config().write_policy() == machine::MachineConfigCache::WritePolicy::WP_BACK) {
         QGraphicsSimpleTextItem *l_dirty = new QGraphicsSimpleTextItem("D", this);
         l_dirty->setFont(font);
         box = l_dirty->boundingRect();

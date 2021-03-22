@@ -53,7 +53,7 @@ enum class ConfigPresets {
 class MachineConfigCache {
 public:
     MachineConfigCache(MemoryAccess::MemoryType ct = MemoryAccess::MemoryType::L1_CACHE);
-    MachineConfigCache(const MachineConfigCache *cc);
+    explicit MachineConfigCache(const MachineConfigCache &cc) noexcept;
     MachineConfigCache(MemoryAccess::MemoryType ct, const QSettings*, const QString &prefix = "");
 
     void store(QSettings*, const QString &prefix = "");
@@ -110,7 +110,7 @@ private:
 class MachineConfig {
 public:
     MachineConfig();
-    MachineConfig(const MachineConfig *cc);
+    MachineConfig(const MachineConfig& cc) noexcept;
     MachineConfig(const QSettings*, const QString &prefix = "");
 
     void store(QSettings*, const QString &prefix = "");

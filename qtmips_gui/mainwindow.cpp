@@ -245,7 +245,7 @@ void MainWindow::show_hide_coreview(bool show) {
 void MainWindow::create_core(const machine::MachineConfig &config, bool load_executable,
                              bool keep_memory) {
     // Create machine
-    machine::QtMipsMachine *new_machine = new machine::QtMipsMachine(&config, true, load_executable);
+    machine::QtMipsMachine *new_machine = new machine::QtMipsMachine(config, true, load_executable);
 
     if (keep_memory && (machine != nullptr)) {
         new_machine->memory_rw()->reset(*machine->memory());
@@ -297,8 +297,8 @@ void MainWindow::create_core(const machine::MachineConfig &config, bool load_exe
     registers->setup(machine);
     program->setup(machine);
     memory->setup(machine);
-    cache_program->setup(machine->cache_program());
-    cache_data->setup(machine->cache_data());
+    cache_program->setup(machine->l1_program_cache());
+    cache_data->setup(machine->l1_data_cache());
     terminal->setup(machine->serial_port());
     peripherals->setup(machine->peripheral_spi_led());
     lcd_display->setup(machine->peripheral_lcd_display());
@@ -332,7 +332,7 @@ void MainWindow::machine_reload(bool force_memory_reset, bool force_elf_load) {
     if (machine == nullptr)
         return new_machine();
     bool load_executable = force_elf_load || machine->executable_loaded();
-    machine::MachineConfig cnf(&machine->config()); // We have to make local copy as create_core will delete current machine
+    machine::MachineConfig cnf(machine->config()); // We have to make local copy as create_core will delete current machine
     try {
         create_core(cnf, load_executable, !load_executable && !force_memory_reset);
     } catch (const machine::QtMipsExceptionInput &e) {
@@ -961,7 +961,7 @@ void MainWindow::compile_source() {
     }
     QString filename = current_srceditor->filename();
 
-    machine->cache_sync();
+    machine->mem_sync();
     SrcEditor *editor = current_srceditor;
     QTextDocument *doc = editor->document();
 
@@ -1039,7 +1039,8 @@ void MainWindow::build_execute_no_check() {
     }
     if (!work_dir.isEmpty())
         proc->setWorkingDirectory(work_dir);
-    proc->start("make", QProcess::Unbuffered | QProcess::ReadOnly);
+
+    proc->start(QString("make"), QStringList(""), QProcess::Unbuffered | QProcess::ReadOnly);
 }
 
 void MainWindow::build_execute_finished(int exitCode, QProcess::ExitStatus exitStatus) {

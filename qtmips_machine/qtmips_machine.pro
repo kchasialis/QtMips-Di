@@ -6,7 +6,9 @@ CONFIG += c++11
 TEMPLATE = lib
 CONFIG += staticlib
 
-LIBS += -lelf
+# TODO: remove these and leave only -lelf
+LIBS += /opt/homebrew/Cellar/libelf/lib -lelf
+INCLUDEPATH += /opt/homebrew/Cellar/libelf/include
 QMAKE_CXXFLAGS += -std=c++0x
 QMAKE_CXXFLAGS_DEBUG += -ggdb
 
