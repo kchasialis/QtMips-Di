@@ -36,7 +36,6 @@
 #include "newdialog.h"
 #include "mainwindow.h"
 #include "qtmipsexception.h"
-#include <QDebug>
 
 #ifdef __EMSCRIPTEN__
 #include <QFileInfo>
@@ -48,6 +47,8 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
 
     this->settings = settings;
     config = nullptr;
+
+    default_settings = false;
 
     ui = new Ui::NewDialog();
     ui->setupUi(this);
@@ -62,7 +63,7 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     ui_l1_d_cache = new Ui::NewDialogCache();
     ui_l1_d_cache->setupUi(ui->tab_l1_data_cache);
     // We assume L1 caches access time = CPU time and cannot be altered.
-    ui_l1_p_cache->access_time->hide();
+    ui_l1_d_cache->access_time->hide();
 
     ui_l2_cache = new Ui::NewDialogCache();
     ui_l2_cache->setupUi(ui->tab_l2_unified_cache);
@@ -131,6 +132,10 @@ NewDialog::~NewDialog() {
 void NewDialog::switch2custom() {
 	ui->preset_custom->setChecked(true);
 	config_gui();
+}
+
+void NewDialog::set_default_settings(bool ds) {
+    default_settings = ds;
 }
 
 void NewDialog::closeEvent(QCloseEvent *) {
@@ -342,7 +347,9 @@ void NewDialog::config_gui() {
     // Cache
     l1_d_cache_handler->config_gui();
     l1_p_cache_handler->config_gui();
-    l2_u_cache_handler->config_gui();
+    l2_u_cache_handler->config_gui(config->l1_data_cache().upper_mem_access_read(),
+                                   config->l1_data_cache().upper_mem_access_write(),
+                                   config->l1_data_cache().upper_mem_access_burst());
     // Operating system and exceptions
     ui->osemu_enable->setChecked(config->osemu_enable());
     ui->osemu_known_syscall_stop->setChecked(config->osemu_known_syscall_stop());
@@ -381,7 +388,11 @@ void NewDialog::load_settings() {
         delete config;
 
     // Load config
-    config = new machine::MachineConfig(settings);
+    if (default_settings) {
+        config = new machine::MachineConfig();
+    } else {
+        config = new machine::MachineConfig(settings);
+    }
     l1_d_cache_handler->set_config(config->access_l1_data_cache());
     l1_p_cache_handler->set_config(config->access_l1_program_cache());
     l2_u_cache_handler->set_config(config->access_l2_unified_cache());
@@ -443,16 +454,16 @@ void NewDialogCacheHandler::set_config(machine::MachineConfigCache *config) {
 	this->config = config;
 }
 
-void NewDialogCacheHandler::config_gui() {
+void NewDialogCacheHandler::config_gui(int time_read, int time_write, int time_burst) {
     ui->enabled->setChecked(config->enabled());
     ui->number_of_sets->setValue(config->sets());
     ui->block_size->setValue(config->blocks());
     ui->degree_of_associativity->setValue(config->associativity());
     ui->replacement_policy->setCurrentIndex((int)config->replacement_policy());
     ui->writeback_policy->setCurrentIndex((int)config->write_policy());
-    ui->l2_access_read->setValue(config->upper_mem_access_read());
-    ui->l2_access_write->setValue(config->upper_mem_access_write());
-    ui->l2_access_burst->setValue(config->upper_mem_access_burst());
+    ui->l2_access_read->setValue(time_read);
+    ui->l2_access_write->setValue(time_write);
+    ui->l2_access_burst->setValue(time_burst);
 }
 
 void NewDialogCacheHandler::enabled(bool val) {

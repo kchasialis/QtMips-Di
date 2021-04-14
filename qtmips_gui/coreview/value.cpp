@@ -42,12 +42,14 @@ using namespace coreview;
 #define HEIGHT 8
 #define LETWIDTH 7
 
+#include <QtDebug>
+
 // TODO orientation
 Value::Value(bool vertical, unsigned width, std::uint32_t init_val,
              unsigned a_base, QChar fillchr, bool frame) : QGraphicsObject(nullptr) {
-    wid = width;
-    val = init_val;
-    base = a_base;
+    this->val = init_val;
+    this->wid = width;
+    this->base = a_base;
     this->vertical = vertical;
     this->fillchr = fillchr;
     this->frame = frame;

@@ -207,8 +207,17 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::start() {
+    QMessageBox m_box;
+    QAbstractButton *prev;
+
     this->show();
     ndialog->show();
+
+    m_box.setText("Load previous or default settings?");
+    prev = m_box.addButton(tr("Previous"), QMessageBox::YesRole);
+    m_box.addButton(tr("Default"), QMessageBox::NoRole);
+    m_box.exec();
+    ndialog->set_default_settings(m_box.clickedButton() == prev);
 }
 
 void MainWindow::show_hide_coreview(bool show) {

@@ -58,8 +58,8 @@ signals:
     void open_cache();
 
 private slots:
-    void cache_hit_update(unsigned);
-    void cache_miss_update(unsigned);
+    void cache_hit_update(std::uint32_t);
+    void cache_miss_update(std::uint32_t);
 
 protected:
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
@@ -83,7 +83,6 @@ public:
 
     const Connector *connector_address() const;
     const Connector *connector_instruction() const;
-
 private:
     Connector *con_address, *con_inst;
 };

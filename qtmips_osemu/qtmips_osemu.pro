@@ -5,6 +5,9 @@ CONFIG += c++11
 
 TEMPLATE = lib
 CONFIG += staticlib
+CONFIG -= x86_64
+CONFIG += sdk_no_version_check
+QMAKE_APPLE_DEVICE_ARCHS=arm64
 
 LIBS += -L$$OUT_PWD/../qtmips_machine/ -lqtmips_machine
 

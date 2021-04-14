@@ -945,7 +945,7 @@ void CorePipelined::do_step(bool skip_break) {
                 }
             }
         } else {
-            // NOTE: it seems to work for some examples
+            // NOTE(kostas): it seems to work for some examples
             // we should see what happens and how it interacts
             // with other hazards.
             if (dt_f.inst.flags() & IMF_BRANCH) {

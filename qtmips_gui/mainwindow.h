@@ -149,6 +149,7 @@ private:
     LcdDisplayDock *lcd_display;
     Cop0Dock *cop0dock;
     MessagesDock *messages;
+    bool load_default_settings;
     bool coreview_shown;
     SrcEditor  *current_srceditor;
 

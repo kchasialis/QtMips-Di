@@ -71,8 +71,8 @@ Memory::Memory(bool cache_used, const machine::Cache *cch) : QGraphicsObject(nul
     cache_hit_t.setVisible(cache);
     cache_miss_t.setVisible(cache);
 
-    connect(cch, SIGNAL(hit_update(uint)), this, SLOT(cache_hit_update(uint)));
-    connect(cch, SIGNAL(miss_update(uint)), this, SLOT(cache_miss_update(uint)));
+    connect(cch, SIGNAL(hit_update(std::uint32_t)), this, SLOT(cache_hit_update(std::uint32_t)));
+    connect(cch, SIGNAL(miss_update(std::uint32_t)), this, SLOT(cache_miss_update(std::uint32_t)));
 
     setPos(x(), y()); // set connector's position
 }
@@ -91,11 +91,11 @@ void Memory::paint(QPainter *painter, const QStyleOptionGraphicsItem *option __a
         painter->drawLine(0, CACHE_HEIGHT, WIDTH, CACHE_HEIGHT);
 }
 
-void Memory::cache_hit_update(unsigned val) {
+void Memory::cache_hit_update(std::uint32_t val) {
     cache_hit_t.setText("Hit: " + QString::number(val));
 }
 
-void Memory::cache_miss_update(unsigned val) {
+void Memory::cache_miss_update(std::uint32_t val) {
     cache_miss_t.setText("Miss: " + QString::number(val));
 }
 

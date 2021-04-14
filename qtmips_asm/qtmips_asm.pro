@@ -5,6 +5,9 @@ CONFIG += c++11
 
 TEMPLATE = lib
 CONFIG += staticlib
+CONFIG -= x86_64
+CONFIG += sdk_no_version_check
+QMAKE_APPLE_DEVICE_ARCHS=arm64
 
 INCLUDEPATH += $$PWD/../qtmips_machine $$PWD/../qtmips_osemu
 DEPENDPATH += $$PWD/../qtmips_machine

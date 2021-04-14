@@ -80,6 +80,7 @@ MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct) {
         SANITY_ASSERT(0, "This needs debugging.");
     }
 
+    en = DFC_EN;
     n_sets = DFC_SETS;
     n_blocks = DFC_BLOCKS;
     d_associativity = DFC_ASSOC;
@@ -89,6 +90,7 @@ MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct) {
 }
 
 MachineConfigCache::MachineConfigCache(const MachineConfigCache& cc) noexcept {
+    en = cc.enabled();
     upper_mem_time_read = cc.upper_mem_access_read();
     upper_mem_time_write = cc.upper_mem_access_write();
     upper_mem_time_burst = cc.upper_mem_access_burst();
@@ -103,6 +105,8 @@ MachineConfigCache::MachineConfigCache(const MachineConfigCache& cc) noexcept {
 #define N(STR) (prefix + QString(STR))
 
 MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct, const QSettings *sts, const QString &prefix) {
+    en = sts->value(N("Enabled"), DFC_EN).toUInt();
+
     cache_type = (MemoryAccess::MemoryType)sts->value(N("CacheType"), (int32_t) ct).toUInt();
     switch (cache_type) {
     case MemoryAccess::MemoryType::L1_CACHE:
@@ -128,6 +132,7 @@ MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct, const QSetti
 }
 
 void MachineConfigCache::store(QSettings *sts, const QString &prefix) {
+    sts->setValue(N("Enabled"), enabled());
     sts->setValue(N("UpperAccessTimeRead"), upper_mem_access_read());
     sts->setValue(N("UpperAccessTimeWrite"), upper_mem_access_write());
     sts->setValue(N("UpperAccessTimeBurst"), upper_mem_access_burst());

@@ -4,7 +4,9 @@ qtHaveModule(printsupport): DEFINES += QTMIPS_WITH_PRINTING=1
 
 TARGET = qtmips_gui
 CONFIG += c++11
+CONFIG -= x86_64
 CONFIG += sdk_no_version_check
+QMAKE_APPLE_DEVICE_ARCHS=arm64
 
 TEMPLATE = app
 

@@ -7,6 +7,8 @@ TEMPLATE = lib
 CONFIG += staticlib
 
 # TODO: remove these and leave only -lelf
+QMAKE_APPLE_DEVICE_ARCHS=arm64
+CONFIG += sdk_no_version_check
 LIBS += /opt/homebrew/Cellar/libelf/lib -lelf
 INCLUDEPATH += /opt/homebrew/Cellar/libelf/include
 QMAKE_CXXFLAGS += -std=c++0x

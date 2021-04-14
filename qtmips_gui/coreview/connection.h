@@ -45,9 +45,10 @@ namespace coreview {
 class Connector : public QObject {
     Q_OBJECT
 public:
+    // From which side to connect.
     enum Axis {
-        AX_X, // X axis
-        AX_Y, // Y axis
+        AX_X, // X axis (left to right)
+        AX_Y, // Y axis (down to up)
         AX_XY, // X=Y axis (45°)
         AX_MXY // X=-Y axis (-45°)
     };

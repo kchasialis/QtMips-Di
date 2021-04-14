@@ -56,12 +56,13 @@ public slots:
     void value_update(std::uint32_t);
 
 protected:
+
     std::uint32_t val;
 
 private:
     unsigned wid;
     unsigned base;
-    unsigned vertical;
+    bool vertical;
     QChar fillchr;
     bool frame;
 };

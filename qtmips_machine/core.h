@@ -181,6 +181,7 @@ signals:
 
     void fetch_predict_branch(std::uint32_t);
     void fetch_inst_addr_value(std::uint32_t);
+    void fetch_();
     void fetch_jump_reg_value(std::uint32_t);
     void fetch_jump_value(std::uint32_t);
     void fetch_branch_value(std::uint32_t);

@@ -53,7 +53,8 @@ public:
     NewDialog(QWidget *parent, QSettings *settings);
     ~NewDialog();
 
-	void switch2custom();
+    void switch2custom();
+    void set_default_settings(bool);
 
 protected:
     void closeEvent(QCloseEvent *);
@@ -87,6 +88,7 @@ private:
     Ui::NewDialogCache *ui_l1_p_cache, *ui_l1_d_cache;
     Ui::NewDialogCache *ui_l2_cache;
     QSettings *settings;
+    bool default_settings; // Whether or not to use previous settings or default.
 
     machine::MachineConfig *config;
     void config_gui(); // Apply configuration to gui
@@ -105,7 +107,7 @@ public:
 
     void set_config(machine::MachineConfigCache *config);
 
-    void config_gui();
+    void config_gui(int time_read = 1, int time_write = 1, int time_burst = 0);
 
 private slots:
 	void enabled(bool);
