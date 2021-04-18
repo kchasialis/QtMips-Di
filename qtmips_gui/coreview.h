@@ -88,10 +88,7 @@ protected:
         coreview::Adder *adder;
         coreview::Constant *adder_4;
         coreview::Junction *junc_pc, *junc_pc_4;
-        // The multiplexer used for branch address.
-        coreview::Multiplexer *multiplex;
-        // The multiplexer used for branch predictor.
-        coreview::Multiplexer *multiplex2;
+        coreview::Multiplexer *multiplex[2];
     } ft;
     struct {
         coreview::LogicBlock *ctl_block, *sign_ext, *shift2, *cmp;
