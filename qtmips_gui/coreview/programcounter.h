@@ -53,6 +53,7 @@ public:
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
     void setPos(qreal x, qreal y);
+    int width() const;
     const Connector *connector_in() const;
     const Connector *connector_out() const;
 

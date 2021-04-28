@@ -18,10 +18,10 @@ public:
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
     const Connector *connector_pc_in() const;
-    const Connector *connector_pc_out() const;
+    const Connector *connector_sig_out() const;
     void setPos(qreal x, qreal y);
 private:
-    Connector *con_pc_in, *con_pc_out;
+    Connector *con_pc_in, *con_sig_out;
     QGraphicsSimpleTextItem name;
 };
 

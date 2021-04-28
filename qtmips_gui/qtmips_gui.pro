@@ -17,8 +17,9 @@ else:win32:CONFIG(debug, debug|release): LIBS_SUBDIR = debug
 else:unix: LIBS_SUBDIR = .
 
 LIBS += -L$$OUT_PWD/../qtmips_osemu/$${LIBS_SUBDIR}  -lqtmips_osemu
-LIBS += -L$$OUT_PWD/../qtmips_machine/$${LIBS_SUBDIR} -lqtmips_machine -lelf
-LIBS += -L$$OUT_PWD/../qtmips_asm/$${LIBS_SUBDIR} -lqtmips_asm -lelf
+LIBS += -L/opt/homebrew/Cellar/libelf/lib -lelf
+LIBS += -L$$OUT_PWD/../qtmips_machine/$${LIBS_SUBDIR} -lqtmips_machine
+LIBS += -L$$OUT_PWD/../qtmips_asm/$${LIBS_SUBDIR} -lqtmips_asm
 
 PRE_TARGETDEPS += $$OUT_PWD/../qtmips_osemu/$${LIBS_SUBDIR}/libqtmips_osemu.a
 PRE_TARGETDEPS += $$OUT_PWD/../qtmips_machine/$${LIBS_SUBDIR}/libqtmips_machine.a
@@ -38,7 +39,6 @@ QMAKE_CXXFLAGS_DEBUG += -ggdb
 DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
-    coreview/predictor.cpp \
         main.cpp \
         mainwindow.cpp \
         newdialog.cpp \
@@ -59,7 +59,8 @@ SOURCES += \
         coreview/junction.cpp \
         coreview/logicblock.cpp \
         coreview/and.cpp \
-        statictable.cpp \
+        coreview/predictor.cpp \
+    statictable.cpp \
     cacheview.cpp \
     cachedock.cpp \
     graphicsview.cpp \
@@ -92,7 +93,6 @@ SOURCES += \
     textsignalaction.cpp
 
 HEADERS += \
-    coreview/predictor.h \
         mainwindow.h \
         newdialog.h \
         coreview.h \
@@ -112,7 +112,8 @@ HEADERS += \
         coreview/junction.h \
         coreview/logicblock.h \
         coreview/and.h \
-        statictable.h \
+        coreview/predictor.h \
+    statictable.h \
     cacheview.h \
     cachedock.h \
     graphicsview.h \

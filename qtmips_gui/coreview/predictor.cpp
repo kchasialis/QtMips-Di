@@ -10,7 +10,7 @@
 
 using namespace coreview;
 
-Predictor::Predictor() : QGraphicsObject(nullptr), con_pc_in(new Connector(Connector::AX_X)), con_pc_out(new Connector(Connector::AX_X)), name("Predictor", this) {
+Predictor::Predictor() : QGraphicsObject(nullptr), con_pc_in(new Connector(Connector::AX_X)), con_sig_out(new Connector(Connector::AX_X)), name("Predictor", this) {
     QFont font;
     font.setPixelSize(FontSize::SIZE7);
     name.setFont(font);
@@ -23,7 +23,7 @@ Predictor::Predictor() : QGraphicsObject(nullptr), con_pc_in(new Connector(Conne
 
 Predictor::~Predictor() {
     delete con_pc_in;
-    delete con_pc_out;
+    delete con_sig_out;
 }
 
 QRectF Predictor::boundingRect() const {
@@ -42,11 +42,12 @@ const Connector *Predictor::connector_pc_in() const {
     return con_pc_in;
 }
 
-const Connector *Predictor::connector_pc_out() const {
-    return con_pc_out;
+const Connector *Predictor::connector_sig_out() const {
+    return con_sig_out;
 }
 
 void Predictor::setPos(qreal x, qreal y) {
     QGraphicsObject::setPos(x, y);
-    con_pc_in->setPos(x, y + 10);
+    con_pc_in->setPos(x + WIDTH / 2, y + HEIGHT);
+    con_sig_out->setPos(x, y + HEIGHT / 2);
 }

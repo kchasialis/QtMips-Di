@@ -81,14 +81,13 @@ protected:
     coreview::Alu *alu;
     coreview::LogicBlock *peripherals;
     coreview::LogicBlock *terminal;
-    coreview::Predictor *predictor;
     struct {
         coreview::ProgramCounter *pc;
         coreview::Latch *latch;
         coreview::Adder *adder;
         coreview::Constant *adder_4;
         coreview::Junction *junc_pc, *junc_pc_4;
-        coreview::Multiplexer *multiplex[2];
+        coreview::Multiplexer *multiplex;
     } ft;
     struct {
         coreview::LogicBlock *ctl_block, *sign_ext, *shift2, *cmp;
@@ -146,7 +145,11 @@ public:
 private:
     coreview::Latch *latch_if_id, *latch_id_ex, *latch_ex_mem, *latch_mem_wb;
     coreview::InstructionView *inst_fetch, *inst_dec, *inst_exec, *inst_mem, *inst_wrb;
-    coreview::LogicBlock *hazard_unit;
+    coreview::LogicBlock *hazard_unit, *nequal;
+    coreview::Predictor *pred;
+    coreview::Multiplexer *ft_mul[2], *dc_mul;
+    coreview::Junction *j_adder, *j_mul_adder, *j_dc_add_mul, *j_mul_nequal, *j_dc_mul_nequal, *j_dc_add_mul1, *j_dc_mul_ft_mul;
+    coreview::Connector *con_pc_pred;
 };
 
 #else

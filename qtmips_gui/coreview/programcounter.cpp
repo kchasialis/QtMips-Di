@@ -89,6 +89,10 @@ void ProgramCounter::setPos(qreal x, qreal y) {
     con_out->setPos(x + WIDTH/2, y);
 }
 
+int ProgramCounter::width() const {
+    return WIDTH;
+}
+
 const Connector *ProgramCounter::connector_in() const {
     return con_in;
 }
