@@ -148,7 +148,7 @@ private:
     coreview::LogicBlock *hazard_unit, *nequal;
     coreview::Predictor *pred;
     coreview::Multiplexer *ft_mul[2], *dc_mul;
-    coreview::Junction *j_adder, *j_mul_adder, *j_dc_add_mul, *j_mul_nequal, *j_dc_mul_nequal, *j_dc_add_mul1, *j_dc_mul_ft_mul;
+    coreview::Junction *j_adder, *j_dc_add_mul, *j_mul_nequal, *j_dc_mul_nequal, *j_dc_mul_ft_mul;
     coreview::Connector *con_pc_pred;
 };
 

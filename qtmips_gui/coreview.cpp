@@ -397,10 +397,8 @@ CoreViewScenePipelined::CoreViewScenePipelined(machine::QtMipsMachine *machine) 
     NEW(Junction, j_adder, ft.adder->x() + 35, 430);
     new_bus(ft.adder->connector_out(), j_adder->new_connector(coreview::Connector::AX_Y));
     new_bus(j_adder->new_connector(coreview::Connector::AX_Y), dc.add->connector_in_b());
-    new_bus(j_adder->new_connector(), dc_mul->connector_in(0));
-    NEW(Junction, j_mul_adder, -40, 373);
-    new_bus(j_adder->new_connector(coreview::Connector::AX_Y), j_mul_adder->new_connector());
-    new_bus(j_mul_adder->new_connector(coreview::Connector::AX_Y), ft_mul[0]->connector_in(0));
+    new_bus(j_adder->new_connector(), dc_mul->connector_in(0))->setAxes({CON_AXIS_X(10), CON_AXIS_Y(360)});
+    new_bus(j_adder->new_connector(coreview::Connector::AX_Y), ft_mul[0]->connector_in(0))->setAxes({CON_AXIS_X(370), CON_AXIS_Y(-40)});
     new_bus(dc.shift2->new_connector(1, 0), dc.add->connector_in_a());
     dc.j_sign_ext->setPos(80, dc.j_sign_ext->y());
     new_bus(dc.j_sign_ext->new_connector(coreview::Connector::AX_Y), dc.shift2->new_connector(-1, 0));
@@ -411,10 +409,10 @@ CoreViewScenePipelined::CoreViewScenePipelined(machine::QtMipsMachine *machine) 
     new_bus(dc_mul->connector_out(), j_dc_mul_nequal->new_connector())->setAxes({CON_AXIS_Y(385)});
     new_bus(j_dc_mul_nequal->new_connector(), nequal->new_connector(0.5, 1));
     new_signal(nequal->new_connector(-1, 0), ft_mul[1]->connector_ctl());
-    NEW(Junction, j_dc_add_mul1, 150, 510);
-    new_bus(dc.add->connector_out(), dc_mul->connector_in(1));
-    new_bus(j_dc_add_mul1->new_connector(coreview::Connector::AX_Y), dc.add->connector_out());
-    new_bus(j_dc_add_mul1->new_connector(coreview::Connector::AX_Y), ft_mul[0]->connector_in(1))->setAxes({CON_AXIS_X(510), CON_AXIS_Y(-40)});
+    NEW(Junction, j_dc_add_mul, 150, 510);
+    new_bus(dc.add->connector_out(), dc_mul->connector_in(1))->setAxes({CON_AXIS_X(10), CON_AXIS_Y(360)});
+    new_bus(j_dc_add_mul->new_connector(coreview::Connector::AX_Y), dc.add->connector_out());
+    new_bus(j_dc_add_mul->new_connector(coreview::Connector::AX_Y), ft_mul[0]->connector_in(1))->setAxes({CON_AXIS_X(510), CON_AXIS_Y(-40)});
     NEW(Junction, j_dc_mul_ft_mul, dc.add->x(), dc.add->y() + 42);
     new_bus(dc_mul->connector_out(), j_dc_mul_ft_mul->new_connector())->setAxes({CON_AXIS_Y(385)});
     new_bus(j_dc_mul_ft_mul->new_connector(), ft_mul[1]->connector_in(1))->setAxes({CON_AXIS_X(510), CON_AXIS_Y(-5)});
