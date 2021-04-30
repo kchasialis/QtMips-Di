@@ -956,9 +956,11 @@ void CorePipelined::do_step(bool skip_break) {
                     regs->pc_abs_jmp(branch_target(dt_f.inst, dt_f.inst_addr));
                 else
                     regs->pc_inc();
+                emit fetch_predictor_value(branch_taken);
             } else if (dt_d.branch) {
                 // Branch is now on ID and can be evaluated.
                 bool branch_taken = branch_result(dt_d);
+                emit decode_nequal_value(branch_taken != bp->current_prediction());
                 if (branch_taken != bp->current_prediction()) {
                     // Prediction was wrong.
                     // Flush fetch stage & move pc accordingly.

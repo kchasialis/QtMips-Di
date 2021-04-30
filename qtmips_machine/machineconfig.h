@@ -53,7 +53,7 @@ enum class ConfigPresets {
 class MachineConfigCache {
 public:
     MachineConfigCache(MemoryAccess::MemoryType ct = MemoryAccess::MemoryType::L1_CACHE);
-    explicit MachineConfigCache(const MachineConfigCache &cc) noexcept;
+    MachineConfigCache(const MachineConfigCache &cc) = default;
     MachineConfigCache(MemoryAccess::MemoryType ct, const QSettings*, const QString &prefix = "");
 
     void store(QSettings*, const QString &prefix = "");
@@ -163,6 +163,7 @@ public:
     void set_l2_unified_cache(const MachineConfigCache&);
 
     bool pipelined() const;
+    bool predictor() const;
     enum BranchUnit branch_unit() const;
     std::int8_t bht_bits() const;
     enum HazardUnit hazard_unit() const;

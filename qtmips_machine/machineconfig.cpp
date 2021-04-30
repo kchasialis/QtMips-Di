@@ -89,19 +89,6 @@ MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct) {
     cache_type = ct;
 }
 
-MachineConfigCache::MachineConfigCache(const MachineConfigCache& cc) noexcept {
-    en = cc.enabled();
-    upper_mem_time_read = cc.upper_mem_access_read();
-    upper_mem_time_write = cc.upper_mem_access_write();
-    upper_mem_time_burst = cc.upper_mem_access_burst();
-    n_sets = cc.sets();
-    n_blocks = cc.blocks();
-    d_associativity = cc.associativity();
-    replac_pol = cc.replacement_policy();
-    write_pol = cc.write_policy();
-    cache_type = cc.type();
-}
-
 #define N(STR) (prefix + QString(STR))
 
 MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct, const QSettings *sts, const QString &prefix) {
@@ -486,6 +473,11 @@ void MachineConfig::set_l2_unified_cache(const MachineConfigCache& l2) {
 
 bool MachineConfig::pipelined() const {
     return pipeline;
+}
+
+// Returns true if predictor is enabled.
+bool MachineConfig::predictor() const {
+    return bunit == BU_ONE_BIT_BP || bunit == BU_TWO_BIT_BP;
 }
 
 // When pipelined, delay_slot or branch predictor are only possible options.
