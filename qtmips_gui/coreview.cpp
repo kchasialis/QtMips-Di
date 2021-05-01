@@ -37,6 +37,8 @@
 #include "fontsize.h"
 #include <cmath>
 
+#include <QDebug>
+
 //////////////////////////////////////////////////////////////////////////////
 /// Size of visible view area
 #define SC_WIDTH 720
@@ -639,7 +641,7 @@ CoreViewScenePipelinedPredictor::CoreViewScenePipelinedPredictor(machine::QtMips
     NEW(this, LogicBlock, ft.shift2, 95, ft.add[1]->y(), "<<2");
     NEW(this, Junction, ft.j_pc, 60, mem_program->connector_address()->y());
     NEW(this, Junction, ft.j_adder, ft.add[0]->x() + 35, 430);
-    NEW(this, Junction, ft.j_mul_cmp, -15, 525);
+    NEW(this, Junction, ft.j_mul_cmp, -15, 520);
     ft.con_pc_pred = new coreview::Connector();
     ft.con_pc_pred->setPos(ft.pc->x() + ft.pc->width() / 2, ft.pc->y());
 
@@ -658,7 +660,7 @@ CoreViewScenePipelinedPredictor::CoreViewScenePipelinedPredictor(machine::QtMips
     NEW(this, Junction, dc.j_jalpctor31, 365, 100);
     NEW(this, Junction, dc.j_jump_reg, 355, 94);
     NEW(this, Junction, dc.j_add_mul, 150, 510);
-    NEW(this, Junction, dc.j_mul_cmp, 385, 525);
+    NEW(this, Junction, dc.j_mul_cmp, 385, 520);
     NEW(this, Junction, dc.j_sign_ext, 290, dc_con_sign_ext->y());
 
     // From decode to fetch stage.
@@ -843,8 +845,8 @@ CoreViewScenePipelinedPredictor::CoreViewScenePipelinedPredictor(machine::QtMips
         new_bus(hu.j_alu_out->new_connector(CON_AX_Y), hu.mux_alu_reg_a->connector_in(2));
         new_bus(hu.j_alu_out->new_connector(CON_AX_Y), hu.mux_alu_reg_b->connector_in(2));
 
-        new_bus(hu.j_alu_out->new_connector(CON_AX_X), hu.mux_branch_reg_a->connector_in(1))->setAxes({CON_AXIS_Y(380), CON_AXIS_X(330)});;
-        new_bus(hu.j_alu_out->new_connector(CON_AX_X), hu.mux_branch_reg_b->connector_in(1))->setAxes({CON_AXIS_Y(380), CON_AXIS_X(330)});
+        new_bus(hu.j_alu_out->new_connector(CON_AX_X), hu.mux_branch_reg_a->connector_in(1))->setAxes({CON_AXIS_Y(402), CON_AXIS_X(330)});;
+        new_bus(hu.j_alu_out->new_connector(CON_AX_X), hu.mux_branch_reg_b->connector_in(1))->setAxes({CON_AXIS_Y(402), CON_AXIS_X(330)});
 
         new_bus(regs_bus1->new_connector(hu.mux_branch_reg_a->connector_in(0)->point(), coreview::Connector::AX_Y), hu.mux_branch_reg_a->connector_in(0));
         new_bus(regs_bus2->new_connector(hu.mux_branch_reg_b->connector_in(0)->point(), coreview::Connector::AX_Y), hu.mux_branch_reg_b->connector_in(0));

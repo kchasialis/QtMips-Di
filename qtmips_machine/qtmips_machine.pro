@@ -17,6 +17,7 @@ DEFINES += QTMIPS_MACHINE_LIBRARY
 DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
+    branchpredictor.cpp \
     qtmipsmachine.cpp \
     qtmipsexception.cpp \
     core.cpp \
@@ -37,6 +38,7 @@ SOURCES += \
     cop0state.cpp
 
 HEADERS += \
+    branchpredictor.h \
     qtmipsmachine.h \
     qtmipsexception.h \
     core.h \
