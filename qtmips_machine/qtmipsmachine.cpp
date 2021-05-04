@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include <QTime>
+#include "branchpredictor.h"
 #include "qtmipsmachine.h"
 #include "programloader.h"
 
@@ -173,7 +174,7 @@ QtMipsMachine::~QtMipsMachine() {
     symtab = nullptr;
 }
 
-const MachineConfig &QtMipsMachine::config() {
+const MachineConfig &QtMipsMachine::config() const {
     return mcnf;
 }
 
@@ -413,6 +414,24 @@ bool QtMipsMachine::get_step_over_exception(enum ExceptionCause excause) const {
     if (cr != nullptr)
         return cr->get_step_over_exception(excause);
     return false;
+}
+
+void QtMipsMachine::set_bht_entry(size_t bht_index, QString val) {
+    BranchPredictor *bp = cr->predictor();
+    if (bp)
+        bp->set_bht_entry(bht_index, val);
+}
+
+uint8_t QtMipsMachine::get_bht_entry(size_t bht_index) const {
+    BranchPredictor *bp = cr->predictor();
+
+    return bp ? bp->get_bht_entry(bht_index) : (uint8_t) 0xab; // value ab means invalid.
+}
+
+double QtMipsMachine::get_bp_precision() const {
+    BranchPredictor *bp = cr->predictor();
+
+    return bp ? bp->get_precision() : 0.0;
 }
 
 enum ExceptionCause QtMipsMachine::get_exception_cause() const {

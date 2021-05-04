@@ -16,14 +16,17 @@ public:
     virtual bool predict(const machine::Instruction &branch_inst) = 0;
     virtual void update_bht(bool branch_taken) = 0;
     // Debug purposes, should be removed.
-    virtual void print_current_state() = 0;
+//    virtual void print_current_state() = 0;
+    virtual void set_bht_entry(std::size_t bht_index, QString val) = 0;
 
+    uint8_t get_bht_entry(std::size_t bht_index) const;
+    double get_precision() const;
     bool current_prediction() const;
 
 protected:
     std::uint8_t *bht; // The branch history table.
     std::uint8_t bht_bits; // The # of bits used to index the history table.
-    std::uint32_t bht_size; // The size of the table.
+    std::size_t bht_size; // The size of the table.
     std::uint32_t last_pos_predicted; // Position in the table that was accessed.
     std::uint32_t correct_predictions; // # of correct predictions.
     std::uint32_t predictions; // # of all predictions.
@@ -57,7 +60,8 @@ public:
 
     bool predict(const machine::Instruction &branch_instr);
     void update_bht(bool branch_taken);
-    void print_current_state();
+//    void print_current_state();
+    void set_bht_entry(std::size_t bht_index, QString val);
 };
 
 
@@ -66,8 +70,8 @@ private:
     enum FSMStates : std::uint8_t {
         STRONGLY_NT = 0x00, // Strongly not taken
         WEAKLY_NT = 0x01, // Weakly not taken
-        STRONGLY_T = 0x10, // Weakly taken
-        WEAKLY_T = 0x11 // Strongly taken
+        WEAKLY_T = 0x10, // Weakly taken
+        STRONGLY_T = 0x11 // Strongly taken
     };
 
 public:
@@ -75,7 +79,8 @@ public:
 
     bool predict(const machine::Instruction &branch_instr);
     void update_bht(bool branch_taken);
-    void print_current_state();
+//    void print_current_state();
+    void set_bht_entry(std::size_t bht_index, QString val);
 };
 
 }

@@ -60,7 +60,7 @@ public:
     QtMipsMachine(const MachineConfig &cc, bool load_symtab = false, bool load_executable = true);
     ~QtMipsMachine();
 
-    const MachineConfig &config();
+    const MachineConfig &config() const;
     void set_speed(std::uint32_t ips, std::uint32_t time_chunk = 0);
     const Registers *registers();
     const Cop0State *cop0state();
@@ -105,6 +105,9 @@ public:
     bool get_stop_on_exception(ExceptionCause excause) const;
     void set_step_over_exception(ExceptionCause excause, bool value);
     bool get_step_over_exception(ExceptionCause excause) const;
+    void set_bht_entry(size_t bht_index, QString val);
+    uint8_t get_bht_entry(size_t bht_index) const;
+    double get_bp_precision() const;
     enum ExceptionCause get_exception_cause() const;
 
 public slots:

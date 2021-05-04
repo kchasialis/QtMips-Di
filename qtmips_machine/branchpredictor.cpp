@@ -14,6 +14,16 @@ BranchPredictor::~BranchPredictor() {
     delete[] this->bht;
 }
 
+uint8_t BranchPredictor::get_bht_entry(std::size_t bht_index) const {
+    Q_ASSERT(bht_index < bht_size);
+
+    return bht[bht_index];
+}
+
+double BranchPredictor::get_precision() const {
+    return (double) correct_predictions / (double) predictions * 100.0;
+}
+
 bool BranchPredictor::current_prediction() const {
     return current_p;
 }
@@ -62,11 +72,24 @@ void OneBitBranchPredictor::update_bht(bool branch_taken) {
     }
 }
 
-void OneBitBranchPredictor::print_current_state() {
-    QMap<std::uint8_t, QString> print_map;
+//void OneBitBranchPredictor::print_current_state() {
+//    QMap<std::uint8_t, QString> print_map;
 
-    print_map.insert(FSMStates::NOT_TAKEN, "Not Taken");
-    print_map.insert(FSMStates::TAKEN, "Taken");
+//    print_map.insert(FSMStates::NOT_TAKEN, "Not Taken");
+//    print_map.insert(FSMStates::TAKEN, "Taken");
+//}
+
+void OneBitBranchPredictor::set_bht_entry(std::size_t bht_index, QString val) {
+    Q_ASSERT(bht_index < bht_size);
+    if (val == "NT") {
+        bht[bht_index] = FSMStates::NOT_TAKEN;
+    }
+    else if (val == "T") {
+        bht[bht_index] = FSMStates::TAKEN;
+    }
+    else {
+        SANITY_ASSERT(0, "Debug me :)");
+    }
 }
 
 TwoBitBranchPredictor::TwoBitBranchPredictor(uint8_t bht_bits) : BranchPredictor(bht_bits) {}
@@ -103,16 +126,34 @@ void TwoBitBranchPredictor::update_bht(bool branch_taken) {
         if (branch_taken) correct_predictions++;
         break;
     default:
-        // This should never happen, it means we have a bug.
-        assert(0);
+        SANITY_ASSERT(0, "Debug me :)");
     }
 }
 
-void TwoBitBranchPredictor::print_current_state() {
-    QMap<std::uint8_t, QString> print_map;
+//void TwoBitBranchPredictor::print_current_state() {
+//    QMap<std::uint8_t, QString> print_map;
 
-    print_map.insert(FSMStates::STRONGLY_NT, "Strongly Not Taken");
-    print_map.insert(FSMStates::WEAKLY_NT, "Weakly Not Taken");
-    print_map.insert(FSMStates::WEAKLY_T, "Weakly Taken");
-    print_map.insert(FSMStates::STRONGLY_T, "Strongly Taken");
+//    print_map.insert(FSMStates::STRONGLY_NT, "Strongly Not Taken");
+//    print_map.insert(FSMStates::WEAKLY_NT, "Weakly Not Taken");
+//    print_map.insert(FSMStates::WEAKLY_T, "Weakly Taken");
+//    print_map.insert(FSMStates::STRONGLY_T, "Strongly Taken");
+//}
+
+void TwoBitBranchPredictor::set_bht_entry(std::size_t bht_index, QString val) {
+    Q_ASSERT(bht_index < bht_size);
+    if (val == "STRONGLY_NT") {
+        bht[bht_index] = FSMStates::STRONGLY_NT;
+    }
+    else if (val == "WEAKLY_NT") {
+        bht[bht_index] = FSMStates::WEAKLY_NT;
+    }
+    else if (val == "WEAKLY_T") {
+        bht[bht_index] = FSMStates::WEAKLY_T;
+    }
+    else if (val == "STRONGLY_T") {
+        bht[bht_index] = FSMStates::STRONGLY_T;
+    }
+    else {
+        SANITY_ASSERT(0, "Debug me :)");
+    }
 }

@@ -39,10 +39,13 @@ QMAKE_CXXFLAGS_DEBUG += -ggdb
 DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
+    comboboxitemdelegate.cpp \
         main.cpp \
         mainwindow.cpp \
         newdialog.cpp \
         coreview.cpp \
+    predictormodel.cpp \
+    predictortableview.cpp \
         registersdock.cpp \
         programdock.cpp \
         memorydock.cpp \
@@ -93,9 +96,12 @@ SOURCES += \
     textsignalaction.cpp
 
 HEADERS += \
+    comboboxitemdelegate.h \
         mainwindow.h \
         newdialog.h \
         coreview.h \
+    predictormodel.h \
+    predictortableview.h \
         registersdock.h \
         programdock.h \
         memorydock.h \

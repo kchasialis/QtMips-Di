@@ -81,6 +81,8 @@ public:
     void step(bool skip_break = false); // Do single step
     void reset(); // Reset core (only core, memory and registers has to be reseted separately)
 
+    virtual BranchPredictor *predictor() = 0;
+
     std::uint32_t cycles() const; // Returns number of executed cycles
     std::uint32_t stalls() const; // Returns number of stall cycles
 
@@ -313,6 +315,7 @@ public:
 protected:
     void do_step(bool skip_break = false);
     void do_reset();
+    BranchPredictor *predictor();
 
 private:
     struct Core::dtFetch *dt_f;
@@ -330,6 +333,7 @@ public:
 protected:
     void do_step(bool skip_break = false);
     void do_reset();
+    BranchPredictor *predictor();
 
 private:
     struct Core::dtFetch dt_f;

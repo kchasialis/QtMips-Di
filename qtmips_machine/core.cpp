@@ -760,6 +760,10 @@ void CoreSingle::do_reset() {
     prev_inst_addr = 0;
 }
 
+BranchPredictor *CoreSingle::predictor() {
+    return nullptr;
+}
+
 CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
                              MachineConfig::HazardUnit hazard_unit,
                              MachineConfig::BranchUnit branch_unit,
@@ -1007,6 +1011,10 @@ void CorePipelined::do_reset() {
     dt_e.inst_addr = 0;
     dtMemoryInit(dt_m);
     dt_m.inst_addr = 0;
+}
+
+BranchPredictor *CorePipelined::predictor() {
+    return bp;
 }
 
 bool StopExceptionHandler::handle_exception(Core *core, Registers *regs,
