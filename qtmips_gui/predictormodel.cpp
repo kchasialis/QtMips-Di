@@ -91,15 +91,12 @@ QVariant PredictorModel::data(const QModelIndex &index, int role) const {
             SANITY_ASSERT(0, "Debug me :)");
             return QVariant();
         }
-    }
-    else if (role == Qt::BackgroundRole) {
+    } else if (role == Qt::BackgroundRole) {
         // idk yet.
         return QVariant();
-    }
-    else if (role == Qt::FontRole) {
+    } else if (role == Qt::FontRole) {
         return data_font;
-    }
-    else {
+    } else {
         return QVariant();
     }
 }
