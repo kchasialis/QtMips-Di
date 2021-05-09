@@ -13,7 +13,7 @@ class PredictorDock : public QDockWidget  {
     using Super = QDockWidget;
 
 public:
-    PredictorDock(QWidget *parent, QSettings *settings);
+    PredictorDock(QWidget *parent);
 
     void setup(machine::QtMipsMachine *machine);
 

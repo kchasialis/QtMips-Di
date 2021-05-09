@@ -6,15 +6,14 @@
 #include "predictormodel.h"
 #include "predictortableview.h"
 
-PredictorDock::PredictorDock(QWidget *parent, QSettings *settings) : Super(parent) {
+PredictorDock::PredictorDock(QWidget *parent) : Super(parent) {
     setObjectName("Predictor");
     setWindowTitle("Predictor");
 
-//    this->settings = settings;
     QWidget *content = new QWidget();
 
     QHBoxLayout *hlayout_top = new QHBoxLayout();
-    predictor_content = new PredictorTableView(this, settings);
+    predictor_content = new PredictorTableView(this);
     QVBoxLayout *vlayout_mid = new QVBoxLayout();
     vlayout = new QVBoxLayout();
 

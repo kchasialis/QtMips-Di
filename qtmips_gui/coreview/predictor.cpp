@@ -51,3 +51,9 @@ void Predictor::setPos(qreal x, qreal y) {
     con_pc_in->setPos(x + WIDTH / 2, y + HEIGHT);
     con_sig_out->setPos(x, y + HEIGHT / 2);
 }
+
+void Predictor::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) {
+    QGraphicsObject::mouseDoubleClickEvent(event);
+
+    emit open_predictor();
+}

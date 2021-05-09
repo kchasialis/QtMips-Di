@@ -867,4 +867,6 @@ CoreViewScenePipelinedPredictor::CoreViewScenePipelinedPredictor(machine::QtMips
         NEW_V(this, 291, 230, forward_m_d_rs_value, false, 1); // Register 1 forward for bxx and jr, jalr
         NEW_V(this, 333, 230, forward_m_d_rt_value, false, 1); // Register 2 forward for beq, bne
     }
+
+    connect(ft.pred, SIGNAL(open_predictor()), this, SIGNAL(request_predictor()));
 }

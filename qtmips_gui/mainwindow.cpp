@@ -103,7 +103,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     cop0dock->hide();
     messages = new MessagesDock(this, settings);
     messages->hide();
-    predictor = new PredictorDock(this, settings);
+    predictor = new PredictorDock(this);
     predictor->hide();
 
     // Execution speed actions
@@ -246,6 +246,7 @@ void MainWindow::show_hide_coreview(bool show) {
     } else {
         corescene = new CoreViewSceneSimple(machine);
     }
+
     // Connect scene signals to actions
     connect(corescene, SIGNAL(request_registers()), this, SLOT(show_registers()));
     connect(corescene, SIGNAL(request_program_memory()), this, SLOT(show_program()));
@@ -255,6 +256,9 @@ void MainWindow::show_hide_coreview(bool show) {
     connect(corescene, SIGNAL(request_cache_data()), this, SLOT(show_cache_data()));
     connect(corescene, SIGNAL(request_peripherals()), this, SLOT(show_peripherals()));
     connect(corescene, SIGNAL(request_terminal()), this, SLOT(show_terminal()));
+    if (machine->config().predictor())
+        connect(corescene, SIGNAL(request_predictor()), this, SLOT(show_predictor()));
+
     coreview->setScene(corescene);
 }
 
@@ -320,7 +324,6 @@ void MainWindow::create_core(const machine::MachineConfig &config, bool load_exe
     lcd_display->setup(machine->peripheral_lcd_display());
     cop0dock->setup(machine);
     predictor->setup(machine);
-    predictor->show();
 
     // Connect signals for instruction address followup
     connect(machine->core(), SIGNAL(fetch_inst_addr_value(std::uint32_t)),
@@ -408,6 +411,7 @@ SHOW_HANDLER(terminal, Qt::RightDockWidgetArea)
 SHOW_HANDLER(lcd_display, Qt::RightDockWidgetArea)
 SHOW_HANDLER(cop0dock, Qt::TopDockWidgetArea)
 SHOW_HANDLER(messages, Qt::BottomDockWidgetArea)
+SHOW_HANDLER(predictor, Qt::RightDockWidgetArea)
 #undef SHOW_HANDLER
 
 void MainWindow::show_symbol_dialog(){

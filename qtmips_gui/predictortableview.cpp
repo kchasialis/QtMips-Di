@@ -9,13 +9,11 @@
 #include "hinttabledelegate.h"
 #include "predictormodel.h"
 
-#include <QDebug>
 
-PredictorTableView::PredictorTableView(QWidget *parent, QSettings *settings) : Super(parent) {
+PredictorTableView::PredictorTableView(QWidget *parent) : Super(parent) {
     setItemDelegate(new HintTableDelegate);
     setTextElideMode(Qt::ElideNone);
     verticalHeader()->setVisible(false);
-    this->settings = settings;
 }
 
 void PredictorTableView::adjustColumnCount() {
@@ -89,11 +87,8 @@ void PredictorTableView::setModel(QAbstractItemModel *model) {
             SANITY_ASSERT(0, "Debug me :)");
         }
 
-        qDebug() << "HERE (1)";
         ComboBoxItemDelegate *cb = new ComboBoxItemDelegate(this, items);
         setItemDelegateForColumn(1, cb);
-    } else {
-        qDebug() << "HERE (2)";
     }
 }
 

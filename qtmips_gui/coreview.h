@@ -73,6 +73,7 @@ signals:
     void request_cache_data();
     void request_peripherals();
     void request_terminal();
+    void request_predictor();
 
 protected:
     coreview::ProgramMemory *mem_program;

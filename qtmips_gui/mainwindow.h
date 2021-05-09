@@ -109,6 +109,7 @@ public slots:
     void show_hide_coreview(bool show);
     void show_symbol_dialog();
     void show_messages();
+    void show_predictor();
     // Actions - help menu
     void about_qtmips();
     void about_qt();
