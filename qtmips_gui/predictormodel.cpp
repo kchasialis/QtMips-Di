@@ -1,5 +1,6 @@
-#include "predictormodel.h"
 #include <cmath>
+#include "branchpredictor.h"
+#include "predictormodel.h"
 
 PredictorModel::PredictorModel(QObject *parent) : Super(parent), data_font("Monospace"), machine(nullptr) {
     data_font.setStyleHint(QFont::TypeWriter);
@@ -34,6 +35,7 @@ QVariant PredictorModel::headerData(int section, Qt::Orientation orientation, in
 }
 
 QVariant PredictorModel::data(const QModelIndex &index, int role) const {
+    // This function works only if we already have a machine.
     // The code for case 1 and 2 is nearly identical, except in the 2-bit branch predictor.
     bool case1 = false;
 
@@ -46,7 +48,7 @@ QVariant PredictorModel::data(const QModelIndex &index, int role) const {
         case 2:
         {
             bool one_bit_pred;
-            int8_t bht_entry = machine->get_bht_entry(index.row());
+            int8_t bht_entry = machine->bp()->get_bht_entry(index.row());
             switch (machine->config().branch_unit()) {
             case machine::MachineConfig::BU_ONE_BIT_BP:
                 one_bit_pred = true;
@@ -86,7 +88,7 @@ QVariant PredictorModel::data(const QModelIndex &index, int role) const {
             }
         }
         case 3:
-            return machine->get_bp_precision();
+            return QString::number(machine->bp()->get_precision());
         default:
             SANITY_ASSERT(0, "Debug me :)");
             return QVariant();
@@ -102,10 +104,11 @@ QVariant PredictorModel::data(const QModelIndex &index, int role) const {
 }
 
 Qt::ItemFlags PredictorModel::flags(const QModelIndex &index) const {
-    if (index.column() != 2 && index.column() != 3)
-        return QAbstractTableModel::flags(index);
-    else
+    if (index.column() == 1) {
         return QAbstractTableModel::flags(index) | Qt::ItemIsEditable;
+    } else {
+        return QAbstractTableModel::flags(index);
+    }
 }
 
 bool PredictorModel::setData(const QModelIndex &index, const QVariant &value, int role) {
@@ -114,7 +117,7 @@ bool PredictorModel::setData(const QModelIndex &index, const QVariant &value, in
         case 1:
         {
             /* History column is editable. */
-            machine->set_bht_entry(index.row(), value.toString());
+            machine->bp()->set_bht_entry(index.row(), value.toString());
             return true;
         }
         case 0:
@@ -123,7 +126,7 @@ bool PredictorModel::setData(const QModelIndex &index, const QVariant &value, in
             /* Prediction column is not editable.  */
         case 3:
             /* Precision column is not editable.  */
-            return true;
+            return false;
         default:
             SANITY_ASSERT(0, "I got something wrong here");
             return false;

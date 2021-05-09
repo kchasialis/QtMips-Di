@@ -281,6 +281,7 @@ struct Core::dtFetch Core::fetch(bool skip_break) {
     }
 
     emit fetch_inst_addr_value(inst_addr);
+    emit fetch_instr_instr_value(inst);
     emit instruction_fetched(inst, inst_addr, excause, true);
     return {
         .inst = inst,

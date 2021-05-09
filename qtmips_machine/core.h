@@ -116,6 +116,7 @@ signals:
     void instruction_program_counter(const machine::Instruction &inst, std::uint32_t inst_addr, ExceptionCause excause, bool valid);
 
     void fetch_inst_addr_value(std::uint32_t);
+    void fetch_instr_instr_value(const machine::Instruction &instr);
     void fetch_jump_reg_value(std::uint32_t);
     void fetch_jump_value(std::uint32_t);
     void fetch_branch_value(std::uint32_t);

@@ -9,9 +9,12 @@
 #include "hinttabledelegate.h"
 #include "predictormodel.h"
 
+#include <QDebug>
+
 PredictorTableView::PredictorTableView(QWidget *parent, QSettings *settings) : Super(parent) {
     setItemDelegate(new HintTableDelegate);
     setTextElideMode(Qt::ElideNone);
+    verticalHeader()->setVisible(false);
     this->settings = settings;
 }
 
@@ -39,21 +42,21 @@ void PredictorTableView::adjustColumnCount() {
     idx = m->index(0, 1);
     cwidth_dh = delegate->sizeHintForText(viewOptions(), idx,
                                           "STRONGLY_NT").width() + 2;
-    horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
+    horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     horizontalHeader()->resizeSection(1, cwidth_dh);
     totwidth += cwidth_dh;
 
     idx = m->index(0, 2);
     cwidth_dh = delegate->sizeHintForText(viewOptions(), idx,
-                                          "NT").width() + 2;
-    horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed);
+                                          "STRONGLY_NT").width() + 2;
+    horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
     horizontalHeader()->resizeSection(2, cwidth_dh);
     totwidth += cwidth_dh;
 
     horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
     idx = m->index(0, 3);
     totwidth += delegate->sizeHintForText(viewOptions(), idx,
-                                          "100.0").width() + 2;
+                                          "0.0").width() + 2;
     totwidth += verticalHeader()->width();
     setColumnHidden(2, totwidth > width());
 }
@@ -64,14 +67,13 @@ void PredictorTableView::resizeEvent(QResizeEvent *event) {
 }
 
 void PredictorTableView::setModel(QAbstractItemModel *model) {
+    // This function assumes that we already have a machine.
     PredictorModel *pmodel = dynamic_cast<PredictorModel*>(model);
     QVector<QString> items;
 
     Super::setModel(model);
 
     if (pmodel) {
-        ComboBoxItemDelegate *cb = new ComboBoxItemDelegate(this);
-
         switch (pmodel->getMachine()->config().branch_unit()) {
         case machine::MachineConfig::BU_ONE_BIT_BP:
             items.append("NT");
@@ -87,8 +89,11 @@ void PredictorTableView::setModel(QAbstractItemModel *model) {
             SANITY_ASSERT(0, "Debug me :)");
         }
 
-        cb->setItems(items);
+        qDebug() << "HERE (1)";
+        ComboBoxItemDelegate *cb = new ComboBoxItemDelegate(this, items);
         setItemDelegateForColumn(1, cb);
+    } else {
+        qDebug() << "HERE (2)";
     }
 }
 

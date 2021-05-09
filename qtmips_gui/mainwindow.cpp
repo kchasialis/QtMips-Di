@@ -103,6 +103,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     cop0dock->hide();
     messages = new MessagesDock(this, settings);
     messages->hide();
+    predictor = new PredictorDock(this, settings);
+    predictor->hide();
 
     // Execution speed actions
     speed_group = new QActionGroup(this);
@@ -317,6 +319,8 @@ void MainWindow::create_core(const machine::MachineConfig &config, bool load_exe
     peripherals->setup(machine->peripheral_spi_led());
     lcd_display->setup(machine->peripheral_lcd_display());
     cop0dock->setup(machine);
+    predictor->setup(machine);
+    predictor->show();
 
     // Connect signals for instruction address followup
     connect(machine->core(), SIGNAL(fetch_inst_addr_value(std::uint32_t)),

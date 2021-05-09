@@ -213,7 +213,7 @@ void ProgramTableView::focus_address_with_save(std::uint32_t address) {
 }
 
 void ProgramTableView::keyPressEvent(QKeyEvent *event) {
-    if(event->matches(QKeySequence::Copy)) {
+    if (event->matches(QKeySequence::Copy)) {
             QString text;
             QItemSelectionRange range = selectionModel()->selection().first();
             for (auto i = range.top(); i <= range.bottom(); ++i)

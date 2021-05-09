@@ -21,20 +21,23 @@ uint8_t BranchPredictor::get_bht_entry(std::size_t bht_index) const {
 }
 
 double BranchPredictor::get_precision() const {
-    return (double) correct_predictions / (double) predictions * 100.0;
+    return predictions > 0.0 ? (double) correct_predictions / (double) predictions * 100.0 : 0.0;
 }
 
 bool BranchPredictor::current_prediction() const {
     return current_p;
 }
 
-size_t BranchPredictor::bht_idx(const Instruction &branch_instr) {
+size_t BranchPredictor::bht_idx(const Instruction &branch_instr, bool ro) {
     std::uint32_t instr_bits = branch_instr.data();
     // MIPS instructions always contain 2 bits for byte offset.
     std::uint32_t pos = (instr_bits >> 2) & mask_bits(bht_bits);
 
-    last_pos_predicted = pos;
-    predictions++;
+    // ro means we only want to get the bht index and not to update anything on the object.
+    if (!ro) {
+        last_pos_predicted = pos;
+        predictions++;
+    }
 
     return pos;
 }

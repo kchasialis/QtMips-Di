@@ -105,9 +105,7 @@ public:
     bool get_stop_on_exception(ExceptionCause excause) const;
     void set_step_over_exception(ExceptionCause excause, bool value);
     bool get_step_over_exception(ExceptionCause excause) const;
-    void set_bht_entry(size_t bht_index, QString val);
-    uint8_t get_bht_entry(size_t bht_index) const;
-    double get_bp_precision() const;
+    BranchPredictor *bp() const;
     enum ExceptionCause get_exception_cause() const;
 
 public slots:

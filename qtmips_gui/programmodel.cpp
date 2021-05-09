@@ -135,7 +135,7 @@ QVariant ProgramModel::data(const QModelIndex &index, int role) const {
         if (!get_row_address(address, index.row()) ||
             machine == nullptr)
             return QVariant();
-        if (index.column() == 2 && machine->l1_program_cache() != nullptr) {
+        if (index.column() == 2 && machine->config().l1_program_cache().enabled()) {
             machine::LocationStatus loc_stat;
             loc_stat = machine->l1_program_cache()->location_status(address);
             if (loc_stat & machine::LOCSTAT_CACHED) {

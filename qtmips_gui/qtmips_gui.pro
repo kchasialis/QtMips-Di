@@ -44,6 +44,7 @@ SOURCES += \
         mainwindow.cpp \
         newdialog.cpp \
         coreview.cpp \
+    predictordock.cpp \
     predictormodel.cpp \
     predictortableview.cpp \
         registersdock.cpp \
@@ -100,6 +101,7 @@ HEADERS += \
         mainwindow.h \
         newdialog.h \
         coreview.h \
+    predictordock.h \
     predictormodel.h \
     predictortableview.h \
         registersdock.h \

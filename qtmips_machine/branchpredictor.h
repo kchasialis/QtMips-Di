@@ -19,6 +19,8 @@ public:
 //    virtual void print_current_state() = 0;
     virtual void set_bht_entry(std::size_t bht_index, QString val) = 0;
 
+    // returns an index in the branch history table based on the instruction.
+    size_t bht_idx(const Instruction &branch_instr, bool ro = false);
     uint8_t get_bht_entry(std::size_t bht_index) const;
     double get_precision() const;
     bool current_prediction() const;
@@ -43,9 +45,6 @@ protected:
     constexpr size_t power_of_2(std::uint32_t exponent) const {
         return exponent == 0 ? 1 : 2 * power_of_2(exponent - 1);
     }
-
-    // returns an index in the branch history table based on the instruction.
-    size_t bht_idx(const Instruction &branch_instr);
 };
 
 class OneBitBranchPredictor : public BranchPredictor {

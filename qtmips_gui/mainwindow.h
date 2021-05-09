@@ -59,6 +59,7 @@
 #include "machineconfig.h"
 #include "srceditor.h"
 #include "simpleasm.h"
+#include "predictordock.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -149,6 +150,7 @@ private:
     LcdDisplayDock *lcd_display;
     Cop0Dock *cop0dock;
     MessagesDock *messages;
+    PredictorDock *predictor;
     bool load_default_settings;
     bool coreview_shown;
     SrcEditor  *current_srceditor;

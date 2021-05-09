@@ -1,7 +1,7 @@
 #include "comboboxitemdelegate.h"
 #include <QComboBox>
 
-ComboBoxItemDelegate::ComboBoxItemDelegate(QObject *parent) : Super(parent), items() {}
+ComboBoxItemDelegate::ComboBoxItemDelegate(QObject *parent, QVector<QString> i) : Super(parent), items(i) {}
 
 QWidget *ComboBoxItemDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &/* option */, const QModelIndex & /* index */) const {
     // Create the combobox and populate it
