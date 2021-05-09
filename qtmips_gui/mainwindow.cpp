@@ -89,10 +89,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     program->show();
     memory = new MemoryDock(this, settings);
     memory->hide();
-    cache_program = new CacheDock(this, "Program");
-    cache_program->hide();
-    cache_data = new CacheDock(this, "Data");
-    cache_data->hide();
+    l1_cache_program = new CacheDock(this, "L1 Program");
+    l1_cache_program->hide();
+    l1_cache_data = new CacheDock(this, "L1 Data");
+    l1_cache_data->hide();
+    l2_cache = new CacheDock(this, "L2");
+    l2_cache->hide();
+
     peripherals = new PeripheralsDock(this, settings);
     peripherals->hide();
     terminal = new TerminalDock(this, settings);
@@ -133,14 +136,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(ui->actionRegisters, SIGNAL(triggered(bool)), this, SLOT(show_registers()));
     connect(ui->actionProgram_memory, SIGNAL(triggered(bool)), this, SLOT(show_program()));
     connect(ui->actionMemory, SIGNAL(triggered(bool)), this, SLOT(show_memory()));
-    connect(ui->actionProgram_Cache, SIGNAL(triggered(bool)), this, SLOT(show_cache_program()));
-    connect(ui->actionData_Cache, SIGNAL(triggered(bool)), this, SLOT(show_cache_data()));
+    connect(ui->actionL1_Program_Cache, SIGNAL(triggered(bool)), this, SLOT(show_l1_cache_program()));
+    connect(ui->actionL1_Data_Cache, SIGNAL(triggered(bool)), this, SLOT(show_l1_cache_data()));
+    connect(ui->actionL2_Cache, SIGNAL(triggered(bool)), this, SLOT(show_l2_cache()));
     connect(ui->actionPeripherals, SIGNAL(triggered(bool)), this, SLOT(show_peripherals()));
     connect(ui->actionTerminal, SIGNAL(triggered(bool)), this, SLOT(show_terminal()));
     connect(ui->actionLcdDisplay, SIGNAL(triggered(bool)), this, SLOT(show_lcd_display()));
     connect(ui->actionCop0State, SIGNAL(triggered(bool)), this, SLOT(show_cop0dock()));
     connect(ui->actionCore_View_show, SIGNAL(triggered(bool)), this, SLOT(show_hide_coreview(bool)));
     connect(ui->actionMessages, SIGNAL(triggered(bool)), this, SLOT(show_messages()));
+    connect(ui->actionPredictor, SIGNAL(triggered(bool)), this, SLOT(show_predictor()));
     connect(ui->actionAbout, SIGNAL(triggered(bool)), this, SLOT(about_qtmips()));
     connect(ui->actionAboutQt, SIGNAL(triggered(bool)), this, SLOT(about_qt()));
     connect(ui->ips1, SIGNAL(toggled(bool)), this, SLOT(set_speed()));
@@ -196,12 +201,14 @@ MainWindow::~MainWindow() {
     delete registers;
     delete program;
     delete memory;
-    delete cache_program;
-    delete cache_data;
+    delete l1_cache_program;
+    delete l1_cache_data;
+    delete l2_cache;
     delete peripherals;
     delete terminal;
     delete lcd_display;
     delete ui;
+    delete predictor;
     if (machine != nullptr)
         delete machine;
     settings->sync();
@@ -252,8 +259,9 @@ void MainWindow::show_hide_coreview(bool show) {
     connect(corescene, SIGNAL(request_program_memory()), this, SLOT(show_program()));
     connect(corescene, SIGNAL(request_data_memory()), this, SLOT(show_memory()));
     connect(corescene, SIGNAL(request_jump_to_program_counter(std::uint32_t)), program, SIGNAL(jump_to_pc(std::uint32_t)));
-    connect(corescene, SIGNAL(request_cache_program()), this, SLOT(show_cache_program()));
-    connect(corescene, SIGNAL(request_cache_data()), this, SLOT(show_cache_data()));
+    connect(corescene, SIGNAL(request_l1_cache_program()), this, SLOT(show_l1_cache_program()));
+    connect(corescene, SIGNAL(request_l1_cache_data()), this, SLOT(show_l1_cache_data()));
+    connect(corescene, SIGNAL(request_l2_cache()), this, SLOT(show_l2_cache()));
     connect(corescene, SIGNAL(request_peripherals()), this, SLOT(show_peripherals()));
     connect(corescene, SIGNAL(request_terminal()), this, SLOT(show_terminal()));
     if (machine->config().predictor())
@@ -317,13 +325,15 @@ void MainWindow::create_core(const machine::MachineConfig &config, bool load_exe
     registers->setup(machine);
     program->setup(machine);
     memory->setup(machine);
-    cache_program->setup(machine->l1_program_cache());
-    cache_data->setup(machine->l1_data_cache());
+    l1_cache_program->setup(machine->l1_program_cache());
+    l1_cache_data->setup(machine->l1_data_cache());
+    l2_cache->setup(machine->l2_unified_cache());
     terminal->setup(machine->serial_port());
     peripherals->setup(machine->peripheral_spi_led());
     lcd_display->setup(machine->peripheral_lcd_display());
     cop0dock->setup(machine);
-    predictor->setup(machine);
+    if (machine->config().predictor())
+        predictor->setup(machine);
 
     // Connect signals for instruction address followup
     connect(machine->core(), SIGNAL(fetch_inst_addr_value(std::uint32_t)),
@@ -404,8 +414,9 @@ void MainWindow::print_action() {
 SHOW_HANDLER(registers, Qt::TopDockWidgetArea)
 SHOW_HANDLER(program, Qt::LeftDockWidgetArea)
 SHOW_HANDLER(memory, Qt::RightDockWidgetArea)
-SHOW_HANDLER(cache_program, Qt::RightDockWidgetArea)
-SHOW_HANDLER(cache_data, Qt::RightDockWidgetArea)
+SHOW_HANDLER(l1_cache_program, Qt::RightDockWidgetArea)
+SHOW_HANDLER(l1_cache_data, Qt::RightDockWidgetArea)
+SHOW_HANDLER(l2_cache, Qt::RightDockWidgetArea)
 SHOW_HANDLER(peripherals, Qt::RightDockWidgetArea)
 SHOW_HANDLER(terminal, Qt::RightDockWidgetArea)
 SHOW_HANDLER(lcd_display, Qt::RightDockWidgetArea)

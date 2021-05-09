@@ -100,8 +100,9 @@ public slots:
     void show_registers();
     void show_program();
     void show_memory();
-    void show_cache_data();
-    void show_cache_program();
+    void show_l1_cache_data();
+    void show_l1_cache_program();
+    void show_l2_cache();
     void show_peripherals();
     void show_terminal();
     void show_lcd_display();
@@ -145,7 +146,8 @@ private:
     RegistersDock *registers;
     ProgramDock *program;
     MemoryDock *memory;
-    CacheDock *cache_program, *cache_data;
+    CacheDock *l1_cache_program, *l1_cache_data;
+    CacheDock *l2_cache;
     PeripheralsDock *peripherals;
     TerminalDock *terminal;
     LcdDisplayDock *lcd_display;

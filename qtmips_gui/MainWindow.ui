@@ -51,7 +51,7 @@
      <x>0</x>
      <y>0</y>
      <width>900</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -82,14 +82,16 @@
     <addaction name="actionRegisters"/>
     <addaction name="actionProgram_memory"/>
     <addaction name="actionMemory"/>
-    <addaction name="actionProgram_Cache"/>
-    <addaction name="actionData_Cache"/>
+    <addaction name="actionL1_Program_Cache"/>
+    <addaction name="actionL1_Data_Cache"/>
+    <addaction name="actionL2_Cache"/>
     <addaction name="actionPeripherals"/>
     <addaction name="actionTerminal"/>
     <addaction name="actionLcdDisplay"/>
     <addaction name="actionCop0State"/>
     <addaction name="actionCore_View_show"/>
     <addaction name="actionMessages"/>
+    <addaction name="actionPredictor"/>
    </widget>
    <widget class="QMenu" name="menuMachine">
     <property name="title">
@@ -465,17 +467,17 @@
     <string>Ctrl+P</string>
    </property>
   </action>
-  <action name="actionProgram_Cache">
+  <action name="actionL1_Program_Cache">
    <property name="text">
-    <string>Program Cache</string>
+    <string>L1 Program Cache</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+P</string>
    </property>
   </action>
-  <action name="actionData_Cache">
+  <action name="actionL1_Data_Cache">
    <property name="text">
-    <string>Data Cache</string>
+    <string>L1 Data Cache</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+M</string>
@@ -573,6 +575,16 @@
    </property>
    <property name="text">
     <string>Mnemonics Registers</string>
+   </property>
+  </action>
+  <action name="actionPredictor">
+   <property name="text">
+    <string>Predictor</string>
+   </property>
+  </action>
+  <action name="actionL2_Cache">
+   <property name="text">
+    <string>L2 Cache</string>
    </property>
   </action>
  </widget>
