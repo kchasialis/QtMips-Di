@@ -320,6 +320,7 @@ MachineConfig::MachineConfig(const MachineConfig& cc) noexcept {
 
 #define N(STR) (prefix + QString(STR))
 
+#include <QDebug>
 MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) {
     pipeline = sts->value(N("Pipelined"), DF_PIPELINE).toBool();
     bunit = (BranchUnit)sts->value(N("BranchUnit"), DF_BUNIT).toUInt();

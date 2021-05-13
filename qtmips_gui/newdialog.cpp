@@ -413,7 +413,6 @@ void NewDialog::load_settings() {
 
     // Load preset
     unsigned preset = settings->value("Preset", 1).toUInt();
-    ui->delay_slot->click();
     if (preset != 0) {
         auto p = (enum machine::ConfigPresets)(preset - 1);
         config->preset(p);
