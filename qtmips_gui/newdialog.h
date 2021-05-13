@@ -55,6 +55,9 @@ public:
 
     void switch2custom();
     void set_default_settings(bool);
+    NewDialogCacheHandler *l1_data_cache_handler();
+    NewDialogCacheHandler *l1_program_cache_handler();
+    Ui::NewDialogCache *l2_cache_dialog();
 
 protected:
     void closeEvent(QCloseEvent *);

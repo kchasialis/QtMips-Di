@@ -69,8 +69,9 @@ signals:
     void request_data_memory();
     void request_program_memory();
     void request_jump_to_program_counter(std::uint32_t addr);
-    void request_cache_program();
-    void request_cache_data();
+    void request_l1_cache_program();
+    void request_l1_cache_data();
+    void request_l2_cache();
     void request_peripherals();
     void request_terminal();
     void request_predictor();

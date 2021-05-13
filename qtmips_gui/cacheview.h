@@ -53,7 +53,7 @@ public:
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
 private slots:
-    void cache_update(unsigned associat, unsigned set, unsigned col, bool valid, bool dirty,
+    void cache_update(std::uint32_t associat, std::uint32_t set, std::uint32_t col, bool valid, bool dirty,
                       std::uint32_t tag, const std::uint32_t *data, bool write);
 
 private:
@@ -74,7 +74,7 @@ public:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
 private slots:
-    virtual void cache_update(unsigned associat, unsigned set, unsigned col, bool valid, bool dirty,
+    virtual void cache_update(std::uint32_t associat, std::uint32_t set, std::uint32_t col, bool valid, bool dirty,
                       std::uint32_t tag, const std::uint32_t *data, bool write);
 
 private:

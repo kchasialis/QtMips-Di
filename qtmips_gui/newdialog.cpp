@@ -43,12 +43,19 @@
 #endif
 
 NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
+    QMessageBox m_box;
+    QAbstractButton *prev;
+
     setWindowTitle("New machine");
 
     this->settings = settings;
     config = nullptr;
 
-    default_settings = false;
+    m_box.setText("Load previous or default settings?");
+    prev = m_box.addButton(tr("Previous"), QMessageBox::YesRole);
+    m_box.addButton(tr("Default"), QMessageBox::NoRole);
+    m_box.exec();
+    set_default_settings(m_box.clickedButton() != prev);
 
     ui = new Ui::NewDialog();
     ui->setupUi(this);
@@ -144,6 +151,18 @@ void NewDialog::closeEvent(QCloseEvent *) {
     MainWindow *prnt = (MainWindow*)parent();
     if (!prnt->configured())
         prnt->close();
+}
+
+NewDialogCacheHandler *NewDialog::l1_data_cache_handler() {
+    return l1_d_cache_handler;
+}
+
+NewDialogCacheHandler *NewDialog::l1_program_cache_handler() {
+    return l1_p_cache_handler;
+}
+
+Ui::NewDialogCache * NewDialog::l2_cache_dialog() {
+    return ui_l2_cache;
 }
 
 void NewDialog::cancel() {
@@ -246,12 +265,11 @@ void NewDialog::branch_unit_change() {
         config->set_bht_bits(-1);
     }
 
-    //NOTE: remove when we're sure it works
     if (config->pipelined()) {
-        assert(config->branch_unit() != machine::MachineConfig::BU_NONE);
+        SANITY_ASSERT(config->branch_unit() != machine::MachineConfig::BU_NONE, "Debug me :)");
     } else {
-        assert(config->branch_unit() == machine::MachineConfig::BU_NONE
-               || config->branch_unit() == machine::MachineConfig::BU_DELAY_SLOT);
+        SANITY_ASSERT(config->branch_unit() == machine::MachineConfig::BU_NONE
+               || config->branch_unit() == machine::MachineConfig::BU_DELAY_SLOT, "Debug me :)");
     }
     switch2custom();
 }
@@ -388,11 +406,7 @@ void NewDialog::load_settings() {
         delete config;
 
     // Load config
-    if (default_settings) {
-        config = new machine::MachineConfig();
-    } else {
-        config = new machine::MachineConfig(settings);
-    }
+    config = default_settings ? new machine::MachineConfig() : new machine::MachineConfig(settings);
     l1_d_cache_handler->set_config(config->access_l1_data_cache());
     l1_p_cache_handler->set_config(config->access_l1_program_cache());
     l2_u_cache_handler->set_config(config->access_l2_unified_cache());
@@ -419,7 +433,7 @@ void NewDialog::load_settings() {
         }
     } else {
         ui->preset_custom->setChecked(true);
-	}
+    }
 
     config_gui();
 }
@@ -468,6 +482,39 @@ void NewDialogCacheHandler::config_gui(int time_read, int time_write, int time_b
 
 void NewDialogCacheHandler::enabled(bool val) {
 	config->set_enabled(val);
+
+    // We must prohibit the user to enable L2 cache without enabling L1.
+    switch (config->type()) {
+    case machine::MemoryAccess::MemoryType::L1_CACHE:
+        if (!val) {
+            // L1 cache is disabled.
+            nd->l2_cache_dialog()->enabled->setChecked(false);
+            nd->l2_cache_dialog()->enabled->setCheckable(false);
+            nd->l2_cache_dialog()->access_time->setEnabled(false);
+        } else {
+            // L1 cache is enabled, allow user to also enable L2 Cache.
+            nd->l2_cache_dialog()->enabled->setCheckable(true);
+            nd->l2_cache_dialog()->access_time->setEnabled(true);
+        }
+        break;
+    case machine::MemoryAccess::MemoryType::L2_CACHE:
+        if (val) {
+            // L2 cache is enabled, check if at least one of L1 program or data cache is also enabled.
+            if (!nd->l1_data_cache_handler()->config->enabled() && !nd->l1_program_cache_handler()->config->enabled()) {
+                nd->l2_cache_dialog()->enabled->setChecked(false);
+                nd->l2_cache_dialog()->enabled->setCheckable(false);
+                nd->l2_cache_dialog()->access_time->setEnabled(false);
+
+                QMessageBox messageBox;
+                messageBox.critical(nullptr, "Error", "L2 cache can't be enabled without enabling one of L1 caches");
+                messageBox.setFixedSize(500, 200);
+            }
+        }
+        break;
+    default:
+        SANITY_ASSERT(0, "Debug me :)");
+    }
+
 	nd->switch2custom();
 }
 

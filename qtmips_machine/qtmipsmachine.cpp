@@ -81,17 +81,13 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
     perip_lcd_display = new LcdDisplay();
     addressapce_insert_range(perip_lcd_display, 0xffe00000, 0xffe4afff, true);
 
+    l2_unified = new Cache(cpu_mem, cc.l2_unified_cache(),
+                           cc.l2_unified_cache().upper_mem_access_read(),
+                           cc.l2_unified_cache().upper_mem_access_write(),
+                           cc.l2_unified_cache().upper_mem_access_burst());
+
     /* If L2 cache is enabled, make it the upper level of L1, else use DRAM.  */
-    if (cc.l2_unified_cache().enabled()) {
-        l2_unified = new Cache(cpu_mem, cc.l2_unified_cache(),
-                               cc.l2_unified_cache().upper_mem_access_read(),
-                               cc.l2_unified_cache().upper_mem_access_write(),
-                               cc.l2_unified_cache().upper_mem_access_burst());
-        mem_upper = l2_unified;
-    } else {
-        l2_unified = nullptr;
-        mem_upper = cpu_mem;
-    }
+    mem_upper = cc.l2_unified_cache().enabled() ? l2_unified : cpu_mem;
 
     l1_data = new Cache(mem_upper, cc.l1_data_cache(),
                         cc.l1_data_cache().upper_mem_access_read(),

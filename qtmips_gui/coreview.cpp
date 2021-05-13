@@ -202,8 +202,8 @@ CoreViewScene::CoreViewScene(machine::QtMipsMachine *machine) : QGraphicsScene()
     connect(regs, SIGNAL(open_registers()), this, SIGNAL(request_registers()));
     connect(mem_program, SIGNAL(open_mem()), this, SIGNAL(request_program_memory()));
     connect(mem_data, SIGNAL(open_mem()), this, SIGNAL(request_data_memory()));
-    connect(mem_program, SIGNAL(open_cache()), this, SIGNAL(request_cache_program()));
-    connect(mem_data, SIGNAL(open_cache()), this, SIGNAL(request_cache_data()));
+    connect(mem_program, SIGNAL(open_cache()), this, SIGNAL(request_l1_cache_program()));
+    connect(mem_data, SIGNAL(open_cache()), this, SIGNAL(request_l1_cache_data()));
     connect(peripherals, SIGNAL(open_block()), this, SIGNAL(request_peripherals()));
     connect(terminal, SIGNAL(open_block()), this, SIGNAL(request_terminal()));
 }

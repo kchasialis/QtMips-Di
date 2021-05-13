@@ -81,11 +81,11 @@ void CacheDock::setup(const machine::Cache *cache) {
     l_hit_rate->setText("0.000%");
     l_speed->setText("100%");
     if (cache != nullptr) {
-        connect(cache, SIGNAL(hit_update(uint)), this, SLOT(hit_update(uint)));
-        connect(cache, SIGNAL(miss_update(uint)), this, SLOT(miss_update(uint)));
-        connect(cache, SIGNAL(memory_reads_update(uint)), this, SLOT(memory_reads_update(uint)));
-        connect(cache, SIGNAL(memory_writes_update(uint)), this, SLOT(memory_writes_update(uint)));
-        connect(cache, SIGNAL(statistics_update(uint,double,double)), this, SLOT(statistics_update(uint,double,double)));
+        connect(cache, SIGNAL(hit_update(std::uint32_t)), this, SLOT(hit_update(std::uint32_t)));
+        connect(cache, SIGNAL(miss_update(std::uint32_t)), this, SLOT(miss_update(std::uint32_t)));
+        connect(cache, SIGNAL(memory_reads_update(std::uint32_t)), this, SLOT(memory_reads_update(std::uint32_t)));
+        connect(cache, SIGNAL(memory_writes_update(std::uint32_t)), this, SLOT(memory_writes_update(std::uint32_t)));
+        connect(cache, SIGNAL(statistics_update(std::uint32_t,double,double)), this, SLOT(statistics_update(std::uint32_t,double,double)));
     }
     top_form->setVisible(cache != nullptr);
     no_cache->setVisible(!cache->config().enabled());

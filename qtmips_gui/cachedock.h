@@ -51,11 +51,11 @@ public:
     void setup(const machine::Cache *cache);
 
 private slots:
-    void hit_update(unsigned);
-    void miss_update(unsigned);
-    void memory_reads_update(unsigned val);
-    void memory_writes_update(unsigned val);
-    void statistics_update(unsigned stalled_cycles, double speed_improv, double hit_rate);
+    void hit_update(std::uint32_t);
+    void miss_update(std::uint32_t);
+    void memory_reads_update(std::uint32_t);
+    void memory_writes_update(std::uint32_t);
+    void statistics_update(std::uint32_t stalled_cycles, double speed_improv, double hit_rate);
 
 private:
     QVBoxLayout *layout_box;
