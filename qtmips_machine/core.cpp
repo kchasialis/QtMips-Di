@@ -949,42 +949,109 @@ void CorePipelined::do_step(bool skip_break) {
                 }
             }
         } else {
-            // NOTE(kostas): it seems to work for some examples
-            // we should see what happens and how it interacts
-            // with other hazards.
-            if (dt_f.inst.flags() & IMF_BRANCH) {
-                // We fetched a branch instruction.
-                pc_before_prediction = regs->read_pc();
-                bool branch_taken = bp->predict(dt_f.inst);
-                if (branch_taken)
-                    regs->pc_abs_jmp(branch_target(dt_f.inst, dt_f.inst_addr));
-                else
-                    regs->pc_inc();
-                emit fetch_predictor_value(branch_taken);
-            } else if (dt_d.branch) {
-                // Branch is now on ID and can be evaluated.
-                bool branch_taken = branch_result(dt_d);
-                emit decode_nequal_value(branch_taken != bp->current_prediction());
-                if (branch_taken != bp->current_prediction()) {
-                    // Prediction was wrong.
-                    // Flush fetch stage & move pc accordingly.
+            emit instruction_program_counter(dt_d.inst, dt_d.inst_addr, EXCAUSE_NONE, dt_d.is_valid);
+
+            // TODO(kostas): THIS NEEDS DEBUGGING FOR SURE!!!
+            // Check the code flow, check the branch predictor functions, make sure this shit works
+            // or we're screwed.
+            // Remember to also change TwoBitBranchPredictor.
+            if (!dt_d.jump) {
+                bool branch_taken = false;
+                if (dt_d.branch) {
+                    // Branch is now on ID and can be evaluated.
+                    branch_taken = branch_result(dt_d);
+                    uint32_t correct_address;
+
+                    emit decode_nequal_value(branch_taken != bp->last_prediction());
+                    if (branch_taken != bp->last_prediction()) {
+                        // Prediction was wrong.
+                        // Flush fetch stage & move pc accordingly.
+                        dtFetchInit(dt_f);
+                        emit instruction_fetched(dt_f.inst, dt_f.inst_addr,
+                                                 dt_f.excause, dt_f.is_valid);
+                        emit fetch_inst_addr_value(STAGEADDR_NONE);
+
+                        correct_address = branch_taken ? branch_target(dt_d.inst, dt_d.inst_addr) : pc_before_prediction + 4;
+                        regs->pc_abs_jump(correct_address);
+                        bp->update_bht(branch_taken, correct_address);
+                    } else {
+                        bp->correct_predictions_inc();
+                    }
+                }
+
+                emit fetch_jump_value(false);
+                emit fetch_jump_reg_value(false);
+                emit fetch_branch_value(branch_taken);
+            } else {
+                uint32_t correct_address;
+
+                if (!bp->last_prediction()) {
+                    // We had a BTB miss, flush fetch stage and update BTB.
                     dtFetchInit(dt_f);
                     emit instruction_fetched(dt_f.inst, dt_f.inst_addr,
                                              dt_f.excause, dt_f.is_valid);
                     emit fetch_inst_addr_value(STAGEADDR_NONE);
 
-                    if (branch_taken) {
-                        regs->pc_abs_jmp(branch_target(dt_d.inst, dt_d.inst_addr));
-                    } else {
-                        regs->pc_abs_jmp(pc_before_prediction + 4);
-                    }
+                    correct_address = !dt.bjr_req_rs ? ((pc & 0xF0000000) | ((dt.inst.address() << 2) & 0x0FFFFFFF)) : dt.val_rs;
+                    regs->pc_abs_jump(correct_address);
+                    bp->update_bht(true, correct_address);
                 } else {
-                    regs->pc_inc();
+                    bp->correct_predictions_inc();
                 }
-                bp->update_bht(branch_taken);
-            } else {
-                handle_pc(dt_d);
+
+                // Jump is on ID and we can evaluate its address.
+                if (!dt.bjr_req_rs) {
+                    emit fetch_jump_value(true);
+                    emit fetch_jump_reg_value(false);
+                } else {
+                    emit fetch_jump_value(false);
+                    emit fetch_jump_reg_value(true);
+                }
+                emit fetch_branch_value(false);
             }
+
+            if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
+                // Instruction is branch or jump, we need to save pc in case we predict wrong.
+                pc_before_prediction = regs->read_pc();
+                regs->pc_abs_jmp(bp->predict(dt_f.inst, regs->read_pc()));
+            } else {
+                regs->pc_inc();
+            }
+
+            /*
+    bool branch = false;
+    emit instruction_program_counter(dt.inst, dt.inst_addr, EXCAUSE_NONE, dt.is_valid);
+
+    if (dt.jump) {
+        if (!dt.bjr_req_rs) {
+            regs->pc_abs_jmp_28(dt.inst.address() << 2);
+            emit fetch_jump_value(true);
+            emit fetch_jump_reg_value(false);
+        } else {
+            regs->pc_abs_jmp(dt.val_rs);
+            emit fetch_jump_value(false);
+            emit fetch_jump_reg_value(true);
+        }
+        emit fetch_branch_value(false);
+        return true;
+    }
+
+    if (dt.branch) {
+        branch = branch_result(dt);
+    }
+
+    emit fetch_jump_value(false);
+    emit fetch_jump_reg_value(false);
+    emit fetch_branch_value(branch);
+
+    if (branch)
+        regs->pc_abs_jmp(branch_target(dt.inst, dt.inst_addr));
+    else
+        regs->pc_inc();
+
+    return branch;
+                */
+
         }
     } else {
         // Run fetch stage on empty

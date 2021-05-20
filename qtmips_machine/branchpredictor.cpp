@@ -1,8 +1,10 @@
 #include "branchpredictor.h"
+#include "branchtargetbuffer.h"
 
 using namespace machine;
 
 BranchPredictor::BranchPredictor(std::uint8_t bht_bits) {
+    this->btb_impl = new BranchTargetBuffer(bht_bits);
     this->bht_bits = bht_bits;
     this->bht_size = power_of_2(this->bht_bits);
     this->bht = new std::uint8_t[this->bht_size]();
@@ -24,8 +26,12 @@ double BranchPredictor::get_precision() const {
     return predictions > 0.0 ? (double) correct_predictions / (double) predictions * 100.0 : 0.0;
 }
 
-bool BranchPredictor::current_prediction() const {
-    return current_p;
+bool BranchPredictor::last_prediction() const {
+    return last_p;
+}
+
+void BranchPredictor::correct_predictions_inc() {
+    correct_predictions++;
 }
 
 size_t BranchPredictor::bht_idx(const Instruction &branch_instr, bool ro) {
@@ -44,43 +50,42 @@ size_t BranchPredictor::bht_idx(const Instruction &branch_instr, bool ro) {
 
 OneBitBranchPredictor::OneBitBranchPredictor(uint8_t bht_bits) : BranchPredictor(bht_bits) {}
 
-bool OneBitBranchPredictor::predict(const Instruction &branch_instr) {
-    size_t idx = bht_idx(branch_instr);
-    current_p = (bht[idx] == FSMStates::TAKEN) ? true : false;
+std::uint32_t OneBitBranchPredictor::predict(const Instruction &instr, std::uint32_t current_pc) {
+    std::uint32_t address;
+    size_t idx;
 
-    return current_p;
-}
-
-void OneBitBranchPredictor::update_bht(bool branch_taken) {
-    // If we predicted the wrong result, update the table.
-    // Else, keep it as is.
-    switch (bht[last_pos_predicted]) {
-    case FSMStates::NOT_TAKEN:
-        if (!branch_taken) {
-           correct_predictions++;
-        } else {
-            bht[last_pos_predicted] = FSMStates::TAKEN;
-        }
-        break;
-    case FSMStates::TAKEN:
-        if (branch_taken) {
-           correct_predictions++;
-        } else {
-            bht[last_pos_predicted] = FSMStates::NOT_TAKEN;
-        }
-        break;
-    default:
-        // This should never happen, it means we have a bug.
-        assert(0);
+    last_jump = bj_instr.flags() & IMF_JUMP;
+    if (last_jump) {
+        return btb_impl->get_pc_address(bht_idx, current_pc, &address) ? address : (current_pc + 4);
+    } else if (bj_instr.flags() & IMF_BRANCH) {
+        idx = bht_idx(bj_instr);
+        last_p = bht[idx] == FSMStates::TAKEN && btb_impl->get_pc_address(bht_idx, current_pc, &address);
+        return last_p ? address : (current_pc + 4);
+    } else {
+        SANITY_ASSERT(0, "Debug me :)");
+        return -1;
     }
 }
 
-//void OneBitBranchPredictor::print_current_state() {
-//    QMap<std::uint8_t, QString> print_map;
-
-//    print_map.insert(FSMStates::NOT_TAKEN, "Not Taken");
-//    print_map.insert(FSMStates::TAKEN, "Taken");
-//}
+void OneBitBranchPredictor::update_bht(bool branch_taken, std::uint32_t bj_address) {
+    // If we predicted the wrong result (this is checked before calling) and the last instruction was not a jump, update the table.
+    if (!last_jump) {
+        switch (bht[last_pos_predicted]) {
+        case FSMStates::NOT_TAKEN:
+            bht[last_pos_predicted] = FSMStates::TAKEN;
+            break;
+        case FSMStates::TAKEN:
+            // It was taken, also update the BTB.
+            btb_impl->update(last_pos_predicted, bj_address);
+            bht[last_pos_predicted] = FSMStates::NOT_TAKEN;
+            break;
+        default:
+            SANITY_ASSERT(0, "Debug me :)");
+        }
+    } else {
+        btb_impl->update(last_pos_predicted, bj_address);
+    }
+}
 
 void OneBitBranchPredictor::set_bht_entry(std::size_t bht_index, QString val) {
     Q_ASSERT(bht_index < bht_size);
@@ -97,15 +102,18 @@ void OneBitBranchPredictor::set_bht_entry(std::size_t bht_index, QString val) {
 
 TwoBitBranchPredictor::TwoBitBranchPredictor(uint8_t bht_bits) : BranchPredictor(bht_bits) {}
 
-bool TwoBitBranchPredictor::predict(const Instruction &branch_instr) {
-    size_t idx = bht_idx(branch_instr);
-    current_p = (bht[idx] == FSMStates::WEAKLY_T || bht[idx] == FSMStates::STRONGLY_T) ?
-              true : false;
+std::uint32_t TwoBitBranchPredictor::predict(const Instruction &instr, std::uint32_t current_pc) {
+    std::uint32_t address;
+    size_t idx;
 
-    return current_p;
+    idx = bht_idx(bj_instr);
+    current_p = (bht[idx] == FSMStates::WEAKLY_T || bht[idx] == FSMStates::STRONGLY_T) \
+            && btb_impl->get_bj_address(bj_instr, &address);
+
+    return current_p ? address : (last_pc + 4);
 }
 
-void TwoBitBranchPredictor::update_bht(bool branch_taken) {
+void TwoBitBranchPredictor::update_bht(bool branch_taken, std::uint32_t bj_address) {
     switch (bht[last_pos_predicted]) {
     case FSMStates::STRONGLY_NT:
         bht[last_pos_predicted] = !branch_taken ?
@@ -118,11 +126,13 @@ void TwoBitBranchPredictor::update_bht(bool branch_taken) {
         if (!branch_taken) correct_predictions++;
         break;
     case FSMStates::WEAKLY_T:
+        btb_impl->update(last_pos_predicted, bj_address);
         bht[last_pos_predicted] = branch_taken ?
                                   FSMStates::STRONGLY_T : FSMStates::WEAKLY_NT;
         if (branch_taken) correct_predictions++;
         break;
     case FSMStates::STRONGLY_T:
+        btb_impl->update(last_pos_predicted, bj_address);
         bht[last_pos_predicted] = branch_taken ?
                                   FSMStates::STRONGLY_T : FSMStates::WEAKLY_T;
 
@@ -132,15 +142,6 @@ void TwoBitBranchPredictor::update_bht(bool branch_taken) {
         SANITY_ASSERT(0, "Debug me :)");
     }
 }
-
-//void TwoBitBranchPredictor::print_current_state() {
-//    QMap<std::uint8_t, QString> print_map;
-
-//    print_map.insert(FSMStates::STRONGLY_NT, "Strongly Not Taken");
-//    print_map.insert(FSMStates::WEAKLY_NT, "Weakly Not Taken");
-//    print_map.insert(FSMStates::WEAKLY_T, "Weakly Taken");
-//    print_map.insert(FSMStates::STRONGLY_T, "Strongly Taken");
-//}
 
 void TwoBitBranchPredictor::set_bht_entry(std::size_t bht_index, QString val) {
     Q_ASSERT(bht_index < bht_size);
