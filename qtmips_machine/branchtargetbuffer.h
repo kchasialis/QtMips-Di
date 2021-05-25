@@ -3,26 +3,27 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <climits>
 
 class Instruction;
 
-// returns a mask containing n ones (1) on the lower bits.
-static constexpr std::uint32_t mask_bits(std::uint32_t n) {
-    return static_cast<std::uint32_t>(-(n != 0)) &
-            (static_cast<std::uint32_t>(-1) >>
-             ((sizeof(std::uint32_t) * CHAR_BIT) - n));
+// returns the bits from [start, end] of number num, ranging from 0 - 31
+constexpr std::uint32_t mask_bits(std::uint32_t num, std::uint32_t start, std::uint32_t end) {
+    return num & ((~0U >> (31 - end)) & (~0U << start));
 }
 
 // returns 2^exponent
-constexpr size_t power_of_2(std::uint8_t exponent) const {
+constexpr size_t power_of_2(std::uint8_t exponent) {
     return exponent == 0 ? 1 : 2 * power_of_2(exponent - 1);
 }
+
+namespace machine {
 
 class BranchTargetBuffer {
 private:
     struct BTBEntry {
         bool valid;
-        std::uint16_t tag;
+        std::uint32_t tag;
         std::uint32_t address;
 
         BTBEntry() : valid(0), tag(0), address(0) {}
@@ -37,8 +38,12 @@ public:
     explicit BranchTargetBuffer(std::uint8_t btb_bits);
     ~BranchTargetBuffer();
 
-    bool get_pc_address(std::uint32_t btb_idx, std::uint32_t current_pc, std::uint32_t *address) const;
-    void update(std::uint32_t btb_idx, std::uint32_t new_pc, std::uint32_t bj_address);
+    bool get_pc_address(std::uint32_t btb_idx, std::uint32_t current_pc, std::uint32_t *address);
+    bool get_btb_entry_valid(std::uint32_t btb_idx) const;
+    std::uint32_t get_btb_entry_address(std::uint32_t btb_idx) const;
+    std::uint32_t get_btb_entry_tag(std::uint32_t btb_idx) const;
+    void update(std::uint32_t btb_idx, std::uint32_t inst_addr);
 };
 
+}
 #endif // BRANCHTARGETBUFFER_H

@@ -39,6 +39,9 @@ QMAKE_CXXFLAGS_DEBUG += -ggdb
 DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
+    branchtargetbufferdock.cpp \
+    branchtargetbuffermodel.cpp \
+    branchtargetbuffertableview.cpp \
     comboboxitemdelegate.cpp \
         main.cpp \
         mainwindow.cpp \
@@ -97,6 +100,9 @@ SOURCES += \
     textsignalaction.cpp
 
 HEADERS += \
+    branchtargetbufferdock.h \
+    branchtargetbuffermodel.h \
+    branchtargetbuffertableview.h \
     comboboxitemdelegate.h \
         mainwindow.h \
         newdialog.h \

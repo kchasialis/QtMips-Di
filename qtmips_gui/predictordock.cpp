@@ -68,7 +68,7 @@ void PredictorDock::setup(machine::QtMipsMachine *machine) {
 
     connect(machine->core(), SIGNAL(fetch_inst_addr_value(std::uint32_t)), this, SLOT(update_pc_val(std::uint32_t)));
     connect(machine->core(), SIGNAL(fetch_instr_instr_value(const machine::Instruction&)), this, SLOT(update_instr_val(const machine::Instruction&)));
-    connect(machine->core(), SIGNAL(fetch_instr_instr_value(const machine::Instruction&)), this, SLOT(update_bht_index_val(const machine::Instruction &)));
+    connect(machine->core(), SIGNAL(fetch_inst_addr_value(std::uint32_t)), this, SLOT(update_bht_index_val(std::uint32_t)));
 
     history_bits_val->setReadOnly(false);
     switch (this->machine->config().branch_unit()) {
@@ -88,11 +88,11 @@ void PredictorDock::setup(machine::QtMipsMachine *machine) {
     bht_entries_val->setReadOnly(true);
 }
 
-void PredictorDock::update_pc_val(std::uint32_t address) {
+void PredictorDock::update_pc_val(std::uint32_t inst_addr) {
     QString s,t;
 
     instr_val->setReadOnly(false);
-    t = QString::number(address, 16);
+    t = QString::number(inst_addr, 16);
     s.fill('0', 8 - t.count());
     instr_val->setText("0x" + s + t.toUpper());
     instr_val->setReadOnly(true);
@@ -108,8 +108,8 @@ void PredictorDock::update_instr_val(const machine::Instruction &instr) {
     pc_val->setReadOnly(true);
 }
 
-void PredictorDock::update_bht_index_val(const machine::Instruction &instr) {
+void PredictorDock::update_bht_index_val(std::uint32_t inst_addr) {
     bht_index_val->setReadOnly(false);
-    bht_index_val->setText(QString::number(machine->bp()->bht_idx(instr, true)));
+    bht_index_val->setText(QString::number(machine->bp()->bht_idx(inst_addr, true)));
     bht_index_val->setReadOnly(true);
 }

@@ -1,10 +1,7 @@
 #ifndef PREDICTORTABLEVIEW_H
 #define PREDICTORTABLEVIEW_H
 
-#include <QObject>
-#include <QSettings>
 #include <QTableView>
-#include <QSharedPointer>
 
 class PredictorTableView : public QTableView {
     Q_OBJECT

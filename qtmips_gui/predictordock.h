@@ -6,6 +6,7 @@
 #include <QLineEdit>
 #include <QTableView>
 #include "qtmipsmachine.h"
+#include "predictormodel.h"
 
 class PredictorDock : public QDockWidget  {
     Q_OBJECT
@@ -18,9 +19,9 @@ public:
     void setup(machine::QtMipsMachine *machine);
 
 public slots:
-    void update_pc_val(std::uint32_t address);
+    void update_pc_val(std::uint32_t inst_addr);
     void update_instr_val(const machine::Instruction &instr);
-    void update_bht_index_val(const machine::Instruction &instr);
+    void update_bht_index_val(std::uint32_t inst_addr);
 private:
     QTableView *predictor_content;
     QVBoxLayout *vlayout;
@@ -30,7 +31,6 @@ private:
     QLineEdit *instr_val;
     QLineEdit *bht_index_val;
     machine::QtMipsMachine *machine;
-//    QSettings *settings;
 };
 
 

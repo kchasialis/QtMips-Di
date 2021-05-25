@@ -951,16 +951,13 @@ void CorePipelined::do_step(bool skip_break) {
         } else {
             emit instruction_program_counter(dt_d.inst, dt_d.inst_addr, EXCAUSE_NONE, dt_d.is_valid);
 
-            // TODO(kostas): THIS NEEDS DEBUGGING FOR SURE!!!
-            // Check the code flow, check the branch predictor functions, make sure this shit works
-            // or we're screwed.
-            // Remember to also change TwoBitBranchPredictor.
             if (!dt_d.jump) {
                 bool branch_taken = false;
+                std::uint32_t correct_address = 0;
+
                 if (dt_d.branch) {
                     // Branch is now on ID and can be evaluated.
                     branch_taken = branch_result(dt_d);
-                    uint32_t correct_address;
 
                     emit decode_nequal_value(branch_taken != bp->last_prediction());
                     if (branch_taken != bp->last_prediction()) {
@@ -971,19 +968,17 @@ void CorePipelined::do_step(bool skip_break) {
                                                  dt_f.excause, dt_f.is_valid);
                         emit fetch_inst_addr_value(STAGEADDR_NONE);
 
-                        correct_address = branch_taken ? branch_target(dt_d.inst, dt_d.inst_addr) : pc_before_prediction + 4;
-                        regs->pc_abs_jump(correct_address);
-                        bp->update_bht(branch_taken, correct_address);
-                    } else {
-                        bp->correct_predictions_inc();
+                        correct_address = branch_taken ? branch_target(dt_d.inst, dt_d.inst_addr) : (pc_before_prediction + 4);
+                        regs->pc_abs_jmp(correct_address);
                     }
+                    bp->update_bht(branch_taken, correct_address);
                 }
 
                 emit fetch_jump_value(false);
                 emit fetch_jump_reg_value(false);
                 emit fetch_branch_value(branch_taken);
             } else {
-                uint32_t correct_address;
+                uint32_t correct_address = 0;
 
                 if (!bp->last_prediction()) {
                     // We had a BTB miss, flush fetch stage and update BTB.
@@ -992,15 +987,13 @@ void CorePipelined::do_step(bool skip_break) {
                                              dt_f.excause, dt_f.is_valid);
                     emit fetch_inst_addr_value(STAGEADDR_NONE);
 
-                    correct_address = !dt.bjr_req_rs ? ((pc & 0xF0000000) | ((dt.inst.address() << 2) & 0x0FFFFFFF)) : dt.val_rs;
-                    regs->pc_abs_jump(correct_address);
-                    bp->update_bht(true, correct_address);
-                } else {
-                    bp->correct_predictions_inc();
+                    correct_address = !dt_d.bjr_req_rs ? ((pc_before_prediction & 0xF0000000) | ((dt_d.inst.address() << 2) & 0x0FFFFFFF)) : dt_d.val_rs;
+                    regs->pc_abs_jmp(correct_address);
                 }
+                bp->update_bht(true, correct_address);
 
                 // Jump is on ID and we can evaluate its address.
-                if (!dt.bjr_req_rs) {
+                if (!dt_d.bjr_req_rs) {
                     emit fetch_jump_value(true);
                     emit fetch_jump_reg_value(false);
                 } else {
@@ -1017,41 +1010,6 @@ void CorePipelined::do_step(bool skip_break) {
             } else {
                 regs->pc_inc();
             }
-
-            /*
-    bool branch = false;
-    emit instruction_program_counter(dt.inst, dt.inst_addr, EXCAUSE_NONE, dt.is_valid);
-
-    if (dt.jump) {
-        if (!dt.bjr_req_rs) {
-            regs->pc_abs_jmp_28(dt.inst.address() << 2);
-            emit fetch_jump_value(true);
-            emit fetch_jump_reg_value(false);
-        } else {
-            regs->pc_abs_jmp(dt.val_rs);
-            emit fetch_jump_value(false);
-            emit fetch_jump_reg_value(true);
-        }
-        emit fetch_branch_value(false);
-        return true;
-    }
-
-    if (dt.branch) {
-        branch = branch_result(dt);
-    }
-
-    emit fetch_jump_value(false);
-    emit fetch_jump_reg_value(false);
-    emit fetch_branch_value(branch);
-
-    if (branch)
-        regs->pc_abs_jmp(branch_target(dt.inst, dt.inst_addr));
-    else
-        regs->pc_inc();
-
-    return branch;
-                */
-
         }
     } else {
         // Run fetch stage on empty

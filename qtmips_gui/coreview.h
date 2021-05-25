@@ -75,6 +75,7 @@ signals:
     void request_peripherals();
     void request_terminal();
     void request_predictor();
+    void request_btb();
 
 protected:
     coreview::ProgramMemory *mem_program;

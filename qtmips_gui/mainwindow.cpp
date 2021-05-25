@@ -108,6 +108,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     messages->hide();
     predictor = new PredictorDock(this);
     predictor->hide();
+    btb = new BranchTargetBufferDock(this);
+    btb->hide();
 
     // Execution speed actions
     speed_group = new QActionGroup(this);
@@ -146,6 +148,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(ui->actionCore_View_show, SIGNAL(triggered(bool)), this, SLOT(show_hide_coreview(bool)));
     connect(ui->actionMessages, SIGNAL(triggered(bool)), this, SLOT(show_messages()));
     connect(ui->actionPredictor, SIGNAL(triggered(bool)), this, SLOT(show_predictor()));
+    connect(ui->actionBtb, SIGNAL(triggered(bool)), this, SLOT(show_btb()));
     connect(ui->actionAbout, SIGNAL(triggered(bool)), this, SLOT(about_qtmips()));
     connect(ui->actionAboutQt, SIGNAL(triggered(bool)), this, SLOT(about_qt()));
     connect(ui->ips1, SIGNAL(toggled(bool)), this, SLOT(set_speed()));
@@ -209,6 +212,7 @@ MainWindow::~MainWindow() {
     delete lcd_display;
     delete ui;
     delete predictor;
+    delete btb;
     if (machine != nullptr)
         delete machine;
     settings->sync();
@@ -255,8 +259,10 @@ void MainWindow::show_hide_coreview(bool show) {
     connect(corescene, SIGNAL(request_l2_cache()), this, SLOT(show_l2_cache()));
     connect(corescene, SIGNAL(request_peripherals()), this, SLOT(show_peripherals()));
     connect(corescene, SIGNAL(request_terminal()), this, SLOT(show_terminal()));
-    if (machine->config().predictor())
+    if (machine->config().predictor()) {
         connect(corescene, SIGNAL(request_predictor()), this, SLOT(show_predictor()));
+        connect(corescene, SIGNAL(request_btb()), this, SLOT(show_btb()));
+    }
 
     coreview->setScene(corescene);
 }
@@ -311,7 +317,6 @@ void MainWindow::create_core(const machine::MachineConfig &config, bool load_exe
     // Connect signal from break to machine pause
     connect(machine->core(), SIGNAL(stop_on_exception_reached()), machine, SLOT(pause()));
 
-
     // Setup docks
     registers->setup(machine);
     program->setup(machine);
@@ -323,8 +328,10 @@ void MainWindow::create_core(const machine::MachineConfig &config, bool load_exe
     peripherals->setup(machine->peripheral_spi_led());
     lcd_display->setup(machine->peripheral_lcd_display());
     cop0dock->setup(machine);
-    if (machine->config().predictor())
+    if (machine->config().predictor()) {
         predictor->setup(machine);
+        btb->setup(machine);
+    }
 
     // Connect signals for instruction address followup
     connect(machine->core(), SIGNAL(fetch_inst_addr_value(std::uint32_t)),
@@ -414,6 +421,7 @@ SHOW_HANDLER(lcd_display, Qt::RightDockWidgetArea)
 SHOW_HANDLER(cop0dock, Qt::TopDockWidgetArea)
 SHOW_HANDLER(messages, Qt::BottomDockWidgetArea)
 SHOW_HANDLER(predictor, Qt::RightDockWidgetArea)
+SHOW_HANDLER(btb, Qt::RightDockWidgetArea)
 #undef SHOW_HANDLER
 
 void MainWindow::show_symbol_dialog(){

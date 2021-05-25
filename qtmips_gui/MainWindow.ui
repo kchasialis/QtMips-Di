@@ -92,6 +92,7 @@
     <addaction name="actionCore_View_show"/>
     <addaction name="actionMessages"/>
     <addaction name="actionPredictor"/>
+    <addaction name="actionBtb"/>
    </widget>
    <widget class="QMenu" name="menuMachine">
     <property name="title">
@@ -585,6 +586,14 @@
   <action name="actionL2_Cache">
    <property name="text">
     <string>L2 Cache</string>
+   </property>
+  </action>
+  <action name="actionBtb">
+   <property name="text">
+    <string>Branch Target Buffer</string>
+   </property>
+   <property name="toolTip">
+    <string>Branch Target Buffer</string>
    </property>
   </action>
  </widget>

@@ -60,6 +60,7 @@
 #include "srceditor.h"
 #include "simpleasm.h"
 #include "predictordock.h"
+#include "branchtargetbufferdock.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -111,6 +112,7 @@ public slots:
     void show_symbol_dialog();
     void show_messages();
     void show_predictor();
+    void show_btb();
     // Actions - help menu
     void about_qtmips();
     void about_qt();
@@ -154,6 +156,7 @@ private:
     Cop0Dock *cop0dock;
     MessagesDock *messages;
     PredictorDock *predictor;
+    BranchTargetBufferDock *btb;
     bool load_default_settings;
     bool coreview_shown;
     SrcEditor  *current_srceditor;

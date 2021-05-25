@@ -15,20 +15,23 @@ public:
     explicit BranchPredictor(std::uint8_t bht_bits);
     virtual ~BranchPredictor();
 
-    // returns then new pc.
-    virtual std::uint32_t predict(const machine::Instruction &instr, std::uint32_t current_pc) = 0;
-    virtual void update_bht(bool branch_taken) = 0;
-    virtual void set_bht_entry(std::size_t bht_index, QString val) = 0;
+    virtual bool get_prediction(std::uint32_t bht_idx) = 0;
+    virtual void update_bht(bool branch_taken, std::uint32_t correct_address) = 0;
+    virtual void set_bht_entry(std::uint32_t bht_idx, QString val) = 0;
 
     // returns an index in the branch history table based on the instruction.
-    size_t bht_idx(const Instruction &branch_instr, bool ro = false);
-    uint8_t get_bht_entry(std::size_t bht_index) const;
+    std::uint32_t bht_idx(std::uint32_t pc, bool ro = false);
+    // returns then new pc.
+    std::uint32_t predict(const machine::Instruction &bj_instr, std::uint32_t pc);
+    uint8_t get_bht_entry(std::uint32_t bht_idx) const;
+    bool get_btb_entry_valid(std::uint32_t btb_idx) const;
+    std::uint32_t get_btb_entry_address(std::uint32_t btb_idx) const;
+    std::uint32_t get_btb_entry_tag(std::uint32_t btb_idx) const;
     double get_precision() const;
     bool last_prediction() const;
-    void correct_predictions_inc();
 
 protected:
-    std::shared_ptr<BranchTargetBuffer> *btb_impl;
+    std::shared_ptr<BranchTargetBuffer> btb_impl;
     std::uint8_t bht_bits; // The # of bits used to index the history table.
     size_t bht_size; // The size of the table.
     std::uint8_t *bht; // The branch history table.
@@ -49,9 +52,9 @@ private:
 public:
     explicit OneBitBranchPredictor(std::uint8_t bht_bits);
 
-    std::uint32_t predict(const machine::Instruction &instr, std::uint32_t current_pc);
-    void update_bht(bool branch_taken);
-    void set_bht_entry(std::size_t bht_index, QString val);
+    bool get_prediction(std::uint32_t bht_idx);
+    void update_bht(bool branch_taken, std::uint32_t correct_address);
+    void set_bht_entry(std::uint32_t bht_idx, QString val);
 };
 
 
@@ -67,9 +70,9 @@ private:
 public:
     explicit TwoBitBranchPredictor(std::uint8_t bht_bits);
 
-    std::uint32_t predict(const machine::Instruction &instr, std::uint32_t current_pc);
-    void update_bht(bool branch_taken);
-    void set_bht_entry(std::size_t bht_index, QString val);
+    bool get_prediction(std::uint32_t bht_idx);
+    void update_bht(bool branch_taken, std::uint32_t correct_address);
+    void set_bht_entry(std::uint32_t bht_idx, QString val);
 };
 
 }
