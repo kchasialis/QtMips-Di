@@ -43,6 +43,7 @@ SOURCES += \
     branchtargetbuffermodel.cpp \
     branchtargetbuffertableview.cpp \
     comboboxitemdelegate.cpp \
+    coreview/branchtargetbuffer.cpp \
         main.cpp \
         mainwindow.cpp \
         newdialog.cpp \
@@ -104,6 +105,7 @@ HEADERS += \
     branchtargetbuffermodel.h \
     branchtargetbuffertableview.h \
     comboboxitemdelegate.h \
+    coreview/branchtargetbuffer.h \
         mainwindow.h \
         newdialog.h \
         coreview.h \

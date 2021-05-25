@@ -239,12 +239,7 @@ void MainWindow::show_hide_coreview(bool show) {
         return;
 
     if (machine->config().pipelined()) {
-        if (machine->config().predictor()) {
-            corescene = new CoreViewScenePipelinedPredictor(machine);
-        }
-        else {
-            corescene = new CoreViewScenePipelined(machine);
-        }
+        corescene = new CoreViewScenePipelined(machine);
     } else {
         corescene = new CoreViewSceneSimple(machine);
     }

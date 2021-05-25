@@ -57,6 +57,7 @@
 #include "coreview/value.h"
 #include "coreview/multitext.h"
 #include "coreview/predictor.h"
+#include "coreview/branchtargetbuffer.h"
 
 class CoreViewScene : public QGraphicsScene {
     Q_OBJECT
@@ -84,6 +85,25 @@ protected:
     coreview::Alu *alu;
     coreview::LogicBlock *peripherals;
     coreview::LogicBlock *terminal;
+    struct {
+        coreview::ProgramCounter *pc;
+        coreview::Predictor *pred;
+        coreview::BranchTargetBuffer *btb;
+        coreview::Latch *latch;
+        coreview::Adder *adder;
+        coreview::Constant *adder_4;
+        coreview::Junction *junc_pc, *junc_pc_4;
+        coreview::Multiplexer *multiplex;
+    } ft;
+    struct {
+        coreview::LogicBlock *ctl_block, *sign_ext, *shift2, *cmp;
+        coreview::Adder *add;
+        coreview::Junction *j_sign_ext;
+        coreview::And *and_branch;
+        coreview::Junction *j_inst_up, *j_inst_down;
+        coreview::Junction *j_jalpctor31, *j_jump_reg;
+        coreview::Bus *instr_bus;
+    } dc;
     struct {
         coreview::Junction *j_mux;
         coreview::Junction *j_rs_num;
@@ -120,29 +140,8 @@ public:
     CoreViewSceneSimple(machine::QtMipsMachine *machine);
 
 private:
-    struct {
-        coreview::ProgramCounter *pc;
-        coreview::Latch *latch;
-        coreview::Adder *adder;
-        coreview::Constant *adder_4;
-        coreview::Junction *junc_pc, *junc_pc_4;
-        coreview::Multiplexer *multiplex;
-    } ft;
-    struct {
-        coreview::LogicBlock *ctl_block, *sign_ext, *shift2, *cmp;
-        coreview::Adder *add;
-        coreview::Junction *j_sign_ext;
-        coreview::And *and_branch;
-        coreview::Junction *j_inst_up, *j_inst_down;
-        coreview::Junction *j_jalpctor31, *j_jump_reg;
-        coreview::Bus *instr_bus;
-    } dc;
-
     coreview::InstructionView *inst_prim, *inst_fetch;
     coreview::Latch *latch_if_id;
-
-    template<typename T>
-    friend void initCoreViewScene(T *coreviewScene, machine::QtMipsMachine *machine);
 };
 
 class CoreViewScenePipelined : public CoreViewScene {
@@ -150,60 +149,7 @@ public:
     CoreViewScenePipelined(machine::QtMipsMachine *machine);
 
 private:
-    struct {
-        coreview::ProgramCounter *pc;
-        coreview::Latch *latch;
-        coreview::Adder *adder;
-        coreview::Constant *adder_4;
-        coreview::Junction *junc_pc, *junc_pc_4;
-        coreview::Multiplexer *multiplex;
-    } ft;
-    struct {
-        coreview::LogicBlock *ctl_block, *sign_ext, *shift2, *cmp;
-        coreview::Adder *add;
-        coreview::Junction *j_sign_ext;
-        coreview::And *and_branch;
-        coreview::Junction *j_inst_up, *j_inst_down;
-        coreview::Junction *j_jalpctor31, *j_jump_reg;
-        coreview::Bus *instr_bus;
-    } dc;
-
     coreview::Latch *latch_if_id, *latch_id_ex, *latch_ex_mem, *latch_mem_wb;
-    coreview::InstructionView *inst_fetch, *inst_dec, *inst_exec, *inst_mem, *inst_wrb;
-    coreview::LogicBlock *hazard_unit;
-
-    template<typename T>
-    friend void initCoreViewScene(T *coreviewScene, machine::QtMipsMachine *machine);
-};
-
-class CoreViewScenePipelinedPredictor : public CoreViewScene {
-public:
-    CoreViewScenePipelinedPredictor(machine::QtMipsMachine *machine);
-
-private:
-    struct {
-        coreview::ProgramCounter *pc;
-        coreview::Predictor *pred;
-        coreview::Latch *latch;
-        coreview::Adder *add[2];
-        coreview::Multiplexer *mul[2];
-        coreview::LogicBlock *sign_ext, *shift2;
-        coreview::Constant *adder_4;
-        coreview::Junction *j_pc, *j_adder, *j_mul_cmp;
-        coreview::Connector *con_pc_pred;
-    } ft;
-    struct {
-        coreview::LogicBlock *ctl_block, *cmp[2];
-        coreview::And *and_branch;
-        coreview::Multiplexer *mul;
-        coreview::Junction *j_inst_up, *j_inst_down;
-        coreview::Junction *j_jalpctor31, *j_jump_reg;
-        coreview::Junction *j_add_mul, *j_mul_cmp, *j_sign_ext;
-        coreview::Bus *instr_bus;
-    } dc;
-
-    coreview::Latch *latch_if_id, *latch_id_ex, *latch_ex_mem, *latch_mem_wb;
-    coreview::Junction *j_dc_mul_ft_mul;
     coreview::InstructionView *inst_fetch, *inst_dec, *inst_exec, *inst_mem, *inst_wrb;
     coreview::LogicBlock *hazard_unit;
 };

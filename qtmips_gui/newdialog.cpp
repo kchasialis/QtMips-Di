@@ -235,6 +235,9 @@ void NewDialog::set_preset() {
 
 void NewDialog::pipelined_change(bool val) {
     config->set_pipelined(val);
+    if (!config->pipelined() && config->predictor()) {
+        config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
+    }
 	switch2custom();
 }
 
@@ -271,6 +274,11 @@ void NewDialog::branch_unit_change() {
         SANITY_ASSERT(config->branch_unit() == machine::MachineConfig::BU_NONE
                || config->branch_unit() == machine::MachineConfig::BU_DELAY_SLOT, "Debug me :)");
     }
+
+    if (!config->pipelined() && config->predictor()) {
+        config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
+    }
+
     switch2custom();
 }
 
@@ -352,8 +360,7 @@ void NewDialog::config_gui() {
     ui->hazard_unit->setChecked(config->hazard_unit() != machine::MachineConfig::HU_NONE);
     ui->hazard_stall->setChecked(config->hazard_unit() == machine::MachineConfig::HU_STALL);
     ui->hazard_stall_forward->setChecked(config->hazard_unit() == machine::MachineConfig::HU_STALL_FORWARD);
-    ui->branch_predictor->setChecked(config->branch_unit() == machine::MachineConfig::BU_ONE_BIT_BP
-                                     || config->branch_unit() == machine::MachineConfig::BU_TWO_BIT_BP);
+    ui->branch_predictor->setChecked(config->predictor());
     ui->delay_slot->setChecked(config->branch_unit() == machine::MachineConfig::BU_DELAY_SLOT);
     ui->none->setChecked(config->branch_unit() == machine::MachineConfig::BU_NONE);
     // Memory

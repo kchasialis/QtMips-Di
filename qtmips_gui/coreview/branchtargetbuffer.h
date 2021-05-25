@@ -1,5 +1,5 @@
-#ifndef COREVIEW_PREDICTOR_H
-#define COREVIEW_PREDICTOR_H
+#ifndef BRANCHTARGETBUFFER_H
+#define BRANCHTARGETBUFFER_H
 
 #include <QGraphicsObject>
 #include <QPainter>
@@ -8,11 +8,11 @@
 
 namespace coreview {
 
-class Predictor : public QGraphicsObject {
+class BranchTargetBuffer : public QGraphicsObject {
     Q_OBJECT
 public:
-    Predictor();
-    ~Predictor();
+    BranchTargetBuffer();
+    ~BranchTargetBuffer();
 
     QRectF boundingRect() const override;
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
@@ -22,7 +22,7 @@ public:
     void setPos(qreal x, qreal y);
 
 signals:
-    void open_predictor();
+    void open_btb();
 
 protected:
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
@@ -34,4 +34,4 @@ private:
 
 }
 
-#endif
+#endif // BRANCHTARGETBUFFER_H

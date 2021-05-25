@@ -10,7 +10,7 @@
 
 using namespace coreview;
 
-Predictor::Predictor() : QGraphicsObject(nullptr), con_pc_in(new Connector(Connector::AX_X)), con_sig_out(new Connector(Connector::AX_X)), name("Predictor", this) {
+Predictor::Predictor() : QGraphicsObject(nullptr), con_in(new Connector(Connector::AX_X)), con_out(new Connector(Connector::AX_X)), name("Predictor", this) {
     QFont font;
     font.setPixelSize(FontSize::SIZE7);
     name.setFont(font);
@@ -22,8 +22,8 @@ Predictor::Predictor() : QGraphicsObject(nullptr), con_pc_in(new Connector(Conne
 }
 
 Predictor::~Predictor() {
-    delete con_pc_in;
-    delete con_sig_out;
+    delete con_in;
+    delete con_out;
 }
 
 QRectF Predictor::boundingRect() const {
@@ -38,18 +38,18 @@ void Predictor::paint(QPainter *painter, const QStyleOptionGraphicsItem *option 
     painter->drawRect(0, 0, WIDTH, HEIGHT);
 }
 
-const Connector *Predictor::connector_pc_in() const {
-    return con_pc_in;
+const Connector *Predictor::connector_in() const {
+    return con_in;
 }
 
-const Connector *Predictor::connector_sig_out() const {
-    return con_sig_out;
+const Connector *Predictor::connector_out() const {
+    return con_out;
 }
 
 void Predictor::setPos(qreal x, qreal y) {
     QGraphicsObject::setPos(x, y);
-    con_pc_in->setPos(x + WIDTH / 2, y + HEIGHT);
-    con_sig_out->setPos(x, y + HEIGHT / 2);
+    con_in->setPos(x + WIDTH/2, y + HEIGHT);
+    con_out->setPos(x + WIDTH, y + HEIGHT/2);
 }
 
 void Predictor::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) {
