@@ -1,6 +1,7 @@
 #ifndef BRANCHTARGETBUFFER_H
 #define BRANCHTARGETBUFFER_H
 
+#include <QObject>
 #include <cstddef>
 #include <cstdint>
 #include <climits>
@@ -19,7 +20,8 @@ constexpr size_t power_of_2(std::uint8_t exponent) {
 
 namespace machine {
 
-class BranchTargetBuffer {
+class BranchTargetBuffer : public QObject {
+    Q_OBJECT
 private:
     struct BTBEntry {
         bool valid;
@@ -33,6 +35,10 @@ private:
     size_t btb_size;
     BTBEntry *btb;
     bool need_update;
+
+signals:
+    void pred_updated_btb(std::int32_t);
+    void pred_accessed_btb(std::int32_t);
 
 public:
     explicit BranchTargetBuffer(std::uint8_t btb_bits);

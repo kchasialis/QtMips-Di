@@ -91,7 +91,7 @@
     <addaction name="actionCop0State"/>
     <addaction name="actionCore_View_show"/>
     <addaction name="actionMessages"/>
-    <addaction name="actionPredictor"/>
+    <addaction name="actionBPredictor"/>
     <addaction name="actionBtb"/>
    </widget>
    <widget class="QMenu" name="menuMachine">
@@ -578,9 +578,12 @@
     <string>Mnemonics Registers</string>
    </property>
   </action>
-  <action name="actionPredictor">
+  <action name="actionBPredictor">
    <property name="text">
-    <string>Predictor</string>
+    <string>Branch Predictor</string>
+   </property>
+   <property name="toolTip">
+    <string>Branch Predictor</string>
    </property>
   </action>
   <action name="actionL2_Cache">

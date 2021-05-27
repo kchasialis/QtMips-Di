@@ -1,7 +1,9 @@
 #include "branchtargetbuffermodel.h"
 #include "branchpredictor.h"
+#include <QBrush>
+#include <QColor>
 
-BranchTargetBufferModel::BranchTargetBufferModel(QObject *parent) : Super(parent), data_font("Monospace"), machine(nullptr) {
+BranchTargetBufferModel::BranchTargetBufferModel(QObject *parent) : Super(parent), data_font("Monospace"), machine(nullptr), pos_btb_update(-1), pos_btb_access(-1) {
     data_font.setStyleHint(QFont::TypeWriter);
 }
 
@@ -64,7 +66,13 @@ QVariant BranchTargetBufferModel::data(const QModelIndex &index, int role) const
             return QVariant();
         }
     } else if (role == Qt::BackgroundRole) {
-        // idk yet.
+        if (index.row() == pos_btb_access) {
+            QBrush bgd(QColor(193, 255, 173));
+            return bgd;
+        } else if (index.row() == pos_btb_update) {
+            QBrush bgd(QColor(255, 173, 173));
+            return bgd;
+        }
         return QVariant();
     } else if (role == Qt::FontRole) {
         return data_font;
@@ -83,4 +91,14 @@ const machine::QtMipsMachine *BranchTargetBufferModel::getMachine() const {
 
 void BranchTargetBufferModel::setup(machine::QtMipsMachine *machine) {
     this->machine = machine;
+}
+
+void BranchTargetBufferModel::update_pos_btb_update(std::int32_t pbu) {
+    this->pos_btb_update = pbu;
+    emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1));
+}
+
+void BranchTargetBufferModel::update_pos_btb_access(std::int32_t pba) {
+    this->pos_btb_access = pba;
+    emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1));
 }

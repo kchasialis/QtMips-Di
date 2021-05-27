@@ -42,15 +42,15 @@ SOURCES += \
     branchtargetbufferdock.cpp \
     branchtargetbuffermodel.cpp \
     branchtargetbuffertableview.cpp \
+    branchpredictordock.cpp \
+    branchpredictormodel.cpp \
+    branchpredictortableview.cpp \
     comboboxitemdelegate.cpp \
     coreview/branchtargetbuffer.cpp \
         main.cpp \
         mainwindow.cpp \
         newdialog.cpp \
         coreview.cpp \
-    predictordock.cpp \
-    predictormodel.cpp \
-    predictortableview.cpp \
         registersdock.cpp \
         programdock.cpp \
         memorydock.cpp \
@@ -67,7 +67,7 @@ SOURCES += \
         coreview/junction.cpp \
         coreview/logicblock.cpp \
         coreview/and.cpp \
-        coreview/predictor.cpp \
+        coreview/branchpredictor.cpp \
     statictable.cpp \
     cacheview.cpp \
     cachedock.cpp \
@@ -104,14 +104,14 @@ HEADERS += \
     branchtargetbufferdock.h \
     branchtargetbuffermodel.h \
     branchtargetbuffertableview.h \
+    branchpredictordock.h \
+    branchpredictormodel.h \
+    branchpredictortableview.h \
     comboboxitemdelegate.h \
     coreview/branchtargetbuffer.h \
         mainwindow.h \
         newdialog.h \
         coreview.h \
-    predictordock.h \
-    predictormodel.h \
-    predictortableview.h \
         registersdock.h \
         programdock.h \
         memorydock.h \
@@ -128,7 +128,7 @@ HEADERS += \
         coreview/junction.h \
         coreview/logicblock.h \
         coreview/and.h \
-        coreview/predictor.h \
+        coreview/branchpredictor.h \
     statictable.h \
     cacheview.h \
     cachedock.h \

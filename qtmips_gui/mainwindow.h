@@ -44,6 +44,8 @@
 #include "ui_MainWindow.h"
 #include "newdialog.h"
 #include "coreview.h"
+#include "branchpredictordock.h"
+#include "branchtargetbufferdock.h"
 #include "registersdock.h"
 #include "programdock.h"
 #include "memorydock.h"
@@ -54,13 +56,10 @@
 #include "cop0dock.h"
 #include "messagesdock.h"
 #include "extprocess.h"
-
 #include "qtmipsmachine.h"
 #include "machineconfig.h"
 #include "srceditor.h"
 #include "simpleasm.h"
-#include "predictordock.h"
-#include "branchtargetbufferdock.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -155,7 +154,7 @@ private:
     LcdDisplayDock *lcd_display;
     Cop0Dock *cop0dock;
     MessagesDock *messages;
-    PredictorDock *predictor;
+    BranchPredictorDock *predictor;
     BranchTargetBufferDock *btb;
     bool load_default_settings;
     bool coreview_shown;

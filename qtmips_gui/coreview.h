@@ -56,7 +56,7 @@
 #include "coreview/and.h"
 #include "coreview/value.h"
 #include "coreview/multitext.h"
-#include "coreview/predictor.h"
+#include "coreview/branchpredictor.h"
 #include "coreview/branchtargetbuffer.h"
 
 class CoreViewScene : public QGraphicsScene {

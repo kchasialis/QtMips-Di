@@ -2,11 +2,11 @@
 #include <QKeyEvent>
 #include <QClipboard>
 #include <QHeaderView>
-#include "predictortableview.h"
-#include "comboboxitemdelegate.h"
-#include "hinttabledelegate.h"
+#include "branchpredictortableview.h"
 #include "branchtargetbuffertableview.h"
 #include "branchtargetbuffermodel.h"
+#include "comboboxitemdelegate.h"
+#include "hinttabledelegate.h"
 
 BranchTargetBufferTableView::BranchTargetBufferTableView(QWidget *parent) : Super(parent) {
     setItemDelegate(new HintTableDelegate);
@@ -60,6 +60,13 @@ void BranchTargetBufferTableView::adjustColumnCount() {
 void BranchTargetBufferTableView::resizeEvent(QResizeEvent *event) {
     Super::resizeEvent(event);
     adjustColumnCount();
+}
+
+void BranchTargetBufferTableView::focus_row(std::int32_t row) {
+    BranchTargetBufferModel *btb_model = dynamic_cast<BranchTargetBufferModel*>(model());
+
+    scrollTo(btb_model->index(row, 0), QAbstractItemView::PositionAtCenter);
+    update();
 }
 
 void BranchTargetBufferTableView::keyPressEvent(QKeyEvent *event) {

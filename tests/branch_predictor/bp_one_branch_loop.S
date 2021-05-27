@@ -47,11 +47,11 @@ _start:
     li t4, 2 // for multiplication
 
     li t5, 1 // i = 1
-forloop:
-    add t1, t1, t5 // s += i
+forloop: 
+    add t1, t1, t5 // s += i 
     mul t6, t5, t4 // t6 = i * 2
-    add t2, t2, t6 // s1 += i * 2
     addi t5, t5, 1 // i += 1
+    add t2, t2, t6 // s1 += i * 2
     bne t5, t0, forloop
 
     mul t4, t1, t2 // p = s * s1

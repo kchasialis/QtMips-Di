@@ -75,7 +75,6 @@ ProgramDock::ProgramDock(QWidget *parent, QSettings *settings) : Super(parent) {
     ProgramModel *program_model = new ProgramModel(this);
     program_content->setModel(program_model);
     program_content->verticalHeader()->hide();
-    //program_content->setHorizontalHeader(program_model->);
 
     QLineEdit *go_edit = new HexLineEdit(0, 8, 16, "0x");
 
@@ -167,7 +166,7 @@ void ProgramDock::writeback_inst_addr(std::uint32_t addr) {
 }
 
 void ProgramDock::update_follow_position() {
-    if (follow_source != FOLLOWSRC_NONE)
+    if (follow_source != FOLLOWSRC_NONE) {}
         emit focus_addr(follow_addr[follow_source]);
 }
 

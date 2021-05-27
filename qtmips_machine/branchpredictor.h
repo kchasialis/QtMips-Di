@@ -10,7 +10,8 @@ namespace machine {
 class Instruction;
 class BranchTargetBuffer;
 
-class BranchPredictor {
+class BranchPredictor : public QObject {
+    Q_OBJECT
 public:
     explicit BranchPredictor(std::uint8_t bht_bits);
     virtual ~BranchPredictor();
@@ -29,17 +30,26 @@ public:
     std::uint32_t get_btb_entry_tag(std::uint32_t btb_idx) const;
     double get_precision() const;
     bool last_prediction() const;
+    std::int32_t get_pos_predicted() const;
+    const BranchTargetBuffer *btb() const;
+
+signals:
+    void pred_accessed_bht(std::int32_t);
+    void pred_updated_bht(std::int32_t);
+    void pred_inst_addr_value(std::uint32_t);
+    void pred_instr_value(const machine::Instruction &bj_instr);
 
 protected:
     std::shared_ptr<BranchTargetBuffer> btb_impl;
     std::uint8_t bht_bits; // The # of bits used to index the history table.
     size_t bht_size; // The size of the table.
     std::uint8_t *bht; // The branch history table.
-    std::uint32_t last_pos_predicted; // Position in the table that was accessed.
+    std::int32_t pos_branch; // Last position of the table that was predicted for a branch instruction.
+    std::int32_t pos_jmp; // Last position of the table that was predicted for a jump instruction.
     std::uint32_t correct_predictions; // # of correct predictions.
     std::uint32_t predictions; // # of all predictions.
     bool last_p; // Last prediction that was made.
-    bool last_jump; // If our last instruction was a jump we do not update the bht.
+    bool last_jmp; // If our last instruction was a jump we do not update the bht.
 };
 
 class OneBitBranchPredictor : public BranchPredictor {

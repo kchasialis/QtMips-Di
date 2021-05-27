@@ -959,7 +959,6 @@ void CorePipelined::do_step(bool skip_break) {
                     // Branch is now on ID and can be evaluated.
                     branch_taken = branch_result(dt_d);
 
-                    emit decode_nequal_value(branch_taken != bp->last_prediction());
                     if (branch_taken != bp->last_prediction()) {
                         // Prediction was wrong.
                         // Flush fetch stage & move pc accordingly.
@@ -969,7 +968,7 @@ void CorePipelined::do_step(bool skip_break) {
                         emit fetch_inst_addr_value(STAGEADDR_NONE);
 
                         correct_address = branch_taken ? branch_target(dt_d.inst, dt_d.inst_addr) : (pc_before_prediction + 4);
-                        regs->pc_abs_jmp(correct_address);
+                        regs->pc_abs_jmp(correct_address - 4);
                     }
                     bp->update_bht(branch_taken, correct_address);
                 }
@@ -988,7 +987,7 @@ void CorePipelined::do_step(bool skip_break) {
                     emit fetch_inst_addr_value(STAGEADDR_NONE);
 
                     correct_address = !dt_d.bjr_req_rs ? ((pc_before_prediction & 0xF0000000) | ((dt_d.inst.address() << 2) & 0x0FFFFFFF)) : dt_d.val_rs;
-                    regs->pc_abs_jmp(correct_address);
+                    regs->pc_abs_jmp(correct_address - 4);
                 }
                 bp->update_bht(true, correct_address);
 

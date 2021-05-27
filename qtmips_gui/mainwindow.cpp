@@ -106,7 +106,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     cop0dock->hide();
     messages = new MessagesDock(this, settings);
     messages->hide();
-    predictor = new PredictorDock(this);
+    predictor = new BranchPredictorDock(this);
     predictor->hide();
     btb = new BranchTargetBufferDock(this);
     btb->hide();
@@ -147,7 +147,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(ui->actionCop0State, SIGNAL(triggered(bool)), this, SLOT(show_cop0dock()));
     connect(ui->actionCore_View_show, SIGNAL(triggered(bool)), this, SLOT(show_hide_coreview(bool)));
     connect(ui->actionMessages, SIGNAL(triggered(bool)), this, SLOT(show_messages()));
-    connect(ui->actionPredictor, SIGNAL(triggered(bool)), this, SLOT(show_predictor()));
+    connect(ui->actionBPredictor, SIGNAL(triggered(bool)), this, SLOT(show_predictor()));
     connect(ui->actionBtb, SIGNAL(triggered(bool)), this, SLOT(show_btb()));
     connect(ui->actionAbout, SIGNAL(triggered(bool)), this, SLOT(about_qtmips()));
     connect(ui->actionAboutQt, SIGNAL(triggered(bool)), this, SLOT(about_qt()));

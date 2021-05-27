@@ -12,6 +12,10 @@ public:
     BranchTargetBufferTableView(QWidget *parent);
 
     void resizeEvent(QResizeEvent *event) override;
+
+public slots:
+    void focus_row(std::int32_t row);
+
 protected:
     void keyPressEvent(QKeyEvent *event) override;
     void adjustColumnCount();

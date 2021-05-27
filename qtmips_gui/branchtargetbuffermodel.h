@@ -21,10 +21,13 @@ public:
 
 public slots:
     void setup(machine::QtMipsMachine *machine);
+    void update_pos_btb_update(std::int32_t pbu);
+    void update_pos_btb_access(std::int32_t pba);
 
 private:
     QFont data_font;
     machine::QtMipsMachine *machine;
+    std::int32_t pos_btb_update, pos_btb_access;
 };
 
 #endif // BRANCHTARGETBUFFERMODEL_H

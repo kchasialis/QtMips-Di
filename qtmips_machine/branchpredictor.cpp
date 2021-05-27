@@ -8,6 +8,8 @@ BranchPredictor::BranchPredictor(std::uint8_t bht_bits) {
     this->bht_bits = bht_bits;
     this->bht_size = power_of_2(this->bht_bits);
     this->bht = new std::uint8_t[this->bht_size]();
+    this->pos_branch = -1;
+    this->pos_jmp = -1;
     this->predictions = 0;
     this->correct_predictions = 0;
 }
@@ -42,6 +44,14 @@ bool BranchPredictor::last_prediction() const {
     return last_p;
 }
 
+std::int32_t BranchPredictor::get_pos_predicted() const {
+    return last_jmp ? pos_jmp : pos_branch;
+}
+
+const BranchTargetBuffer *BranchPredictor::btb() const {
+    return btb_impl.get();
+}
+
 std::uint32_t BranchPredictor::bht_idx(std::uint32_t pc, bool ro) {
     // MIPS instructions always contain 2 bits for byte offset.
     std::uint32_t pos;
@@ -51,7 +61,12 @@ std::uint32_t BranchPredictor::bht_idx(std::uint32_t pc, bool ro) {
 
     // ro means we only want to get the bht index and not to update anything on the object.
     if (!ro) {
-        last_pos_predicted = pos;
+        if (!last_jmp) {
+            pos_branch = pos;
+            emit pred_accessed_bht(pos);
+        } else {
+            pos_jmp = pos;
+        }
         predictions++;
     }
 
@@ -60,14 +75,21 @@ std::uint32_t BranchPredictor::bht_idx(std::uint32_t pc, bool ro) {
 
 std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std::uint32_t pc) {
     std::uint32_t address, idx;
+    bool lhs_and, rhs_and;
 
-    last_jump = bj_instr.flags() & IMF_JUMP;
-    if (last_jump) {
-        idx = bht_idx(pc, true);
-        return btb_impl->get_pc_address(idx, pc, &address) ? address : (pc + 4);
+    emit pred_inst_addr_value(pc);
+    emit pred_instr_value(bj_instr);
+
+    last_jmp = bj_instr.flags() & IMF_JUMP;
+    if (last_jmp) {
+        idx = bht_idx(pc);
+        last_p = btb_impl->get_pc_address(idx, pc, &address);
+        return last_p ? address : (pc + 4);
     } else if (bj_instr.flags() & IMF_BRANCH) {
         idx = bht_idx(pc);
-        last_p = get_prediction(idx) && btb_impl->get_pc_address(idx, pc, &address);
+        lhs_and = get_prediction(idx);
+        rhs_and = btb_impl->get_pc_address(idx, pc, &address);
+        last_p = lhs_and && rhs_and;
         return last_p ? address : (pc + 4);
     } else {
         SANITY_ASSERT(0, "Debug me :)");
@@ -84,24 +106,24 @@ bool OneBitBranchPredictor::get_prediction(std::uint32_t bht_idx) {
 void OneBitBranchPredictor::update_bht(bool branch_taken, std::uint32_t correct_address) {
     if (branch_taken == last_p) {
         correct_predictions++;
-    } else if (!last_jump) {
+    } else if (!last_jmp) {
         // If we predicted the wrong result (this is checked before calling)
         // and the last instruction was not a jump, update the table (and possibly BTB).
-        switch (bht[last_pos_predicted]) {
+        switch (bht[pos_branch]) {
         case FSMStates::NOT_TAKEN:
-            bht[last_pos_predicted] = FSMStates::TAKEN;
+            // It was taken, also update the BTB.
+            btb_impl->update(pos_branch, correct_address);
+            bht[pos_branch] = FSMStates::TAKEN;
             break;
         case FSMStates::TAKEN:
-            // It was taken, also update the BTB.
-            btb_impl->update(last_pos_predicted, correct_address);
-            bht[last_pos_predicted] = FSMStates::NOT_TAKEN;
+            bht[pos_branch] = FSMStates::NOT_TAKEN;
             break;
         default:
             SANITY_ASSERT(0, "Debug me :)");
         }
+        emit pred_updated_bht(pos_branch);
     } else {
-        // Last instruction was a jump, we do not update the table, just the BTB.
-        btb_impl->update(last_pos_predicted, correct_address);
+        btb_impl->update(pos_jmp, correct_address);
     }
 }
 
@@ -129,33 +151,30 @@ void TwoBitBranchPredictor::update_bht(bool branch_taken, std::uint32_t correct_
         correct_predictions++;
     }
 
-    if (!last_jump) {
-        switch (bht[last_pos_predicted]) {
+    if (!last_jmp) {
+        switch (bht[pos_branch]) {
         case FSMStates::STRONGLY_NT:
-            bht[last_pos_predicted] = !branch_taken ?
-                                      FSMStates::STRONGLY_NT : FSMStates::WEAKLY_NT;
+            // On taken branches we also update BTB.
+            btb_impl->update(pos_branch, correct_address);
+            bht[pos_branch] = !branch_taken ? FSMStates::STRONGLY_NT : FSMStates::WEAKLY_NT;
             break;
         case FSMStates::WEAKLY_NT:
-            bht[last_pos_predicted] = !branch_taken ?
-                                      FSMStates::STRONGLY_NT : FSMStates::WEAKLY_T;
+            btb_impl->update(pos_branch, correct_address);
+            bht[pos_branch] = !branch_taken ? FSMStates::STRONGLY_NT : FSMStates::WEAKLY_T;
             break;
         case FSMStates::WEAKLY_T:
-            // On taken branches we also update BTB.
-            btb_impl->update(last_pos_predicted, correct_address);
-            bht[last_pos_predicted] = branch_taken ?
-                                      FSMStates::STRONGLY_T : FSMStates::WEAKLY_NT;
+            bht[pos_branch] = branch_taken ? FSMStates::STRONGLY_T : FSMStates::WEAKLY_NT;
             break;
         case FSMStates::STRONGLY_T:
-            btb_impl->update(last_pos_predicted, correct_address);
-            bht[last_pos_predicted] = branch_taken ?
-                                      FSMStates::STRONGLY_T : FSMStates::WEAKLY_T;
+            bht[pos_branch] = branch_taken ? FSMStates::STRONGLY_T : FSMStates::WEAKLY_T;
             break;
         default:
             SANITY_ASSERT(0, "Debug me :)");
         }
+        emit pred_updated_bht(pos_branch);
     } else {
         // Last instruction was a jump, we do not update the table, just the BTB.
-        btb_impl->update(last_pos_predicted, correct_address);
+        btb_impl->update(pos_jmp, correct_address);
     }
 }
 

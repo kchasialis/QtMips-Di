@@ -182,8 +182,7 @@ void ProgramTableView::go_to_address_priv(std::uint32_t address) {
     if (m == nullptr)
         return;
     m->adjustRowAndOffset(row, address);
-    scrollTo(m->index(row, 0),
-         QAbstractItemView::PositionAtTop);
+    scrollTo(m->index(row, 0), QAbstractItemView::PositionAtTop);
     setCurrentIndex(m->index(row, 1));
     if (need_addr0_save)
         addr0_save_change(address);

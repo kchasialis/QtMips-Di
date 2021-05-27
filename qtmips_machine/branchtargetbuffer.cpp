@@ -19,6 +19,8 @@ bool BranchTargetBuffer::get_pc_address(std::uint32_t btb_idx, std::uint32_t pc,
     *address = btb[btb_idx].address;
     need_update = !(btb[btb_idx].valid && btb[btb_idx].tag == tag);
 
+    emit pred_accessed_btb(btb_idx);
+
     return !need_update;
 }
 
@@ -39,5 +41,7 @@ void BranchTargetBuffer::update(std::uint32_t btb_idx, std::uint32_t inst_addr) 
         btb[btb_idx].tag = mask_bits(inst_addr, btb_bits, 31);
         btb[btb_idx].valid = true;
         btb[btb_idx].address = inst_addr;
+
+        emit pred_updated_btb(btb_idx);
     }
 }
