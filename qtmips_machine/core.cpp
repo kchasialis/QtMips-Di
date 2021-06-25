@@ -967,7 +967,8 @@ void CorePipelined::do_step(bool skip_break) {
                                                  dt_f.excause, dt_f.is_valid);
                         emit fetch_inst_addr_value(STAGEADDR_NONE);
 
-                        correct_address = branch_taken ? branch_target(dt_d.inst, dt_d.inst_addr) : (pc_before_prediction + 4);
+                        correct_address = branch_taken ? branch_target(dt_d.inst, dt_d.inst_addr) : 
+                                                        (pc_before_prediction + 4);
                         regs->pc_abs_jmp(correct_address - 4);
                     }
                     bp->update_bht(branch_taken, correct_address);

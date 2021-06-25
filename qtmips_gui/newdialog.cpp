@@ -441,6 +441,13 @@ void NewDialog::load_settings() {
         ui->preset_custom->setChecked(true);
     }
 
+    QString predictor_bits = ui->predictor_bits->currentText();
+    QString bht_bits = ui->bht_bits->currentText();
+    config->set_branch_unit(predictor_bits.toShort() == 1 ?
+                                machine::MachineConfig::BU_ONE_BIT_BP :
+                                machine::MachineConfig::BU_TWO_BIT_BP);
+    config->set_bht_bits(bht_bits.toShort());
+
     config_gui();
 }
 

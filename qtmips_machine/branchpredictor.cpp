@@ -37,7 +37,7 @@ std::uint32_t BranchPredictor::get_btb_entry_tag(std::uint32_t btb_idx) const {
 }
 
 double BranchPredictor::get_precision() const {
-    return predictions > 0.0 ? (double) correct_predictions / (double) predictions * 100.0 : 0.0;
+    return predictions > 0 ? ((double) correct_predictions / (double) predictions * 100.0) : 100.0;
 }
 
 bool BranchPredictor::last_prediction() const {
@@ -81,12 +81,11 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
     emit pred_instr_value(bj_instr);
 
     last_jmp = bj_instr.flags() & IMF_JUMP;
+    idx = bht_idx(pc);
     if (last_jmp) {
-        idx = bht_idx(pc);
         last_p = btb_impl->get_pc_address(idx, pc, &address);
         return last_p ? address : (pc + 4);
     } else if (bj_instr.flags() & IMF_BRANCH) {
-        idx = bht_idx(pc);
         lhs_and = get_prediction(idx);
         rhs_and = btb_impl->get_pc_address(idx, pc, &address);
         last_p = lhs_and && rhs_and;
@@ -107,8 +106,8 @@ void OneBitBranchPredictor::update_bht(bool branch_taken, std::uint32_t correct_
     if (branch_taken == last_p) {
         correct_predictions++;
     } else if (!last_jmp) {
-        // If we predicted the wrong result (this is checked before calling)
-        // and the last instruction was not a jump, update the table (and possibly BTB).
+        // If we predicted the wrong result and the last instruction was not a jump, 
+        // update the table (and possibly BTB).
         switch (bht[pos_branch]) {
         case FSMStates::NOT_TAKEN:
             // It was taken, also update the BTB.

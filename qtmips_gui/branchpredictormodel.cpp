@@ -49,19 +49,8 @@ QVariant BranchPredictorModel::data(const QModelIndex &index, int role) const {
             case1 = true;
         case 2:
         {
-            bool one_bit_pred;
+            int one_bit_pred = machine->config().branch_unit() == machine::MachineConfig::BU_ONE_BIT_BP;
             int8_t bht_entry = machine->bp()->get_bht_entry(index.row());
-            switch (machine->config().branch_unit()) {
-            case machine::MachineConfig::BU_ONE_BIT_BP:
-                one_bit_pred = true;
-                break;
-            case machine::MachineConfig::BU_TWO_BIT_BP:
-                one_bit_pred = false;
-                break;
-            default:
-                SANITY_ASSERT(0, "Debug me :)");
-                return QVariant();
-            }
 
             if (one_bit_pred) {
                 switch (bht_entry) {
@@ -90,7 +79,7 @@ QVariant BranchPredictorModel::data(const QModelIndex &index, int role) const {
             }
         }
         case 3:
-            return QString::number(machine->bp()->get_precision());
+            return QString::number(machine->bp()->get_precision()) + "%";
         default:
             SANITY_ASSERT(0, "Debug me :)");
             return QVariant();
@@ -98,14 +87,17 @@ QVariant BranchPredictorModel::data(const QModelIndex &index, int role) const {
     } else if (role == Qt::BackgroundRole) {
         if (index.row() == pos_bht_access) {
             if (pos_bht_access == pos_bht_update) {
+                // Pink - we updated the same entry we are accessing.
                 QBrush bgd(QColor(255, 173, 230));
                 return bgd;
             } else {
+                // Green - we just accessed a new entry.
                 QBrush bgd(QColor(193, 255, 173));
                 return bgd;
             }
         } else if (index.row() == pos_bht_update) {
-            QBrush bgd(QColor(255, 173, 173));
+            // Orange - we updated an entry in the table.
+            QBrush bgd(QColor(255, 173, 120));
             return bgd;
         }
         return QVariant();
@@ -117,11 +109,8 @@ QVariant BranchPredictorModel::data(const QModelIndex &index, int role) const {
 }
 
 Qt::ItemFlags BranchPredictorModel::flags(const QModelIndex &index) const {
-    if (index.column() == 1) {
-        return QAbstractTableModel::flags(index) | Qt::ItemIsEditable;
-    } else {
-        return QAbstractTableModel::flags(index);
-    }
+    return index.column() == 1 ? (QAbstractTableModel::flags(index) | Qt::ItemIsEditable) :
+                                 QAbstractTableModel::flags(index);   
 }
 
 bool BranchPredictorModel::setData(const QModelIndex &idx, const QVariant &value, int role) {

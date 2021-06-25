@@ -67,9 +67,11 @@ QVariant BranchTargetBufferModel::data(const QModelIndex &index, int role) const
         }
     } else if (role == Qt::BackgroundRole) {
         if (index.row() == pos_btb_access) {
+            // Pink - we are updating the previous accessed entry.
             QBrush bgd(QColor(193, 255, 173));
             return bgd;
         } else if (index.row() == pos_btb_update) {
+            // Green - we are accessing a new entry.
             QBrush bgd(QColor(255, 173, 173));
             return bgd;
         }
