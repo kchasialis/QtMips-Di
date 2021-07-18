@@ -42,6 +42,9 @@
 #include "qhtml5file.h"
 #endif
 
+#define MIN_BHT_BITS 5
+#define MAX_BHT_BITS 14
+
 NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     QMessageBox m_box;
     QAbstractButton *prev;
@@ -77,9 +80,11 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
 
     ui->predictor_bits->addItem("1");
     ui->predictor_bits->addItem("2");
-    for (size_t i = 5 ; i <= 14 ; i++) {
+    for (size_t i = MIN_BHT_BITS ; i <= MAX_BHT_BITS ; i++) {
         ui->bht_bits->addItem(QString::number(i));
     }
+    ui->resolution->addItem("ID");
+    ui->resolution->addItem("EX");
 
     connect(ui->pushButton_start_empty, SIGNAL(clicked(bool)), this, SLOT(create_empty()));
     connect(ui->pushButton_load, SIGNAL(clicked(bool)), this, SLOT(create()));
@@ -99,6 +104,7 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     connect(ui->branch_predictor, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
     connect(ui->predictor_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
     connect(ui->bht_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
+    connect(ui->resolution, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
     connect(ui->delay_slot, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
     connect(ui->none, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
 
@@ -272,6 +278,8 @@ void NewDialog::branch_unit_change() {
         config->set_bht_bits(0);
     }
 
+    config->set_branch_res_id(ui->resolution->currentText() == "ID");
+
     if (config->pipelined()) {
         SANITY_ASSERT(config->branch_unit() != machine::MachineConfig::BU_NONE, "Debug me :)");
     } else {
@@ -395,6 +403,8 @@ void NewDialog::config_gui() {
     ui->bht_bits_label->setEnabled(ui->branch_predictor->isChecked());
     ui->predictor_bits->setEnabled(ui->branch_predictor->isChecked());
     ui->predictor_bits_label->setEnabled(ui->branch_predictor->isChecked());
+    ui->resolution->setEnabled(ui->branch_predictor->isChecked());
+    ui->resolution_label->setEnabled(ui->branch_predictor->isChecked());
 }
 
 unsigned NewDialog::preset_number() {
@@ -444,6 +454,7 @@ void NewDialog::load_settings() {
     } else {
         ui->preset_custom->setChecked(true);
     }
+    ui->predictor_bits->setCurrentIndex(0);
 
     config_gui();
 }

@@ -15,7 +15,6 @@ class BranchPredictorDock : public QDockWidget  {
 
 public:
     BranchPredictorDock(QWidget *parent);
-    ~BranchPredictorDock();
 
     void setup(machine::QtMipsMachine *machine);
 

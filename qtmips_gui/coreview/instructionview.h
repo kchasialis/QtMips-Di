@@ -60,7 +60,6 @@ public slots:
 private:
     QGraphicsSimpleTextItem text;
     machine::ExceptionCause excause;
-    Cycle cycle;
     QColor bgnd;
     bool valid;
 };

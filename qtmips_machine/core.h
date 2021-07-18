@@ -243,11 +243,18 @@ protected:
         bool memread;
         bool memwrite;
         bool regwrite;
+        bool bjr_req_rs; // requires rs for beq, bne, blez, bgtz, jr nad jalr
+        bool bjr_req_rt; // requires rt for beq, bne
+        bool branch;     // branch instruction
+        bool jump;       // jump
+        bool bj_not;     // negate branch condition
+        bool bgt_blez;   // BGTZ/BLEZ instead of BGEZ/BLTZ
+        std::uint32_t val_rs; // Value from register rs
+        std::uint32_t val_rt; // Value from register rt
         AccessControl memctl;
-        std::uint32_t val_rt;
         std::uint8_t rwrite; // Writeback register (multiplexed between rt and rd according to regd)
         std::uint32_t alu_val; // Result of ALU execution
-        uint32_t inst_addr; // Address of instruction
+        std::uint32_t inst_addr; // Address of instruction
         ExceptionCause excause;
         bool in_delay_slot;
         bool stop_if;
@@ -272,10 +279,14 @@ protected:
     struct dtExecute execute(const struct dtDecode&);
     struct dtMemory memory(const struct dtExecute&);
     void writeback(const struct dtMemory&);
-    bool branch_result(const struct dtDecode&);
+    template<typename Dt>
+    bool branch_result(const Dt&);
+    template<typename Dt>
+    bool handle_pc(const Dt&);
+    bool branch_result_wrp(const dtDecode &dtd, const dtExecute &dte, bool branch_eval_id = true);
+    bool handle_pc_wpr(const dtDecode &dtd, const dtExecute &dte, bool branch_eval_id = true);
     std::uint32_t branch_target(const machine::Instruction &inst,
                                 std::uint32_t inst_addr);
-    bool handle_pc(const struct dtDecode&);
 
     ExceptionCause memory_special(enum AccessControl memctl,
                            int mode, bool memread, bool memwrite,
@@ -326,10 +337,13 @@ public:
     CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
                   MachineConfig::HazardUnit hazard_unit = MachineConfig::HU_STALL_FORWARD,
                   MachineConfig::BranchUnit branch_unit = MachineConfig::BU_DELAY_SLOT,
-                  int8_t bp_bits = -1, std::uint32_t min_cache_row_size = 1,
+                  int8_t bp_bits = -1, bool branch_eval_id = true,
+                  std::uint32_t min_cache_row_size = 1,
                   Cop0State *cop0state = nullptr);
 
 protected:
+    void flush_stages();
+    std::uint32_t get_correct_address(std::uint32_t pc_before_prediction, bool branch_taken, bool btb_miss);
     void do_step(bool skip_break = false);
     void do_reset();
     BranchPredictor *predictor();
@@ -341,6 +355,7 @@ private:
     struct Core::dtMemory dt_m;
 
     BranchPredictor *bp;
+    bool branch_res_id;
     enum MachineConfig::BranchUnit branch_unit;
     enum MachineConfig::HazardUnit hazard_unit;
 };

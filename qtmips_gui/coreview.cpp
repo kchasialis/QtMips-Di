@@ -407,9 +407,6 @@ CoreViewScenePipelined::CoreViewScenePipelined(machine::QtMipsMachine *machine) 
     NEW_I(inst_mem, 620, 12, instruction_memory, QColor(173, 255, 229));
     NEW_I(inst_wrb, 820, 12, instruction_writeback, QColor(255, 173, 230));
 
-    coreview::Cycle *cycle;
-    NEW(Cycle, cycle, 30, 12);
-
     if (machine->config().hazard_unit() != machine::MachineConfig::HU_NONE) {
         NEW(LogicBlock, hazard_unit, SC_WIDTH/2, SC_HEIGHT - 15, "Hazard Unit");
         hazard_unit->setSize(SC_WIDTH - 100, 12);

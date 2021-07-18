@@ -47,7 +47,6 @@ SOURCES += \
     branchpredictortableview.cpp \
     comboboxitemdelegate.cpp \
     coreview/branchtargetbuffer.cpp \
-    coreview/cycle.cpp \
         main.cpp \
         mainwindow.cpp \
         newdialog.cpp \
@@ -110,7 +109,6 @@ HEADERS += \
     branchpredictortableview.h \
     comboboxitemdelegate.h \
     coreview/branchtargetbuffer.h \
-    coreview/cycle.h \
         mainwindow.h \
         newdialog.h \
         coreview.h \

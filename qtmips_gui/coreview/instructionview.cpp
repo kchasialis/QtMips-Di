@@ -49,7 +49,7 @@ using namespace coreview;
 #define PENW 1
 //////////////////////
 
-InstructionView::InstructionView(QColor bgnd) : QGraphicsObject(nullptr), text(this), cycle(this) {
+InstructionView::InstructionView(QColor bgnd) : QGraphicsObject(nullptr), text(this) {
     QFont f;
     f.setPointSize(FontSize::SIZE6);
     text.setFont(f);

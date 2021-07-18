@@ -233,6 +233,23 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QLabel" name="resolution_label">
+            <property name="text">
+             <string>Resolution</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="resolution">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>

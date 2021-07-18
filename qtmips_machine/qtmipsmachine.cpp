@@ -109,8 +109,8 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
 
     if (cc.pipelined())
         cr = new CorePipelined(regs, l1_program, l1_data, cc.hazard_unit(),
-                               cc.branch_unit(), cc.bht_bits(), min_cache_row_size,
-                               cop0st);
+                               cc.branch_unit(), cc.bht_bits(), cc.branch_res_id(),
+                               min_cache_row_size, cop0st);
     else
         cr = new CoreSingle(regs, l1_program, l1_data,
                             cc.branch_unit() == machine::MachineConfig::BU_DELAY_SLOT,

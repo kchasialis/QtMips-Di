@@ -142,6 +142,8 @@ public:
     void set_branch_unit(BranchUnit);
     // Branch history table lookup bits
     void set_bht_bits(std::int8_t);
+    // Wether or not branch resolution is done on ID.
+    void set_branch_res_id(bool);
     // Protect data memory from execution. Only program sections can be executed.
     void set_memory_execute_protection(bool);
     // Protect program memory from accidental writes.
@@ -166,6 +168,7 @@ public:
     bool predictor() const;
     enum BranchUnit branch_unit() const;
     std::int8_t bht_bits() const;
+    bool branch_res_id() const;
     enum HazardUnit hazard_unit() const;
     bool memory_execute_protection() const;
     bool memory_write_protection() const;
@@ -192,6 +195,7 @@ private:
     bool pipeline;
     BranchUnit bunit;
     std::uint8_t bp_bits;
+    bool b_res_id;
     HazardUnit hunit;
     bool exec_protect, write_protect;
     bool osem_enable, osem_known_syscall_stop, osem_unknown_syscall_stop;

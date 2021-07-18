@@ -43,6 +43,7 @@ using namespace machine;
 #define DF_PIPELINE false
 #define DF_BUNIT BU_DELAY_SLOT
 #define DF_BP_BITS 0
+#define DF_B_RES_ID true
 #define DF_HUNIT HU_STALL_FORWARD
 #define DF_EXEC_PROTEC false
 #define DF_WRITE_PROTEC false
@@ -282,6 +283,7 @@ MachineConfig::MachineConfig() {
     pipeline = DF_PIPELINE;
     bunit = DF_BUNIT;
     bp_bits = DF_BP_BITS;
+    b_res_id = DF_B_RES_ID;
     hunit = DF_HUNIT;
     exec_protect = DF_EXEC_PROTEC;
     write_protect = DF_WRITE_PROTEC;
@@ -302,6 +304,7 @@ MachineConfig::MachineConfig(const MachineConfig& cc) noexcept {
     this->pipeline = cc.pipelined();
     this->bunit = cc.branch_unit();
     this->bp_bits = cc.bht_bits();
+    this->b_res_id = cc.branch_res_id();
     this->hunit = cc.hazard_unit();
     this->exec_protect = cc.memory_execute_protection();
     this->write_protect = cc.memory_write_protection();
@@ -325,6 +328,7 @@ MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) {
     pipeline = sts->value(N("Pipelined"), DF_PIPELINE).toBool();
     bunit = (BranchUnit)sts->value(N("BranchUnit"), DF_BUNIT).toUInt();
     bp_bits = sts->value(N("BPbits"), DF_BP_BITS).toInt();
+    b_res_id = sts->value(N("BResId"), DF_B_RES_ID).toInt();
     hunit = (HazardUnit)sts->value(N("HazardUnit"), DF_HUNIT).toUInt();
     exec_protect = sts->value(N("MemoryExecuteProtection"), DF_EXEC_PROTEC).toBool();
     write_protect = sts->value(N("MemoryWriteProtection"), DF_WRITE_PROTEC).toBool();
@@ -345,6 +349,7 @@ void MachineConfig::store(QSettings *sts, const QString &prefix) {
     sts->setValue(N("Pipelined"), pipelined());
     sts->setValue(N("BranchUnit"), (unsigned)branch_unit());
     sts->setValue(N("BPbits"), bht_bits());
+    sts->setValue(N("BResId"), branch_res_id());
     sts->setValue(N("HazardUnit"), (unsigned)hazard_unit());
     sts->setValue(N("OsemuEnable"), osemu_enable());
     sts->setValue(N("OsemuKnownSyscallStop"), osemu_known_syscall_stop());
@@ -420,6 +425,10 @@ void MachineConfig::set_bht_bits(int8_t b) {
     bp_bits = b;
 }
 
+void MachineConfig::set_branch_res_id(bool bri) {
+    b_res_id = bri;
+}
+
 void MachineConfig::set_memory_execute_protection(bool ep) {
     exec_protect = ep;
 }
@@ -489,6 +498,10 @@ enum MachineConfig::BranchUnit MachineConfig::branch_unit() const {
 
 int8_t MachineConfig::bht_bits() const {
     return bp_bits;
+}
+
+bool MachineConfig::branch_res_id() const {
+    return b_res_id;
 }
 
 enum MachineConfig::HazardUnit MachineConfig::hazard_unit() const {
