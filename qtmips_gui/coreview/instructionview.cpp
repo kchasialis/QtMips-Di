@@ -41,7 +41,7 @@
 
 using namespace coreview;
 
-//////////////////////
+////////////////////// Instruction Box
 #define WIDTH 120
 #define HEIGHT 14
 #define ROUND 5
@@ -49,7 +49,7 @@ using namespace coreview;
 #define PENW 1
 //////////////////////
 
-InstructionView::InstructionView(QColor bgnd) : QGraphicsObject(nullptr), text(this) {
+InstructionView::InstructionView(QColor bgnd) : QGraphicsObject(nullptr), text(this), cycle(this) {
     QFont f;
     f.setPointSize(FontSize::SIZE6);
     text.setFont(f);
@@ -77,7 +77,6 @@ void InstructionView::paint(QPainter *painter, const QStyleOptionGraphicsItem *o
 
 void InstructionView::instruction_update(const machine::Instruction &i,
                    std::uint32_t inst_addr, machine::ExceptionCause excause, bool valid) {
-
     this->valid = valid;
     QRectF prev_box = boundingRect();
     text.setText(i.to_str(inst_addr));
@@ -85,4 +84,8 @@ void InstructionView::instruction_update(const machine::Instruction &i,
     QRectF box = text.boundingRect();
     text.setPos(-box.width()/2, GAP);
     update(prev_box.united(boundingRect()));
+}
+
+const QGraphicsSimpleTextItem &InstructionView::get_text() {
+    return text;
 }

@@ -37,12 +37,12 @@
 
 using namespace machine;
 
-Cache::Cache(MemoryAccess *m, const MachineConfigCache& cc, std::uint32_t upper_access_penalty_r,
-             std::uint32_t upper_access_penalty_w, std::uint32_t upper_access_penalty_b) : cnf(cc) {
-    mem_upper = m;
-    access_pen_r = upper_access_penalty_r;
-    access_pen_w = upper_access_penalty_w;
-    access_pen_b = upper_access_penalty_b;
+Cache::Cache(MemoryAccess *m, const MachineConfigCache& cc, std::uint32_t lower_access_penalty_r,
+             std::uint32_t lower_access_penalty_w, std::uint32_t lower_access_penalty_b) : cnf(cc) {
+    mem_lower = m;
+    access_pen_r = lower_access_penalty_r;
+    access_pen_w = lower_access_penalty_w;
+    access_pen_b = lower_access_penalty_b;
     uncached_start = 0xf0000000;
     uncached_last = 0xffffffff;
     cache_type = cc.type();
@@ -50,8 +50,8 @@ Cache::Cache(MemoryAccess *m, const MachineConfigCache& cc, std::uint32_t upper_
     read_misses = 0;
     write_hits = 0;
     write_misses = 0;
-    mem_upper_reads = 0;
-    mem_upper_writes = 0;
+    mem_lower_reads = 0;
+    mem_lower_writes = 0;
     burst_reads = 0;
     burst_writes = 0;
     change_counter = 0;
@@ -137,19 +137,19 @@ bool Cache::wword(std::uint32_t address, std::uint32_t value) {
     bool out_of_bounds = address >= uncached_start && address <= uncached_last;
 
     if (!cnf.enabled() || out_of_bounds) {
-        mem_upper_writes++;
-        emit_mem_upper_signal(false);
+        mem_lower_writes++;
+        emit_mem_lower_signal(false);
         update_statistics();
-        return mem_upper->write_word(address, value);
+        return mem_lower->write_word(address, value);
     }
 
     changed = access(address, &data, true, value);
 
     if (cnf.write_policy() != MachineConfigCache::WritePolicy::WP_BACK) {
-        mem_upper_writes++;
-        emit_mem_upper_signal(false);
+        mem_lower_writes++;
+        emit_mem_lower_signal(false);
         update_statistics();
-        return mem_upper->write_word(address, value);
+        return mem_lower->write_word(address, value);
     }
 
     return changed;
@@ -160,15 +160,15 @@ std::uint32_t Cache::rword(std::uint32_t address, bool debug_access) const {
     bool out_of_bounds = address >= uncached_start && address <= uncached_last;
 
     if (!cnf.enabled() || out_of_bounds) {
-        mem_upper_reads++;
-        emit_mem_upper_signal(true);
+        mem_lower_reads++;
+        emit_mem_lower_signal(true);
         update_statistics();
-        return mem_upper->read_word(address, debug_access);
+        return mem_lower->read_word(address, debug_access);
     }
 
     if (debug_access) {
         if (!(location_status(address) & LOCSTAT_CACHED))
-            return mem_upper->read_word(address, debug_access);
+            return mem_lower->read_word(address, debug_access);
         return debug_rword(address);
     }
 
@@ -215,16 +215,16 @@ std::uint32_t Cache::miss() const {
 }
 
 std::uint32_t Cache::mu_reads() const {
-    return mem_upper_reads;
+    return mem_lower_reads;
 }
 
 std::uint32_t Cache::mu_writes() const {
-    return mem_upper_writes;
+    return mem_lower_writes;
 }
 
 std::uint32_t Cache::stalled_cycles() const {
-    std::uint32_t st_cycles = mem_upper_reads * (access_pen_r - 1) +
-                              mem_upper_writes * (access_pen_w - 1);
+    std::uint32_t st_cycles = mem_lower_reads * (access_pen_r - 1) +
+                              mem_lower_writes * (access_pen_w - 1);
     if (access_pen_b != 0)
         st_cycles -= burst_reads * (access_pen_r - access_pen_b) +
                      burst_writes * (access_pen_w - access_pen_b);
@@ -244,8 +244,8 @@ double Cache::speed_improvement() const {
     if (cnf.write_policy() == MachineConfigCache::WritePolicy::WP_BACK)
         lookup_time += write_hits + write_misses;
 
-    mem_access_time = mem_upper_reads * access_pen_r +
-                      mem_upper_writes * access_pen_w;
+    mem_access_time = mem_lower_reads * access_pen_r +
+                      mem_lower_writes * access_pen_w;
 
     if (access_pen_b != 0)
         mem_access_time -= burst_reads * (access_pen_r - access_pen_b) +
@@ -277,16 +277,16 @@ void Cache::reset() {
     read_misses = 0;
     write_hits = 0;
     write_misses = 0;
-    mem_upper_reads = 0;
-    mem_upper_writes = 0;
+    mem_lower_reads = 0;
+    mem_lower_writes = 0;
     burst_reads = 0;
     burst_writes = 0;
 
     // Trigger signals
     emit hit_update(hit());
     emit miss_update(miss());
-    emit_mem_upper_signal(true);
-    emit_mem_upper_signal(false);
+    emit_mem_lower_signal(true);
+    emit_mem_lower_signal(false);
     update_statistics();
     if (cnf.enabled()) {
         for (size_t as = 0; as < cnf.associativity(); as++)
@@ -315,25 +315,25 @@ enum LocationStatus Cache::location_status(std::uint32_t address) const {
         }
     }
 
-    return mem_upper->location_status(address);
+    return mem_lower->location_status(address);
 }
 
-void Cache::emit_mem_upper_signal(bool read) const {
-    switch (mem_upper->type()) {
+void Cache::emit_mem_lower_signal(bool read) const {
+    switch (mem_lower->type()) {
     case MemoryType::L1_CACHE:
-        SANITY_ASSERT(0, "Upper level cannot be L1 cache.");
+        SANITY_ASSERT(0, "lower level cannot be L1 cache.");
         break;
     case MemoryType::L2_CACHE:
         if (read)
-            emit level2_cache_reads_update(mem_upper_reads);
+            emit level2_cache_reads_update(mem_lower_reads);
         else
-            emit level2_cache_writes_update(mem_upper_writes);
+            emit level2_cache_writes_update(mem_lower_writes);
         break;
     case MemoryType::DRAM:
         if (read)
-            emit memory_reads_update(mem_upper_reads);
+            emit memory_reads_update(mem_lower_reads);
         else
-            emit memory_writes_update(mem_upper_writes);
+            emit memory_writes_update(mem_lower_writes);
         break;
     default:
         SANITY_ASSERT(0, "Unknown memory type.");
@@ -426,13 +426,13 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
         emit miss_update(miss());
 
         for (size_t i = 0; i < cnf.blocks(); i++) {
-            cd.data[i] = mem_upper->read_word(base_address(tag, row) + (4*i));
+            cd.data[i] = mem_lower->read_word(base_address(tag, row) + (4*i));
             change_counter++;
         }
 
-        mem_upper_reads += cnf.blocks();
+        mem_lower_reads += cnf.blocks();
         burst_reads += cnf.blocks() - 1;
-        emit_mem_upper_signal(true);
+        emit_mem_lower_signal(true);
         update_statistics();
     }
 
@@ -485,12 +485,12 @@ void Cache::kick(std::uint32_t associat_indx, std::uint32_t row) const {
 
     if (cd.dirty && cnf.write_policy() == MachineConfigCache::WritePolicy::WP_BACK) {
         for (size_t i = 0; i < cnf.blocks(); i++) {
-            mem_upper->write_word(base_address(cd.tag, row) + (4*i), cd.data[i]);
+            mem_lower->write_word(base_address(cd.tag, row) + (4*i), cd.data[i]);
         }
 
-        mem_upper_writes += cnf.blocks();
+        mem_lower_writes += cnf.blocks();
         burst_writes += cnf.blocks() - 1;
-        emit_mem_upper_signal(false);
+        emit_mem_lower_signal(false);
     }
 
     cd.valid = false;

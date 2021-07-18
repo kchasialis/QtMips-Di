@@ -50,11 +50,11 @@ CacheDock::CacheDock(QWidget *parent, const QString &type) : QDockWidget(parent)
     l_miss = new QLabel("0", top_form);
     layout_top_form->addRow("Miss:", l_miss);
     l_m_reads = new QLabel("0", top_form);
-    layout_top_form->addRow("Memory reads:", l_m_reads);
+    layout_top_form->addRow("Lower memory reads:", l_m_reads);
     l_m_writes = new QLabel("0", top_form);
-    layout_top_form->addRow("Memory writes:", l_m_writes);
+    layout_top_form->addRow("Lower memory writes:", l_m_writes);
     l_stalled = new QLabel("0", top_form);
-    layout_top_form->addRow("Memory stall cycles:", l_stalled);
+    layout_top_form->addRow("Lower memory stall cycles:", l_stalled);
     l_hit_rate = new QLabel("0.000%", top_form);
     layout_top_form->addRow("Hit rate:", l_hit_rate);
     l_speed  = new QLabel("100%", top_form);
@@ -73,6 +73,8 @@ CacheDock::CacheDock(QWidget *parent, const QString &type) : QDockWidget(parent)
 }
 
 void CacheDock::setup(const machine::Cache *cache) {
+    this->cache = cache;
+
     l_hit->setText("0");
     l_miss->setText("0");
     l_stalled->setText("0");
@@ -83,8 +85,10 @@ void CacheDock::setup(const machine::Cache *cache) {
     if (cache != nullptr) {
         connect(cache, SIGNAL(hit_update(std::uint32_t)), this, SLOT(hit_update(std::uint32_t)));
         connect(cache, SIGNAL(miss_update(std::uint32_t)), this, SLOT(miss_update(std::uint32_t)));
-        connect(cache, SIGNAL(memory_reads_update(std::uint32_t)), this, SLOT(memory_reads_update(std::uint32_t)));
-        connect(cache, SIGNAL(memory_writes_update(std::uint32_t)), this, SLOT(memory_writes_update(std::uint32_t)));
+        connect(cache, SIGNAL(memory_reads_update(std::uint32_t)), this, SLOT(lower_memory_reads_update(std::uint32_t)));
+        connect(cache, SIGNAL(memory_writes_update(std::uint32_t)), this, SLOT(lower_memory_writes_update(std::uint32_t)));
+        connect(cache, SIGNAL(level2_cache_reads_update(std::uint32_t)), this, SLOT(lower_memory_reads_update(std::uint32_t)));
+        connect(cache, SIGNAL(level2_cache_writes_update(std::uint32_t)), this, SLOT(lower_memory_writes_update(std::uint32_t)));
         connect(cache, SIGNAL(statistics_update(std::uint32_t,double,double)), this, SLOT(statistics_update(std::uint32_t,double,double)));
     }
     top_form->setVisible(cache != nullptr);
@@ -105,11 +109,11 @@ void CacheDock::miss_update(unsigned val) {
     l_miss->setText(QString::number(val));
 }
 
-void CacheDock::memory_reads_update(unsigned val) {
+void CacheDock::lower_memory_reads_update(unsigned val) {
     l_m_reads->setText(QString::number(val));
 }
 
-void CacheDock::memory_writes_update(unsigned val) {
+void CacheDock::lower_memory_writes_update(unsigned val) {
     l_m_writes->setText(QString::number(val));
 }
 

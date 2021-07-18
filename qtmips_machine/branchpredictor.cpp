@@ -36,7 +36,7 @@ std::uint32_t BranchPredictor::get_btb_entry_tag(std::uint32_t btb_idx) const {
     return btb_impl->get_btb_entry_tag(btb_idx);
 }
 
-double BranchPredictor::get_precision() const {
+double BranchPredictor::get_accuracy() const {
     return predictions > 0 ? ((double) correct_predictions / (double) predictions * 100.0) : 100.0;
 }
 

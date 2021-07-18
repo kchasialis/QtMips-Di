@@ -27,6 +27,8 @@ BranchPredictorDock::BranchPredictorDock(QWidget *parent) : Super(parent) {
     pc_val = new QLineEdit();
     QLabel *bht_index = new QLabel("BHT Index");
     bht_index_val = new QLineEdit();
+    QLabel *accuracy = new QLabel("Accuracy");
+    accuracy_val = new QLineEdit();
 
     bht_entries_val->setReadOnly(true);
     history_bits_val->setReadOnly(true);
@@ -35,6 +37,7 @@ BranchPredictorDock::BranchPredictorDock(QWidget *parent) : Super(parent) {
     instr_val->setReadOnly(true);
     pc_val->setReadOnly(true);
     bht_index_val->setReadOnly(true);
+    accuracy_val->setReadOnly(true);
 
     hlayout_top->addWidget(bht_entries);
     hlayout_top->addWidget(bht_entries_val);
@@ -47,6 +50,8 @@ BranchPredictorDock::BranchPredictorDock(QWidget *parent) : Super(parent) {
     vlayout_mid->addWidget(pc_val);
     vlayout_mid->addWidget(bht_index);
     vlayout_mid->addWidget(bht_index_val);
+    vlayout_mid->addWidget(accuracy);
+    vlayout_mid->addWidget(accuracy_val);
 
     vlayout->addLayout(hlayout_top);
     vlayout->addLayout(vlayout_mid);
@@ -57,8 +62,15 @@ BranchPredictorDock::BranchPredictorDock(QWidget *parent) : Super(parent) {
     setWidget(content);
 }
 
+static void set_qline_val(QLineEdit *qline_obj, const QString &text) {
+    qline_obj->setReadOnly(false);
+    qline_obj->setText(text);
+    qline_obj->setReadOnly(true);
+}
+
 void BranchPredictorDock::setup(machine::QtMipsMachine *machine) {
     BranchPredictorModel *pmodel = new BranchPredictorModel(this);
+    QString text;
 
     this->machine = machine;
     pmodel->setup(machine);
@@ -67,52 +79,52 @@ void BranchPredictorDock::setup(machine::QtMipsMachine *machine) {
 
     connect(machine->bp(), SIGNAL(pred_inst_addr_value(std::uint32_t)), this, SLOT(update_pc_val(std::uint32_t)));
     connect(machine->bp(), SIGNAL(pred_inst_addr_value(std::uint32_t)), this, SLOT(update_bht_index_val(std::uint32_t)));
+    connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), this, SLOT(update_accuracy_val(std::int32_t)));
     connect(machine->bp(), SIGNAL(pred_instr_value(const machine::Instruction&)), this, SLOT(update_instr_val(const machine::Instruction&)));
     connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), pmodel, SLOT(update_pos_bht_update(std::int32_t)));
     connect(machine->bp(), SIGNAL(pred_accessed_bht(std::int32_t)), pmodel, SLOT(update_pos_bht_access(std::int32_t)));
     connect(machine->bp(), SIGNAL(pred_accessed_bht(std::int32_t)), predictor_content, SLOT(focus_row(std::int32_t)));
     connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), predictor_content, SLOT(focus_row(std::int32_t)));
 
-    history_bits_val->setReadOnly(false);
     switch (this->machine->config().branch_unit()) {
     case machine::MachineConfig::BU_ONE_BIT_BP:
-        history_bits_val->setText("One Bit");
+        text = "One Bit";
         break;
     case machine::MachineConfig::BU_TWO_BIT_BP:
-        history_bits_val->setText("Two Bit");
+        text = "Two Bit";
         break;
     default:
         SANITY_ASSERT(0, "Debug me.");
     }
-    history_bits_val->setReadOnly(true);
 
-    bht_entries_val->setReadOnly(false);
-    bht_entries_val->setText(QString::number(pow(2, this->machine->config().bht_bits())));
-    bht_entries_val->setReadOnly(true);
+    set_qline_val(history_bits_val, text);
+    set_qline_val(bht_entries_val, QString::number(pow(2, this->machine->config().bht_bits())));
 }
 
 void BranchPredictorDock::update_pc_val(std::uint32_t inst_addr) {
-    QString s,t;
+    QString s,t, text;
 
-    pc_val->setReadOnly(false);
     t = QString::number(inst_addr, 16);
     s.fill('0', 8 - t.count());
-    pc_val->setText("0x" + s + t.toUpper());
-    pc_val->setReadOnly(true);
+    text = "0x" + s + t.toUpper();
+
+    set_qline_val(pc_val, text);
 }
 
 void BranchPredictorDock::update_instr_val(const machine::Instruction &instr) {
-    QString s,t;
+    QString s,t, text;
 
-    instr_val->setReadOnly(false);
     t = QString::number(instr.data(), 16);
     s.fill('0', 8 - t.count());
-    instr_val->setText("0x" + s + t.toUpper());
-    instr_val->setReadOnly(true);
+    text = "0x" + s + t.toUpper();
+
+    set_qline_val(instr_val, text);
 }
 
 void BranchPredictorDock::update_bht_index_val(std::uint32_t inst_addr) {
-    bht_index_val->setReadOnly(false);
-    bht_index_val->setText(QString::number(machine->bp()->bht_idx(inst_addr, true)));
-    bht_index_val->setReadOnly(true);
+    set_qline_val(bht_index_val, QString::number(machine->bp()->bht_idx(inst_addr, true)));
+}
+
+void BranchPredictorDock::update_accuracy_val(std::int32_t) {
+    set_qline_val(accuracy_val, QString::number(machine->bp()->get_accuracy()));
 }

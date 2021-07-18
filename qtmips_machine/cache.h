@@ -46,8 +46,8 @@ namespace machine {
 class Cache : public MemoryAccess {
     Q_OBJECT
 public:
-    Cache(MemoryAccess *m, const MachineConfigCache &cc, std::uint32_t upper_access_penalty_r,
-          std::uint32_t upper_access_penalty_w, std::uint32_t upper_access_penalty_b);
+    Cache(MemoryAccess *m, const MachineConfigCache &cc, std::uint32_t lower_access_penalty_r,
+          std::uint32_t lower_access_penalty_w, std::uint32_t lower_access_penalty_b);
     ~Cache();
 
     bool wword(std::uint32_t address, std::uint32_t value) override;
@@ -60,9 +60,9 @@ public:
 
     std::uint32_t hit() const; // Number of recorded hits.
     std::uint32_t miss() const; // Number of recorded misses.
-    std::uint32_t mu_reads() const; // Number of reads on the upper level (L* or memory).
-    std::uint32_t mu_writes() const; // Number of writes on the upper level (L* or memory).
-    std::uint32_t stalled_cycles() const; // Number of wasted cycles in upper level.
+    std::uint32_t mu_reads() const; // Number of reads on the lower level (L* or memory).
+    std::uint32_t mu_writes() const; // Number of writes on the lower level (L* or memory).
+    std::uint32_t stalled_cycles() const; // Number of wasted cycles in lower level.
     double speed_improvement() const; // Speed improvement in percents in comare with no used cache.
     double hit_rate() const; // Usage efficiency in percents.
 
@@ -84,13 +84,13 @@ signals:
 
 private:
     MachineConfigCache cnf;
-    MemoryAccess *mem_upper;
+    MemoryAccess *mem_lower;
     std::uint32_t access_pen_r, access_pen_w, access_pen_b;
     std::uint32_t uncached_start;
     std::uint32_t uncached_last;
     MemoryType cache_type;
     mutable std::uint32_t read_hits, read_misses, write_hits, write_misses;
-    mutable std::uint32_t mem_upper_reads, mem_upper_writes;
+    mutable std::uint32_t mem_lower_reads, mem_lower_writes;
     mutable std::uint32_t burst_reads, burst_writes;
     mutable std::uint32_t change_counter;
 
@@ -106,7 +106,7 @@ private:
         std::uint32_t **lfu; // Access count
     } replc; // Data used for replacement policy
 
-    void emit_mem_upper_signal(bool read) const;
+    void emit_mem_lower_signal(bool read) const;
     std::uint32_t debug_rword(std::uint32_t address) const;
     bool access(std::uint32_t address, std::uint32_t *data, bool write, std::uint32_t value = 0) const;
     void kick(std::uint32_t associat_indx, std::uint32_t row) const;

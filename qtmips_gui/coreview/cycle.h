@@ -33,38 +33,36 @@
  *
  ******************************************************************************/
 
-#ifndef INSTRUCTIONVIEW_H
-#define INSTRUCTIONVIEW_H
+#ifndef CYCLE_H
+#define CYCLE_H
 
 #include <QGraphicsObject>
+#include <QPainter>
 #include <QGraphicsSimpleTextItem>
+#include <QVector>
+#include <QObject>
 #include "qtmipsmachine.h"
 #include "coreview_colors.h"
 
 namespace coreview {
 
-class InstructionView : public QGraphicsObject {
+class Cycle : public QGraphicsObject {
     Q_OBJECT
 public:
-    InstructionView(QColor bgnd = QColor(240, 240, 240));
+    Cycle();
+    ~Cycle();
 
     QRectF boundingRect() const override;
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
-public slots:
-    void instruction_update(const machine::Instruction &i, std::uint32_t inst_addr,
-                            machine::ExceptionCause excause, bool valid);
-    const QGraphicsSimpleTextItem &get_text();
-
+private slots:
+    void cycle_update(std::uint32_t cycle);
 
 private:
-    QGraphicsSimpleTextItem text;
-    machine::ExceptionCause excause;
-    Cycle cycle;
-    QColor bgnd;
-    bool valid;
+    QRectF box;
+    QGraphicsSimpleTextItem *text;
 };
 
 }
 
-#endif // INSTRUCTIONVIEW_H
+#endif // CYCLE_H

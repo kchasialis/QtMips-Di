@@ -841,7 +841,7 @@ void CorePipelined::do_step(bool skip_break) {
     dt_d.ff_rt = ForwardFrom::FORWARD_NONE;
 
     if (hazard_unit != MachineConfig::HU_NONE) {
-        // Note: We make exception with $0 as that has no effect when written and is used in nop instruction
+        // Note: We make exception wmith $0 as that has no effect when written and is used in nop instruction
 
 #define HAZARD(STAGE) ( \
             (STAGE).regwrite && (STAGE).rwrite != 0 && \
@@ -937,10 +937,11 @@ void CorePipelined::do_step(bool skip_break) {
     if (!stall && !dt_d.stop_if) {
         dt_d.stall = false;
         dt_f = fetch(skip_break);
-        if (bp == nullptr) {
-            // Means we have delay slot enabled.
+        if (!bp) {
+            // We have delay slot enabled.
             if (handle_pc(dt_d)) {
                 dt_f.in_delay_slot = true;
+                dt_d.in_delay_slot = true;
             } else {
                 if (dt_d.nb_skip_ds) {
                     dtFetchInit(dt_f);

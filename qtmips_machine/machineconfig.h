@@ -191,7 +191,7 @@ public:
 private:
     bool pipeline;
     BranchUnit bunit;
-    std::int8_t bp_bits;
+    std::uint8_t bp_bits;
     HazardUnit hunit;
     bool exec_protect, write_protect;
     bool osem_enable, osem_known_syscall_stop, osem_unknown_syscall_stop;

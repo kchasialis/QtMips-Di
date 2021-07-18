@@ -77,7 +77,7 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
 
     ui->predictor_bits->addItem("1");
     ui->predictor_bits->addItem("2");
-    for (size_t i = 7 ; i <= 12 ; i++) {
+    for (size_t i = 5 ; i <= 14 ; i++) {
         ui->bht_bits->addItem(QString::number(i));
     }
 
@@ -238,6 +238,11 @@ void NewDialog::pipelined_change(bool val) {
     if (!config->pipelined() && config->predictor()) {
         config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
     }
+    if (config->pipelined() && ui->none->isChecked()) {
+        config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
+        ui->delay_slot->click();
+    }
+
 	switch2custom();
 }
 
@@ -254,18 +259,17 @@ void NewDialog::branch_unit_change() {
     if (ui->branch_predictor->isChecked()) {
         QString predictor_bits = ui->predictor_bits->currentText();
         QString bht_bits = ui->bht_bits->currentText();
+
         config->set_branch_unit(predictor_bits.toShort() == 1 ?
-                                  machine::MachineConfig::BU_ONE_BIT_BP :
-                                  machine::MachineConfig::BU_TWO_BIT_BP);
+                                    machine::MachineConfig::BU_ONE_BIT_BP :
+                                    machine::MachineConfig::BU_TWO_BIT_BP);
         config->set_bht_bits(bht_bits.toShort());
-    }
-    else if (ui->delay_slot->isChecked()) {
+    } else if (ui->delay_slot->isChecked()) {
         config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
-        config->set_bht_bits(-1);
-    }
-    else {
+        config->set_bht_bits(0);
+    } else {
         config->set_branch_unit(machine::MachineConfig::BU_NONE);
-        config->set_bht_bits(-1);
+        config->set_bht_bits(0);
     }
 
     if (config->pipelined()) {
@@ -440,13 +444,6 @@ void NewDialog::load_settings() {
     } else {
         ui->preset_custom->setChecked(true);
     }
-
-    QString predictor_bits = ui->predictor_bits->currentText();
-    QString bht_bits = ui->bht_bits->currentText();
-    config->set_branch_unit(predictor_bits.toShort() == 1 ?
-                                machine::MachineConfig::BU_ONE_BIT_BP :
-                                machine::MachineConfig::BU_TWO_BIT_BP);
-    config->set_bht_bits(bht_bits.toShort());
 
     config_gui();
 }

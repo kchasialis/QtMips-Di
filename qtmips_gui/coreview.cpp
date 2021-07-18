@@ -51,6 +51,11 @@
         NEW_B(TYPE, VAR, __VA_ARGS__); \
         VAR->setPos(X, Y); \
     } while(false)
+#define NEW_C(Var, X, Y, SIG) do { \
+        NEW(Cycle, VAR, X, Y); \
+        connect(machine->core(), &machine::Core::SIG, \
+                VAR, &coreview::Cycle::cycle_update); \
+    } while(false)
 #define NEW_I(VAR, X, Y, SIG, ...) do { \
         NEW(InstructionView, VAR, X, Y, __VA_ARGS__); \
         connect(machine->core(), &machine::Core::SIG, \
@@ -396,11 +401,14 @@ CoreViewScenePipelined::CoreViewScenePipelined(machine::QtMipsMachine *machine) 
     NEW(Latch, latch_mem_wb, 660, 70, machine, 400);
     latch_mem_wb->setTitle("MEM/WB");
 
-    NEW_I(inst_fetch, 79, 2, instruction_fetched, QColor(255, 173, 173));
-    NEW_I(inst_dec, 275, 2, instruction_decoded, QColor(255, 212, 173));
-    NEW_I(inst_exec, 464, 2, instruction_executed, QColor(193, 255, 173));
-    NEW_I(inst_mem, 598, 2, instruction_memory, QColor(173, 255, 229));
-    NEW_I(inst_wrb, 660, 18, instruction_writeback, QColor(255, 173, 230));
+    NEW_I(inst_fetch, 20, 12, instruction_fetched, QColor(255, 173, 173));
+    NEW_I(inst_dec, 220, 12, instruction_decoded, QColor(255, 212, 173));
+    NEW_I(inst_exec, 420, 12, instruction_executed, QColor(193, 255, 173));
+    NEW_I(inst_mem, 620, 12, instruction_memory, QColor(173, 255, 229));
+    NEW_I(inst_wrb, 820, 12, instruction_writeback, QColor(255, 173, 230));
+
+    coreview::Cycle *cycle;
+    NEW(Cycle, cycle, 30, 12);
 
     if (machine->config().hazard_unit() != machine::MachineConfig::HU_NONE) {
         NEW(LogicBlock, hazard_unit, SC_WIDTH/2, SC_HEIGHT - 15, "Hazard Unit");

@@ -79,7 +79,7 @@ QVariant BranchPredictorModel::data(const QModelIndex &index, int role) const {
             }
         }
         case 3:
-            return QString::number(machine->bp()->get_precision()) + "%";
+            return QString::number(machine->bp()->get_accuracy()) + "%";
         default:
             SANITY_ASSERT(0, "Debug me :)");
             return QVariant();

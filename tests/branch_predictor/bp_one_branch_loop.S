@@ -5,7 +5,7 @@
 #define a0	$4
 #define a1	$5
 #define a2	$6
-#define	a3	$7
+#define a3	$7
 
 #define t0	$8
 #define t1	$9
@@ -40,21 +40,21 @@
 .ent _start
 
 _start:
-    li t0, 151 // loops = 150
-    li t1, 0 // s = 0
-    li t2, 0 // s1 = 0
-    li t3, 1 // p = 1
-    li t4, 2 // for multiplication
+    li t0, 151 # loops = 150
+    li t1, 0 # s = 0
+    li t2, 0 # s1 = 0
+    li t3, 1 # p = 1
+    li t4, 2 # for multiplication
 
-    li t5, 1 // i = 1
+    li t5, 1 # i = 1
 forloop: 
-    add t1, t1, t5 // s += i 
-    mul t6, t5, t4 // t6 = i * 2
-    addi t5, t5, 1 // i += 1
-    add t2, t2, t6 // s1 += i * 2
+    add t1, t1, t5 # s += i
+    mul t6, t5, t4 # t6 = i * 2
+    addi t5, t5, 1 # i += 1
+    add t2, t2, t6 # s1 += i * 2
     bne t5, t0, forloop
 
-    mul t4, t1, t2 // p = s * s1
+    mul t4, t1, t2 # p = s * s1
 
 loop:	
     break

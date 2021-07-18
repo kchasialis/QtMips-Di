@@ -28,7 +28,7 @@ public:
     bool get_btb_entry_valid(std::uint32_t btb_idx) const;
     std::uint32_t get_btb_entry_address(std::uint32_t btb_idx) const;
     std::uint32_t get_btb_entry_tag(std::uint32_t btb_idx) const;
-    double get_precision() const;
+    double get_accuracy() const;
     bool last_prediction() const;
     std::int32_t get_pos_predicted() const;
     const BranchTargetBuffer *btb() const;

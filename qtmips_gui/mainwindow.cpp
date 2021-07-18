@@ -93,7 +93,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     l1_cache_program->hide();
     l1_cache_data = new CacheDock(this, "L1 Data");
     l1_cache_data->hide();
-    l2_cache = new CacheDock(this, "L2");
+    l2_cache = new CacheDock(this, "L2 Unified");
     l2_cache->hide();
 
     peripherals = new PeripheralsDock(this, settings);

@@ -58,6 +58,7 @@
 #include "coreview/multitext.h"
 #include "coreview/branchpredictor.h"
 #include "coreview/branchtargetbuffer.h"
+#include "coreview/cycle.h"
 
 class CoreViewScene : public QGraphicsScene {
     Q_OBJECT
@@ -151,6 +152,7 @@ public:
 private:
     coreview::Latch *latch_if_id, *latch_id_ex, *latch_ex_mem, *latch_mem_wb;
     coreview::InstructionView *inst_fetch, *inst_dec, *inst_exec, *inst_mem, *inst_wrb;
+    coreview::Cycle *cyc_fetch, *cyc_dec, *cyc_exec, *cyc_mem, *cyc_wrb;
     coreview::LogicBlock *hazard_unit;
 };
 

@@ -42,6 +42,7 @@
 #include "cacheview.h"
 #include "graphicsview.h"
 #include "qtmipsmachine.h"
+#include "cache.h"
 
 class CacheDock : public QDockWidget {
     Q_OBJECT
@@ -53,8 +54,8 @@ public:
 private slots:
     void hit_update(std::uint32_t);
     void miss_update(std::uint32_t);
-    void memory_reads_update(std::uint32_t);
-    void memory_writes_update(std::uint32_t);
+    void lower_memory_reads_update(std::uint32_t);
+    void lower_memory_writes_update(std::uint32_t);
     void statistics_update(std::uint32_t stalled_cycles, double speed_improv, double hit_rate);
 
 private:
@@ -66,6 +67,7 @@ private:
     QLabel *l_m_reads, *l_m_writes;
     GraphicsView *graphicsview;
     CacheViewScene *cachescene;
+    const machine::Cache *cache;
 };
 
 #endif // CACHEDOCK_H

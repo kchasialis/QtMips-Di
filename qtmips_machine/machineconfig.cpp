@@ -42,7 +42,7 @@ using namespace machine;
 /// Default config of MachineConfig
 #define DF_PIPELINE false
 #define DF_BUNIT BU_DELAY_SLOT
-#define DF_BP_BITS -1
+#define DF_BP_BITS 0
 #define DF_HUNIT HU_STALL_FORWARD
 #define DF_EXEC_PROTEC false
 #define DF_WRITE_PROTEC false
