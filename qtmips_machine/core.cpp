@@ -492,8 +492,15 @@ struct Core::dtExecute Core::execute(const struct dtDecode &dt) {
         .memread = dt.memread,
         .memwrite = dt.memwrite,
         .regwrite = regwrite,
-        .memctl = dt.memctl,
+        .bjr_req_rs = dt.bjr_req_rs,
+        .bjr_req_rt = dt.bjr_req_rt,
+        .branch = dt.branch,
+        .jump = dt.jump,
+        .bj_not = dt.bj_not,
+        .bgt_blez = dt.bgt_blez,
+        .val_rs = dt.val_rs,
         .val_rt = dt.val_rt,
+        .memctl = dt.memctl,
         .rwrite = dt.rwrite,
         .alu_val = alu_val,
         .inst_addr = dt.inst_addr,
@@ -775,17 +782,21 @@ BranchPredictor *CoreSingle::predictor() {
     return nullptr;
 }
 
+#include <QDebug>
+
 CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
                              MachineConfig::HazardUnit hazard_unit,
                              MachineConfig::BranchUnit branch_unit,
-                             int8_t bp_bits, bool branch_eval_id,
+                             int8_t bp_bits, bool branch_res_id,
                              unsigned int min_cache_row_size,
                              Cop0State *cop0state) :
     Core(regs, mem_program, mem_data, min_cache_row_size, cop0state) {
 
+    qDebug() << "branch_res_id : " << branch_res_id;
+
     this->hazard_unit = hazard_unit;
     this->branch_unit = branch_unit;
-    this->branch_res_id = branch_eval_id;
+    this->branch_res_id = branch_res_id;
     switch (branch_unit) {
     case MachineConfig::BU_NONE:
         // This is not allowed on a pipelined core.

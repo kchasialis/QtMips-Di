@@ -101,12 +101,7 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     connect(ui->hazard_unit, SIGNAL(clicked(bool)), this, SLOT(hazard_unit_change()));
     connect(ui->hazard_stall, SIGNAL(clicked(bool)), this, SLOT(hazard_unit_change()));
     connect(ui->hazard_stall_forward, SIGNAL(clicked(bool)), this, SLOT(hazard_unit_change()));
-    connect(ui->branch_predictor, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
-    connect(ui->predictor_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
-    connect(ui->bht_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
-    connect(ui->resolution, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
-    connect(ui->delay_slot, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
-    connect(ui->none, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
+    // Connections for branch unit are being done on load_settings() function.
 
     connect(ui->mem_protec_exec, SIGNAL(clicked(bool)), this, SLOT(mem_protec_exec_change(bool)));
     connect(ui->mem_protec_write, SIGNAL(clicked(bool)), this, SLOT(mem_protec_write_change(bool)));
@@ -270,6 +265,7 @@ void NewDialog::branch_unit_change() {
                                     machine::MachineConfig::BU_ONE_BIT_BP :
                                     machine::MachineConfig::BU_TWO_BIT_BP);
         config->set_bht_bits(bht_bits.toShort());
+        config->set_branch_res_id(ui->resolution->currentText() == "ID");
     } else if (ui->delay_slot->isChecked()) {
         config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
         config->set_bht_bits(0);
@@ -277,8 +273,6 @@ void NewDialog::branch_unit_change() {
         config->set_branch_unit(machine::MachineConfig::BU_NONE);
         config->set_bht_bits(0);
     }
-
-    config->set_branch_res_id(ui->resolution->currentText() == "ID");
 
     if (config->pipelined()) {
         SANITY_ASSERT(config->branch_unit() != machine::MachineConfig::BU_NONE, "Debug me :)");
@@ -375,6 +369,15 @@ void NewDialog::config_gui() {
     ui->branch_predictor->setChecked(config->predictor());
     ui->delay_slot->setChecked(config->branch_unit() == machine::MachineConfig::BU_DELAY_SLOT);
     ui->none->setChecked(config->branch_unit() == machine::MachineConfig::BU_NONE);
+    if (config->predictor()) {
+        ui->predictor_bits->setCurrentIndex(config->branch_unit() == machine::MachineConfig::BU_ONE_BIT_BP ? 0 : 1);
+        ui->bht_bits->setCurrentIndex(config->bht_bits() - MIN_BHT_BITS);
+        ui->resolution->setCurrentIndex(config->branch_res_id() ? 0 : 1);
+    } else {
+        ui->predictor_bits->setCurrentIndex(0);
+        ui->bht_bits->setCurrentIndex(0);
+        ui->resolution->setCurrentIndex(0);
+    }
     // Memory
     ui->mem_protec_exec->setChecked(config->memory_execute_protection());
     ui->mem_protec_write->setChecked(config->memory_write_protection());
@@ -454,9 +457,16 @@ void NewDialog::load_settings() {
     } else {
         ui->preset_custom->setChecked(true);
     }
-    ui->predictor_bits->setCurrentIndex(0);
 
     config_gui();
+
+    // Connections need to be done here. A bug is caused otherwise.
+    connect(ui->branch_predictor, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
+    connect(ui->predictor_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
+    connect(ui->bht_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
+    connect(ui->resolution, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
+    connect(ui->delay_slot, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
+    connect(ui->none, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
 }
 
 void NewDialog::store_settings() {

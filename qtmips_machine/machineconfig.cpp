@@ -323,12 +323,11 @@ MachineConfig::MachineConfig(const MachineConfig& cc) noexcept {
 
 #define N(STR) (prefix + QString(STR))
 
-#include <QDebug>
 MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) {
     pipeline = sts->value(N("Pipelined"), DF_PIPELINE).toBool();
     bunit = (BranchUnit)sts->value(N("BranchUnit"), DF_BUNIT).toUInt();
     bp_bits = sts->value(N("BPbits"), DF_BP_BITS).toInt();
-    b_res_id = sts->value(N("BResId"), DF_B_RES_ID).toInt();
+    b_res_id = sts->value(N("BResId"), DF_B_RES_ID).toBool();
     hunit = (HazardUnit)sts->value(N("HazardUnit"), DF_HUNIT).toUInt();
     exec_protect = sts->value(N("MemoryExecuteProtection"), DF_EXEC_PROTEC).toBool();
     write_protect = sts->value(N("MemoryWriteProtection"), DF_WRITE_PROTEC).toBool();

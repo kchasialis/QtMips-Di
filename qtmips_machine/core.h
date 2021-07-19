@@ -337,7 +337,7 @@ public:
     CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
                   MachineConfig::HazardUnit hazard_unit = MachineConfig::HU_STALL_FORWARD,
                   MachineConfig::BranchUnit branch_unit = MachineConfig::BU_DELAY_SLOT,
-                  int8_t bp_bits = -1, bool branch_eval_id = true,
+                  int8_t bp_bits = -1, bool branch_res_id = true,
                   std::uint32_t min_cache_row_size = 1,
                   Cop0State *cop0state = nullptr);
 
