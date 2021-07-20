@@ -60,8 +60,8 @@ public:
 
     std::uint32_t hit() const; // Number of recorded hits.
     std::uint32_t miss() const; // Number of recorded misses.
-    std::uint32_t mu_reads() const; // Number of reads on the lower level (L* or memory).
-    std::uint32_t mu_writes() const; // Number of writes on the lower level (L* or memory).
+    std::uint32_t ml_reads() const; // Number of reads on the lower level (L* or memory).
+    std::uint32_t ml_writes() const; // Number of writes on the lower level (L* or memory).
     std::uint32_t stalled_cycles() const; // Number of wasted cycles in lower level.
     double speed_improvement() const; // Speed improvement in percents in comare with no used cache.
     double hit_rate() const; // Usage efficiency in percents.

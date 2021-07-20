@@ -214,11 +214,11 @@ std::uint32_t Cache::miss() const {
     return read_misses + write_misses;
 }
 
-std::uint32_t Cache::mu_reads() const {
+std::uint32_t Cache::ml_reads() const {
     return mem_lower_reads;
 }
 
-std::uint32_t Cache::mu_writes() const {
+std::uint32_t Cache::ml_writes() const {
     return mem_lower_writes;
 }
 

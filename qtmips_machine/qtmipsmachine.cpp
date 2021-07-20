@@ -42,7 +42,7 @@ using namespace machine;
 
 QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool load_executable) :
                              QObject(), mcnf(cc) {
-    MemoryAccess *cpu_mem, *mem_upper;
+    MemoryAccess *cpu_mem, *mem_lower;
     std::uint32_t min_cache_row_size;
 
     stat = ST_READY;
@@ -87,13 +87,13 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
                            cc.l2_unified_cache().upper_mem_access_burst());
 
     /* If L2 cache is enabled, make it the upper level of L1, else use DRAM.  */
-    mem_upper = cc.l2_unified_cache().enabled() ? l2_unified : cpu_mem;
+    mem_lower = cc.l2_unified_cache().enabled() ? l2_unified : cpu_mem;
 
-    l1_data = new Cache(mem_upper, cc.l1_data_cache(),
+    l1_data = new Cache(mem_lower, cc.l1_data_cache(),
                         cc.l1_data_cache().upper_mem_access_read(),
                         cc.l1_data_cache().upper_mem_access_write(),
                         cc.l1_data_cache().upper_mem_access_burst());
-    l1_program = new Cache(mem_upper, cc.l1_program_cache(),
+    l1_program = new Cache(mem_lower, cc.l1_program_cache(),
                            cc.l1_program_cache().upper_mem_access_read(),
                            cc.l1_program_cache().upper_mem_access_write(),
                            cc.l1_program_cache().upper_mem_access_burst());
@@ -104,6 +104,7 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
     if (cc.l1_program_cache().enabled() &&
         cc.l1_program_cache().blocks() < min_cache_row_size)
         min_cache_row_size = cc.l1_program_cache().blocks() * 4;
+    prev_cache_stalls = 0;
 
     cop0st = new Cop0State();
 
@@ -275,7 +276,7 @@ const CorePipelined *QtMipsMachine::core_pipelined() {
 }
 
 bool QtMipsMachine::executable_loaded() const {
-    return (mem_program_only != nullptr);
+    return mem_program_only != nullptr;
 }
 
 enum QtMipsMachine::Status QtMipsMachine::status() {
@@ -305,6 +306,8 @@ void QtMipsMachine::pause() {
 }
 
 void QtMipsMachine::step_internal(bool skip_break) {
+    std::uint32_t current_cache_stalls;
+
     CTL_GUARD;
     enum Status stat_prev = stat;
     set_status(ST_BUSY);
@@ -313,6 +316,10 @@ void QtMipsMachine::step_internal(bool skip_break) {
         QTime start_time = QTime::currentTime();
         do {
             cr->step(skip_break);
+            // Update cycles for cache misses in every step
+            current_cache_stalls = l1_data->stalled_cycles() + l1_program->stalled_cycles() + l2_unified->stalled_cycles();
+            cr->set_stalls(cr->get_stalls() + (current_cache_stalls - prev_cache_stalls));
+            prev_cache_stalls = current_cache_stalls;
         } while(time_chunk != 0 && stat == ST_BUSY && skip_break == false &&
                 start_time.msecsTo(QTime::currentTime()) < (int)time_chunk);
     } catch (QtMipsException &e) {

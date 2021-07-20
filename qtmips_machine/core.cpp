@@ -43,8 +43,8 @@ using namespace machine;
 Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
            std::uint32_t min_cache_row_size, Cop0State *cop0state) :
            ex_handlers(), hw_breaks() {
-    cycle_c = 0;
-    stall_c = 0;
+    cycles = 0;
+    stalls = 0;
     this->regs = regs;
     this->cop0state = cop0state;
     this->mem_program = mem_program;
@@ -66,23 +66,32 @@ Core::~Core() {
 }
 
 void Core::step(bool skip_break) {
-    cycle_c++;
-    emit cycle_c_value(cycle_c);
+    cycles++;
+    emit cycles_value(cycles + stalls);
     do_step(skip_break);
 }
 
 void Core::reset() {
-    cycle_c = 0;
-    stall_c = 0;
+    cycles = 0;
+    stalls = 0;
     do_reset();
 }
 
-unsigned Core::cycles() const {
-    return cycle_c;
+unsigned Core::get_cycles() const {
+    return cycles;
 }
 
-unsigned Core::stalls() const {
-    return stall_c;
+void Core::set_cycles(std::uint32_t c) {
+    cycles = c;
+}
+
+std::uint32_t Core::get_stalls() const {
+    return stalls;
+}
+
+void Core::set_stalls(std::uint32_t s) {
+   stalls = s;
+   emit stall_c_value(stalls);
 }
 
 Registers *Core::get_regs() {
@@ -94,11 +103,11 @@ Cop0State *Core::get_cop0state() {
 }
 
 
-MemoryAccess *Core::get_mem_data() {
+MemoryAccess *Core::get_mem_data() const {
     return mem_data;
 }
 
-MemoryAccess *Core::get_mem_program() {
+MemoryAccess *Core::get_mem_program() const {
     return mem_program;
 }
 
@@ -421,7 +430,7 @@ struct Core::dtExecute Core::execute(const struct dtDecode &dt) {
                 alu_val = min_cache_row_size;
                 break;
             case 2: // CC
-                alu_val = cycle_c;
+                alu_val = cycles;
                 break;
             case 3: // CCRes
                 alu_val = 1;
@@ -782,8 +791,6 @@ BranchPredictor *CoreSingle::predictor() {
     return nullptr;
 }
 
-#include <QDebug>
-
 CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
                              MachineConfig::HazardUnit hazard_unit,
                              MachineConfig::BranchUnit branch_unit,
@@ -791,8 +798,6 @@ CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryA
                              unsigned int min_cache_row_size,
                              Cop0State *cop0state) :
     Core(regs, mem_program, mem_data, min_cache_row_size, cop0state) {
-
-    qDebug() << "branch_res_id : " << branch_res_id;
 
     this->hazard_unit = hazard_unit;
     this->branch_unit = branch_unit;
@@ -825,11 +830,13 @@ void CorePipelined::flush_stages() {
     emit instruction_fetched(dt_f.inst, dt_f.inst_addr,
                              dt_f.excause, dt_f.is_valid);
     emit fetch_inst_addr_value(STAGEADDR_NONE);
+    set_stalls(stalls + 1);
     if (!branch_res_id) {
         // We evaluate branches on EX stage, flush ID too.
         dtDecodeInit(dt_d);
         emit instruction_decoded(dt_d.inst, dt_d.inst_addr, dt_d.excause, dt_d.is_valid);
         emit decode_inst_addr_value(STAGEADDR_NONE);
+        set_stalls(stalls + 1);
     }
 }
 
@@ -1067,8 +1074,7 @@ void CorePipelined::do_step(bool skip_break) {
         }
     }
     if (stall || dt_d.stop_if) {
-        stall_c++;
-        emit stall_c_value(stall_c);
+        set_stalls(stalls + 1);
     }
 }
 

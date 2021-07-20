@@ -138,6 +138,7 @@ private:
     LcdDisplay *perip_lcd_display;
     Cache *l1_program, *l1_data;
     Cache *l2_unified;
+    std::uint32_t cache_stalls;
     Cop0State *cop0st;
     Core *cr;
     QTimer *run_t;
