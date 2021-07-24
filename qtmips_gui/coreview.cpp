@@ -248,9 +248,9 @@ CoreViewScene::CoreViewScene(machine::QtMipsMachine *machine) : QGraphicsScene()
     NEW_V(320, 500, writeback_regw_num_value, false, 2, 0, 10, ' ');
 
     new_label("Cycles", 440, SC_HEIGHT - 14);
-    NEW_V(500, SC_HEIGHT - 9, cycle_c_value, false, 10, 0, 10, ' ', false);
+    NEW_V(500, SC_HEIGHT - 9, cycles_c_value, false, 10, 0, 10, ' ', false);
     new_label("Stalls", 570, SC_HEIGHT - 14);
-    NEW_V(630, SC_HEIGHT - 9, stall_c_value, false, 10, 0, 10, ' ', false);
+    NEW_V(630, SC_HEIGHT - 9, stalls_c_value, false, 10, 0, 10, ' ', false);
 
     setBackgroundBrush(QBrush(Qt::white));
 

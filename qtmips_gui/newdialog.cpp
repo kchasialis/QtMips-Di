@@ -256,6 +256,8 @@ void NewDialog::hazard_unit_change() {
     switch2custom();
 }
 
+#include <QDebug>
+
 void NewDialog::branch_unit_change() {
     if (ui->branch_predictor->isChecked()) {
         QString predictor_bits = ui->predictor_bits->currentText();

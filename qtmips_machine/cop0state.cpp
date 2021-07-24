@@ -241,7 +241,7 @@ void Cop0State::update_count_and_compare_irq() {
     if (core == nullptr)
         return;
     count_orig = cop0reg[(int)Count];
-    core_cycles = core->cycles();
+    core_cycles = core->get_cycles();
     cop0reg[(int)Count] += core_cycles - last_core_cycles;
     last_core_cycles = core_cycles;
     emit cop0reg_update(Count, cop0reg[(int)Count]);

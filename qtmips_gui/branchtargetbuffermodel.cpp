@@ -42,12 +42,12 @@ QVariant BranchTargetBufferModel::data(const QModelIndex &index, int role) const
             return index.row();
         case 1:
         {
-            QString valid = QString::number(machine->bp()->get_btb_entry_valid(index.row()), 16);
+            QString valid = QString::number(machine->bp()->btb_entry_valid(index.row()), 16);
             return valid;
         }
         case 2:
         {
-            QString address = QString::number(machine->bp()->get_btb_entry_address(index.row()), 16);
+            QString address = QString::number(machine->bp()->btb_entry_address(index.row()), 16);
             QString zeroes;
 
             zeroes.fill('0', 8 - address.count());
@@ -55,7 +55,7 @@ QVariant BranchTargetBufferModel::data(const QModelIndex &index, int role) const
         }
         case 3:
         {
-            QString tag = QString::number(machine->bp()->get_btb_entry_tag(index.row()), 16);
+            QString tag = QString::number(machine->bp()->btb_entry_tag(index.row()), 16);
             QString zeroes;
 
             zeroes.fill('0', 8 - tag.count());

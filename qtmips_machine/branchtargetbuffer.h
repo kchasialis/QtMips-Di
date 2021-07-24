@@ -44,10 +44,10 @@ public:
     explicit BranchTargetBuffer(std::uint8_t btb_bits);
     ~BranchTargetBuffer();
 
-    bool get_pc_address(std::uint32_t btb_idx, std::uint32_t current_pc, std::uint32_t *address);
-    bool get_btb_entry_valid(std::uint32_t btb_idx) const;
-    std::uint32_t get_btb_entry_address(std::uint32_t btb_idx) const;
-    std::uint32_t get_btb_entry_tag(std::uint32_t btb_idx) const;
+    bool pc_address(std::uint32_t btb_idx, std::uint32_t current_pc, std::uint32_t *address);
+    bool btb_entry_valid(std::uint32_t btb_idx) const;
+    std::uint32_t btb_entry_address(std::uint32_t btb_idx) const;
+    std::uint32_t btb_entry_tag(std::uint32_t btb_idx) const;
     void update(std::uint32_t btb_idx, std::uint32_t inst_addr);
 };
 

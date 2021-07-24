@@ -50,7 +50,7 @@ QVariant BranchPredictorModel::data(const QModelIndex &index, int role) const {
         case 2:
         {
             int one_bit_pred = machine->config().branch_unit() == machine::MachineConfig::BU_ONE_BIT_BP;
-            int8_t bht_entry = machine->bp()->get_bht_entry(index.row());
+            int8_t bht_entry = machine->bp()->bht_entry(index.row());
 
             if (one_bit_pred) {
                 switch (bht_entry) {
@@ -79,7 +79,7 @@ QVariant BranchPredictorModel::data(const QModelIndex &index, int role) const {
             }
         }
         case 3:
-            return QString::number(machine->bp()->get_accuracy()) + "%";
+            return QString::number(machine->bp()->accuracy()) + "%";
         default:
             SANITY_ASSERT(0, "Debug me :)");
             return QVariant();

@@ -126,5 +126,5 @@ void BranchPredictorDock::update_bht_index_val(std::uint32_t inst_addr) {
 }
 
 void BranchPredictorDock::update_accuracy_val(std::int32_t) {
-    set_qline_val(accuracy_val, QString::number(machine->bp()->get_accuracy()));
+    set_qline_val(accuracy_val, QString::number(machine->bp()->accuracy()));
 }

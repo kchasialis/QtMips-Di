@@ -38,6 +38,8 @@
 #include "programloader.h"
 #include "utils.h"
 
+#include <QDebug>
+
 using namespace machine;
 
 Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
@@ -67,7 +69,7 @@ Core::~Core() {
 
 void Core::step(bool skip_break) {
     cycles++;
-    emit cycles_value(cycles + stalls);
+    emit cycles_c_value(cycles + stalls);
     do_step(skip_break);
 }
 
@@ -91,7 +93,7 @@ std::uint32_t Core::get_stalls() const {
 
 void Core::set_stalls(std::uint32_t s) {
    stalls = s;
-   emit stall_c_value(stalls);
+   emit stalls_c_value(stalls);
 }
 
 Registers *Core::get_regs() {
@@ -149,8 +151,7 @@ bool Core::get_step_over_exception(ExceptionCause excause) const {
     return step_over_exception[(int)excause];
 }
 
-void Core::register_exception_handler(ExceptionCause excause, ExceptionHandler *exhandler)
-{
+void Core::register_exception_handler(ExceptionCause excause, ExceptionHandler *exhandler) {
     if (excause == EXCAUSE_NONE ) {
         if (ex_default_handler != nullptr)
             delete ex_default_handler;
@@ -165,8 +166,7 @@ void Core::register_exception_handler(ExceptionCause excause, ExceptionHandler *
 bool Core::handle_exception(Core *core, Registers *regs, ExceptionCause excause,
                       std::uint32_t inst_addr, std::uint32_t next_addr,
                       std::uint32_t jump_branch_pc, bool in_delay_slot,
-                      std::uint32_t mem_ref_addr)
-{
+                      std::uint32_t mem_ref_addr) {
     bool ret = false;
     if (excause == EXCAUSE_HWBREAK) {
         if (in_delay_slot)
@@ -211,10 +211,10 @@ void Core::set_c0_userlocal(std::uint32_t address) {
     }
 }
 
-ExceptionCause  Core::memory_special(AccessControl memctl,
-                       int mode, bool memread, bool memwrite,
-                       std::uint32_t &towrite_val,
-                       std::uint32_t rt_value, std::uint32_t mem_addr) {
+ExceptionCause Core::memory_special(AccessControl memctl,
+                                    int mode, bool memread, bool memwrite,
+                                    std::uint32_t &towrite_val, std::uint32_t rt_value,
+                                    std::uint32_t mem_addr) {
     std::uint32_t mask;
     std::uint32_t shift;
     std::uint32_t temp;
@@ -605,7 +605,6 @@ bool Core::branch_result(const Dt &dt) {
 template<typename Dt>
 bool Core::handle_pc(const Dt &dt) {
     bool branch = false;
-    emit instruction_program_counter(dt.inst, dt.inst_addr, EXCAUSE_NONE, dt.is_valid);
 
     if (dt.jump) {
         if (!dt.bjr_req_rs) {
@@ -654,71 +653,19 @@ uint32_t Core::branch_target(const Instruction &inst, uint32_t inst_addr) {
 }
 
 void Core::dtFetchInit(struct dtFetch &dt) {
-    dt.inst = Instruction(0x00);
-    dt.excause = EXCAUSE_NONE;
-    dt.in_delay_slot = false;
-    dt.is_valid = false;
+    memset(&dt, 0, sizeof(dtFetch));
 }
 
 void Core::dtDecodeInit(struct dtDecode &dt) {
-    dt.inst = Instruction(0x00);
-    dt.memread = false;
-    dt.memwrite = false;
-    dt.alusrc = false;
-    dt.regd = false;
-    dt.regwrite = false;
-    dt.bjr_req_rs = false; // requires rs for beq, bne, blez, bgtz, jr nad jalr
-    dt.bjr_req_rt = false; // requires rt for beq, bne
-    dt.jump = false;
-    dt.bj_not = false;
-    dt.bgt_blez = false;
-    dt.nb_skip_ds = false;
-    dt.forward_m_d_rs = false;
-    dt.forward_m_d_rt = false;
-    dt.aluop = ALU_OP_SLL;
-    dt.memctl = AC_NONE;
-    dt.num_rs = 0;
-    dt.num_rt = 0;
-    dt.num_rd = 0;
-    dt.val_rs = 0;
-    dt.val_rt = 0;
-    dt.rwrite = 0;
-    dt.immediate_val = 0;
-    dt.ff_rs = ForwardFrom::FORWARD_NONE;
-    dt.ff_rt = ForwardFrom::FORWARD_NONE;
-    dt.excause = EXCAUSE_NONE;
-    dt.in_delay_slot = false;
-    dt.stall = false;
-    dt.stop_if = false;
-    dt.is_valid = false;
+    memset(&dt, 0, sizeof(dtDecode));
 }
 
 void Core::dtExecuteInit(struct dtExecute &dt) {
-    dt.inst = Instruction(0x00);
-    dt.memread = false;
-    dt.memwrite = false;
-    dt.regwrite = false;
-    dt.memctl = AC_NONE;
-    dt.val_rt = 0;
-    dt.rwrite = 0;
-    dt.alu_val = 0;
-    dt.excause = EXCAUSE_NONE;
-    dt.in_delay_slot = false;
-    dt.stop_if = false;
-    dt.is_valid = false;
+    memset(&dt, 0, sizeof(dtExecute));
 }
 
 void Core::dtMemoryInit(struct dtMemory &dt) {
-    dt.inst = Instruction(0x00);
-    dt.memtoreg = false;
-    dt.regwrite = false;
-    dt.rwrite = false;
-    dt.towrite_val = 0;
-    dt.mem_addr = 0;
-    dt.excause = EXCAUSE_NONE;
-    dt.in_delay_slot = false;
-    dt.stop_if = false;
-    dt.is_valid = false;
+    memset(&dt, 0, sizeof(dtMemory));
 }
 
 CoreSingle::CoreSingle(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
@@ -826,13 +773,20 @@ CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryA
 }
 
 void CorePipelined::flush_stages() {
+    if (dt_d.branch) {
+        // If the instruction is a branch, we need to remove from the queue.
+        machine::BranchPredictor::InstAddr inst_addr(dt_d.inst_addr);
+        bp->remove(inst_addr);
+        remove_pc(dt_d.inst_addr);
+    }
+
     dtFetchInit(dt_f);
     emit instruction_fetched(dt_f.inst, dt_f.inst_addr,
                              dt_f.excause, dt_f.is_valid);
     emit fetch_inst_addr_value(STAGEADDR_NONE);
     set_stalls(stalls + 1);
-    if (!branch_res_id) {
-        // We evaluate branches on EX stage, flush ID too.
+    if (!branch_res_id && !dt_d.jump) {
+        // We evaluate branches on EX stage, flush ID too if the instruction was a branch.
         dtDecodeInit(dt_d);
         emit instruction_decoded(dt_d.inst, dt_d.inst_addr, dt_d.excause, dt_d.is_valid);
         emit decode_inst_addr_value(STAGEADDR_NONE);
@@ -840,17 +794,15 @@ void CorePipelined::flush_stages() {
     }
 }
 
-std::uint32_t CorePipelined::get_correct_address(std::uint32_t pc_before_prediction, bool branch_taken, bool btb_miss) {
+std::uint32_t CorePipelined::get_correct_address(std::uint32_t pc, bool branch_taken, bool btb_miss) {
     if (btb_miss)
-        if (branch_res_id)
-            return !dt_d.bjr_req_rs ? ((pc_before_prediction & 0xF0000000) | ((dt_d.inst.address() << 2) & 0x0FFFFFFF)) : dt_d.val_rs;
-        else
-            return dt_e.bjr_req_rs ? ((pc_before_prediction & 0xF0000000) | ((dt_e.inst.address() << 2) & 0x0FFFFFFF)) : dt_e.val_rs;
+        // We had a BTB miss in a jump instruction, jump instructions are always evaluated at ID.
+        return !dt_d.bjr_req_rs ? ((pc & 0xF0000000) | ((dt_d.inst.address() << 2) & 0x0FFFFFFF)) : dt_d.val_rs;
     else
         if (branch_res_id)
-            return branch_taken ? branch_target(dt_d.inst, dt_d.inst_addr) : (pc_before_prediction + 4);
+            return branch_taken ? branch_target(dt_d.inst, dt_d.inst_addr) : (pc + 4);
         else
-            return branch_taken ? branch_target(dt_e.inst, dt_e.inst_addr) : (pc_before_prediction + 4);
+            return branch_taken ? branch_target(dt_e.inst, dt_e.inst_addr) : (pc + 4);
 }
 
 void CorePipelined::do_step(bool skip_break) {
@@ -858,7 +810,6 @@ void CorePipelined::do_step(bool skip_break) {
     bool branch_stall = false;
     bool excpt_in_progress = false;
     std::uint32_t jump_branch_pc = dt_m.inst_addr;
-    static std::uint32_t pc_before_prediction = 0;
 
     // Process stages
     writeback(dt_m);
@@ -896,6 +847,7 @@ void CorePipelined::do_step(bool skip_break) {
     dt_d.ff_rs = ForwardFrom::FORWARD_NONE;
     dt_d.ff_rt = ForwardFrom::FORWARD_NONE;
 
+    // TODO: implement forwarding for branches being evaluated at EX
     if (hazard_unit != MachineConfig::HU_NONE) {
         // Note: We make exception wmith $0 as that has no effect when written and is used in nop instruction
 
@@ -1008,43 +960,43 @@ void CorePipelined::do_step(bool skip_break) {
                 }
             }
         } else {
-            emit instruction_program_counter(dt_d.inst, dt_d.inst_addr, EXCAUSE_NONE, dt_d.is_valid);
+            std::uint32_t correct_address = 0;
 
-            if (!(branch_res_id ? dt_d.jump : dt_e.jump)) {
-                bool branch_taken = false;
-                std::uint32_t correct_address = 0;
+            if (!dt_d.jump) {
+                // If the instruction on ID is not a jump.
+                bool branch = false;
 
                 if (branch_res_id ? dt_d.branch : dt_e.branch) {
-                    // Branch is now on ID and can be evaluated.
-                    branch_taken = branch_result_wrp(dt_d, dt_e, branch_res_id);
+                    std::uint32_t pc_before_prediction = dequeue_pc();
+                    // Branch is now on ID/EX and can be evaluated.
+                    branch = branch_result_wrp(dt_d, dt_e, branch_res_id);
 
-                    if (branch_taken != bp->last_prediction()) {
+                    if (branch != bp->prediction()) {
                         // Prediction was wrong.
                         // Flush appropriate stages & move pc accordingly.
+                        correct_address = get_correct_address(pc_before_prediction, branch, false);
                         flush_stages();
-                        correct_address = get_correct_address(pc_before_prediction, branch_taken, false);
                         regs->pc_abs_jmp(correct_address - 4);
                     }
-                    bp->update_bht(branch_taken, correct_address);
+                    bp->update_bht(branch, correct_address);
                 }
 
                 emit fetch_jump_value(false);
                 emit fetch_jump_reg_value(false);
-                emit fetch_branch_value(branch_taken);
+                emit fetch_branch_value(branch);
             } else {
-                uint32_t correct_address = 0;
-
-                if (!bp->last_prediction()) {
+                if (!bp->prediction()) {
+                    // The second parameter does not mattter here.
+                    correct_address = get_correct_address(pc_before_jmp, 0, true);
                     // We had a BTB miss, flush appropriate stages and update BTB.
                     flush_stages();
-                    // The second parameter does not mattter here.
-                    correct_address = get_correct_address(pc_before_prediction, 0, true);
                     regs->pc_abs_jmp(correct_address - 4);
                 }
+
                 bp->update_bht(true, correct_address);
 
                 // Jump is on ID and we can evaluate its address.
-                if (!(branch_res_id ? dt_d.bjr_req_rs : dt_e.bjr_req_rs)) {
+                if (!dt_d.bjr_req_rs) {
                     emit fetch_jump_value(true);
                     emit fetch_jump_reg_value(false);
                 } else {
@@ -1056,7 +1008,13 @@ void CorePipelined::do_step(bool skip_break) {
 
             if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
                 // Instruction is branch or jump, we need to save pc in case we predict wrong.
-                pc_before_prediction = regs->read_pc();
+                if (dt_f.inst.flags() & IMF_JUMP) {
+                    // Instruction is a jump, save pc before jumping.
+                    pc_before_jmp = regs->read_pc();
+                } else {
+                    // Instruction is a branch, store pc in a queue because we need to cover resolutions both in ID and EX.
+                    enqueue_pc(regs->read_pc());
+                }
                 regs->pc_abs_jmp(bp->predict(dt_f.inst, regs->read_pc()));
             } else {
                 regs->pc_inc();
@@ -1091,6 +1049,30 @@ void CorePipelined::do_reset() {
 
 BranchPredictor *CorePipelined::predictor() {
     return bp;
+}
+
+void CorePipelined::enqueue_pc(std::uint32_t pc) {
+    pcs.append(pc);
+}
+
+std::uint32_t CorePipelined::dequeue_pc() {
+    std::uint32_t pc_before_pred = pcs[0];
+
+    pcs.remove(0);
+
+    return pc_before_pred;
+}
+
+void CorePipelined::remove_pc(std::uint32_t pc) {
+    int idx = 0;
+
+    for (int i = 0 ; i < pcs.size() ; i++) {
+        if (pcs[i] == pc) {
+            idx = i;
+        }
+    }
+
+    pcs.remove(idx);
 }
 
 bool StopExceptionHandler::handle_exception(Core *core, Registers *regs,

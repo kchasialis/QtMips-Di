@@ -37,6 +37,7 @@
 #define CORE_H
 
 #include <QObject>
+#include <QVector>
 #include <qtmipsexception.h>
 #include <machineconfig.h>
 #include <registers.h>
@@ -115,7 +116,6 @@ signals:
     void instruction_executed(const machine::Instruction &inst, std::uint32_t inst_addr, ExceptionCause excause, bool valid);
     void instruction_memory(const machine::Instruction &inst, std::uint32_t inst_addr, ExceptionCause excause, bool valid);
     void instruction_writeback(const machine::Instruction &inst, std::uint32_t inst_addr, ExceptionCause excause, bool valid);
-    void instruction_program_counter(const machine::Instruction &inst, std::uint32_t inst_addr, ExceptionCause excause, bool valid);
 
     void fetch_inst_addr_value(std::uint32_t);
     void fetch_instr_instr_value(const machine::Instruction &instr);
@@ -176,8 +176,8 @@ signals:
     void hu_stall_value(std::uint32_t);
     void branch_forward_value(std::uint32_t);
 
-    void cycles_value(std::uint32_t);
-    void stall_c_value(std::uint32_t);
+    void cycles_c_value(std::uint32_t);
+    void stalls_c_value(std::uint32_t);
 
     void stop_on_exception_reached();
 
@@ -349,6 +349,9 @@ protected:
     void do_step(bool skip_break = false);
     void do_reset();
     BranchPredictor *predictor();
+    void enqueue_pc(std::uint32_t pc);
+    std::uint32_t dequeue_pc();
+    void remove_pc(std::uint32_t inst_addr);
 
 private:
     struct Core::dtFetch dt_f;
@@ -360,6 +363,10 @@ private:
     bool branch_res_id;
     enum MachineConfig::BranchUnit branch_unit;
     enum MachineConfig::HazardUnit hazard_unit;
+    // Variables used for branch predictor.
+    QVector<std::uint32_t> pcs; // Save pc for each prediction we make.
+    std::uint32_t pc_before_jmp;
+
 };
 
 }
