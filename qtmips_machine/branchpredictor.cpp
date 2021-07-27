@@ -1,8 +1,6 @@
 #include "branchpredictor.h"
 #include "branchtargetbuffer.h"
 
-#include <QDebug>
-
 using namespace machine;
 
 BranchPredictor::BranchPredictor(std::uint8_t bht_bits) {
@@ -61,12 +59,6 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
             b_info.branch = b_info.btb_miss;
         }
         b_info.pos_branch = idx;
-
-//        qDebug() << "Enqueueing...";
-//        qDebug() << "Branch Info : ";
-//        qDebug() << "pos_branch = " << b_info.pos_branch;
-//        qDebug() << "branch = " << b_info.branch;
-//        qDebug() << "btb_miss = " << b_info.btb_miss;
 
         enqueue(b_info);
 
@@ -159,13 +151,6 @@ void OneBitBranchPredictor::update_bht(bool branch, std::uint32_t correct_addres
     if (!l_jmp) {
         const BranchInfo &b_info = dequeue();
         bool updated_btb = false;
-
-//        qDebug() << "Updating BHT with correct_address = " << QString::number(correct_address, 16);
-//        qDebug() << "Dequeueing...";
-//        qDebug() << "Branch Info : ";
-//        qDebug() << "pos_branch = " << b_info.pos_branch;
-//        qDebug() << "branch = " << b_info.branch;
-//        qDebug() << "btb_miss = " << b_info.btb_miss;
 
         if (branch == b_info.branch) {
             correct_predictions++;

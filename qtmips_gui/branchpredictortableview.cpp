@@ -50,10 +50,6 @@ void BranchPredictorTableView::adjustColumnCount() {
     horizontalHeader()->resizeSection(2, cwidth_dh);
     totwidth += cwidth_dh;
 
-    horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
-    idx = m->index(0, 3);
-    totwidth += delegate->sizeHintForText(viewOptions(), idx,
-                                          "0.0").width() + 2;
     totwidth += verticalHeader()->width();
     setColumnHidden(2, totwidth > width());
 }

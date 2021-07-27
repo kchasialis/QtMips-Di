@@ -256,8 +256,6 @@ void NewDialog::hazard_unit_change() {
     switch2custom();
 }
 
-#include <QDebug>
-
 void NewDialog::branch_unit_change() {
     if (ui->branch_predictor->isChecked()) {
         QString predictor_bits = ui->predictor_bits->currentText();
@@ -271,6 +269,7 @@ void NewDialog::branch_unit_change() {
     } else if (ui->delay_slot->isChecked()) {
         config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
         config->set_bht_bits(0);
+        config->set_branch_res_id(ui->resolution->currentText() == "ID");
     } else {
         config->set_branch_unit(machine::MachineConfig::BU_NONE);
         config->set_bht_bits(0);
@@ -284,6 +283,7 @@ void NewDialog::branch_unit_change() {
     }
 
     if (!config->pipelined() && config->predictor()) {
+        // If not pipelined and user ticked predictor somehow, change that to delay slot.
         config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
     }
 
@@ -371,14 +371,13 @@ void NewDialog::config_gui() {
     ui->branch_predictor->setChecked(config->predictor());
     ui->delay_slot->setChecked(config->branch_unit() == machine::MachineConfig::BU_DELAY_SLOT);
     ui->none->setChecked(config->branch_unit() == machine::MachineConfig::BU_NONE);
+    ui->resolution->setCurrentIndex(config->branch_res_id() ? 0 : 1);
     if (config->predictor()) {
         ui->predictor_bits->setCurrentIndex(config->branch_unit() == machine::MachineConfig::BU_ONE_BIT_BP ? 0 : 1);
         ui->bht_bits->setCurrentIndex(config->bht_bits() - MIN_BHT_BITS);
-        ui->resolution->setCurrentIndex(config->branch_res_id() ? 0 : 1);
     } else {
         ui->predictor_bits->setCurrentIndex(0);
         ui->bht_bits->setCurrentIndex(0);
-        ui->resolution->setCurrentIndex(0);
     }
     // Memory
     ui->mem_protec_exec->setChecked(config->memory_execute_protection());
@@ -404,12 +403,12 @@ void NewDialog::config_gui() {
     ui->hazard_unit->setEnabled(config->pipelined());
     ui->none->setEnabled(!config->pipelined());
     ui->branch_predictor->setEnabled(config->pipelined());
-    ui->bht_bits->setEnabled(ui->branch_predictor->isChecked());
-    ui->bht_bits_label->setEnabled(ui->branch_predictor->isChecked());
-    ui->predictor_bits->setEnabled(ui->branch_predictor->isChecked());
-    ui->predictor_bits_label->setEnabled(ui->branch_predictor->isChecked());
-    ui->resolution->setEnabled(ui->branch_predictor->isChecked());
-    ui->resolution_label->setEnabled(ui->branch_predictor->isChecked());
+    ui->bht_bits->setEnabled(config->predictor());
+    ui->bht_bits_label->setEnabled(config->predictor());
+    ui->predictor_bits->setEnabled(config->predictor());
+    ui->predictor_bits_label->setEnabled(config->predictor());
+    ui->resolution->setEnabled(config->pipelined());
+    ui->resolution_label->setEnabled(config->pipelined());
 }
 
 unsigned NewDialog::preset_number() {

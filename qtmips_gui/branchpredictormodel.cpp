@@ -13,7 +13,7 @@ int BranchPredictorModel::rowCount(const QModelIndex &index) const {
 }
 
 int BranchPredictorModel::columnCount(const QModelIndex & /* parent */) const {
-    return 4;
+    return 3;
 }
 
 QVariant BranchPredictorModel::headerData(int section, Qt::Orientation orientation, int role) const {
@@ -26,8 +26,6 @@ QVariant BranchPredictorModel::headerData(int section, Qt::Orientation orientati
                 return tr("History");
             case 2:
                 return tr("Prediction");
-            case 3:
-                return tr("Precision");
             default:
                 SANITY_ASSERT(0, "I got something wrong here");
             }
@@ -78,8 +76,6 @@ QVariant BranchPredictorModel::data(const QModelIndex &index, int role) const {
                 }
             }
         }
-        case 3:
-            return QString::number(machine->bp()->accuracy()) + "%";
         default:
             SANITY_ASSERT(0, "Debug me :)");
             return QVariant();

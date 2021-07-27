@@ -114,11 +114,11 @@ void BranchPredictorDock::update_pc_val(std::uint32_t inst_addr) {
 void BranchPredictorDock::update_instr_val(const machine::Instruction &instr) {
     QString s,t, text;
 
-    t = QString::number(instr.data(), 16);
-    s.fill('0', 8 - t.count());
-    text = "0x" + s + t.toUpper();
+//    t = QString::number(instr.data(), 16);
+//    s.fill('0', 8 - t.count());
+//    text = "0x" + s + t.toUpper();
 
-    set_qline_val(instr_val, text);
+    set_qline_val(instr_val, instr.to_str());
 }
 
 void BranchPredictorDock::update_bht_index_val(std::uint32_t inst_addr) {
@@ -126,5 +126,5 @@ void BranchPredictorDock::update_bht_index_val(std::uint32_t inst_addr) {
 }
 
 void BranchPredictorDock::update_accuracy_val(std::int32_t) {
-    set_qline_val(accuracy_val, QString::number(machine->bp()->accuracy()));
+    set_qline_val(accuracy_val, QString::number(machine->bp()->accuracy()) + "%");
 }
