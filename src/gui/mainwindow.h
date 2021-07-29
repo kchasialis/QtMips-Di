@@ -59,7 +59,7 @@
 #include "qtmipsmachine.h"
 #include "machineconfig.h"
 #include "srceditor.h"
-#include "simpleasm.h"
+#include "assembler/simpleasm.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT

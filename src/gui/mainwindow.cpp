@@ -45,13 +45,13 @@
 #include <QMetaObject>
 #include <iostream>
 
+#include "assembler/simpleasm.h"
+#include "assembler/fixmatheval.h"
+#include "os_emulation/ossyscall.h"
 #include "mainwindow.h"
 #include "aboutdialog.h"
-#include "ossyscall.h"
 #include "fontsize.h"
 #include "gotosymboldialog.h"
-#include "fixmatheval.h"
-#include "simpleasm.h"
 #include "extprocess.h"
 #include "savechangeddialog.h"
 #include "textsignalaction.h"

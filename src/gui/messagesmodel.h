@@ -40,7 +40,7 @@
 #include <QFont>
 #include <QVector>
 
-#include "messagetype.h"
+#include "assembler/messagetype.h"
 
 class MessagesEntry;
 

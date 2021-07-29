@@ -42,12 +42,11 @@
 #include <QMessageBox>
 #include <QSettings>
 
+#include "assembler/messagetype.h"
 #include "messagesdock.h"
 #include "messagesmodel.h"
 #include "messagesview.h"
-#include "messagetype.h"
 #include "hexlineedit.h"
-
 
 
 MessagesDock::MessagesDock(QWidget *parent, QSettings *settings) : Super(parent) {

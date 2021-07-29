@@ -37,8 +37,8 @@
 #define PROGRAM_H
 
 #include <unistd.h>
-#include <libelf/libelf.h>
-#include <libelf/gelf.h>
+#include <libelf.h>
+#include <gelf.h>
 #include <cstdint>
 #include <qvector.h>
 #include <qstring.h>

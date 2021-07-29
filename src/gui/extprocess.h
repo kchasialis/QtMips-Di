@@ -38,7 +38,7 @@
 
 #include <QProcess>
 #include <QString>
-#include "messagetype.h"
+#include "assembler/messagetype.h"
 
 class ExtProcess : public QProcess {
     Q_OBJECT
