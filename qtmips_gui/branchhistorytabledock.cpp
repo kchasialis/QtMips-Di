@@ -2,17 +2,17 @@
 #include <QLabel>
 #include <QLineEdit>
 #include "branchpredictor.h"
-#include "branchpredictordock.h"
-#include "branchpredictortableview.h"
+#include "branchhistorytabledock.h"
+#include "branchhistorytabletableview.h"
 
-BranchPredictorDock::BranchPredictorDock(QWidget *parent) : Super(parent) {
-    setObjectName("Branch Predictor");
-    setWindowTitle("Branch Predictor");
+BranchHistoryTableDock::BranchHistoryTableDock(QWidget *parent) : Super(parent) {
+    setObjectName("Branch History Table");
+    setWindowTitle("Branch History Table");
 
     QWidget *content = new QWidget();
 
     QHBoxLayout *hlayout_top = new QHBoxLayout();
-    predictor_content = new BranchPredictorTableView(this);
+    predictor_content = new BranchHistoryTableTableView(this);
     QVBoxLayout *vlayout_mid = new QVBoxLayout();
     vlayout = new QVBoxLayout();
 
@@ -68,8 +68,8 @@ static void set_qline_val(QLineEdit *qline_obj, const QString &text) {
     qline_obj->setReadOnly(true);
 }
 
-void BranchPredictorDock::setup(machine::QtMipsMachine *machine) {
-    BranchPredictorModel *pmodel = new BranchPredictorModel(this);
+void BranchHistoryTableDock::setup(machine::QtMipsMachine *machine) {
+    BranchHistoryTableModel *pmodel = new BranchHistoryTableModel(this);
     QString text;
 
     this->machine = machine;
@@ -101,7 +101,7 @@ void BranchPredictorDock::setup(machine::QtMipsMachine *machine) {
     set_qline_val(bht_entries_val, QString::number(pow(2, this->machine->config().bht_bits())));
 }
 
-void BranchPredictorDock::update_pc_val(std::uint32_t inst_addr) {
+void BranchHistoryTableDock::update_pc_val(std::uint32_t inst_addr) {
     QString s,t, text;
 
     t = QString::number(inst_addr, 16);
@@ -111,7 +111,7 @@ void BranchPredictorDock::update_pc_val(std::uint32_t inst_addr) {
     set_qline_val(pc_val, text);
 }
 
-void BranchPredictorDock::update_instr_val(const machine::Instruction &instr) {
+void BranchHistoryTableDock::update_instr_val(const machine::Instruction &instr) {
     QString s,t, text;
 
 //    t = QString::number(instr.data(), 16);
@@ -121,10 +121,10 @@ void BranchPredictorDock::update_instr_val(const machine::Instruction &instr) {
     set_qline_val(instr_val, instr.to_str());
 }
 
-void BranchPredictorDock::update_bht_index_val(std::uint32_t inst_addr) {
+void BranchHistoryTableDock::update_bht_index_val(std::uint32_t inst_addr) {
     set_qline_val(bht_index_val, QString::number(machine->bp()->bht_idx(inst_addr, true)));
 }
 
-void BranchPredictorDock::update_accuracy_val(std::int32_t) {
+void BranchHistoryTableDock::update_accuracy_val(std::int32_t) {
     set_qline_val(accuracy_val, QString::number(machine->bp()->accuracy()) + "%");
 }

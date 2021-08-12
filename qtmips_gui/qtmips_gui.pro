@@ -39,12 +39,12 @@ QMAKE_CXXFLAGS_DEBUG += -ggdb
 DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
+    branchhistorytabledock.cpp \
+    branchhistorytablemodel.cpp \
+    branchhistorytabletableview.cpp \
     branchtargetbufferdock.cpp \
     branchtargetbuffermodel.cpp \
     branchtargetbuffertableview.cpp \
-    branchpredictordock.cpp \
-    branchpredictormodel.cpp \
-    branchpredictortableview.cpp \
     comboboxitemdelegate.cpp \
     coreview/branchtargetbuffer.cpp \
         main.cpp \
@@ -101,12 +101,12 @@ SOURCES += \
     textsignalaction.cpp
 
 HEADERS += \
+    branchhistorytabledock.h \
+    branchhistorytablemodel.h \
+    branchhistorytabletableview.h \
     branchtargetbufferdock.h \
     branchtargetbuffermodel.h \
     branchtargetbuffertableview.h \
-    branchpredictordock.h \
-    branchpredictormodel.h \
-    branchpredictortableview.h \
     comboboxitemdelegate.h \
     coreview/branchtargetbuffer.h \
         mainwindow.h \

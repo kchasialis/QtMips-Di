@@ -1,15 +1,15 @@
-#ifndef BRANCHPREDICTORTABLEVIEW_H
-#define BRANCHPREDICTORTABLEVIEW_H
+#ifndef BRANCHHISTORYTABLETABLEVIEW_H
+#define BRANCHHISTORYTABLETABLEVIEW_H
 
 #include <QTableView>
 
-class BranchPredictorTableView : public QTableView {
+class BranchHistoryTableTableView : public QTableView {
     Q_OBJECT
 
     using Super = QTableView;
 
 public:
-    BranchPredictorTableView(QWidget *parent);
+    BranchHistoryTableTableView(QWidget *parent);
 
     void resizeEvent(QResizeEvent *event) override;
     void setModel(QAbstractItemModel *model) override;
@@ -22,4 +22,4 @@ protected:
     void adjustColumnCount();
 };
 
-#endif // BRANCHPREDICTORTABLEVIEW_H
+#endif // BRANCHHISTORYTABLETABLEVIEW_H

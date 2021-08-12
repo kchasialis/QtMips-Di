@@ -4,23 +4,23 @@
 #include <QKeyEvent>
 #include <QClipboard>
 #include <QApplication>
-#include "branchpredictortableview.h"
-#include "branchpredictormodel.h"
+#include "branchhistorytabletableview.h"
+#include "branchhistorytablemodel.h"
 #include "comboboxitemdelegate.h"
 #include "hinttabledelegate.h"
 
-BranchPredictorTableView::BranchPredictorTableView(QWidget *parent) : Super(parent) {
+BranchHistoryTableTableView::BranchHistoryTableTableView(QWidget *parent) : Super(parent) {
     setItemDelegate(new HintTableDelegate);
     setTextElideMode(Qt::ElideNone);
     verticalHeader()->setVisible(false);
 }
 
-void BranchPredictorTableView::adjustColumnCount() {
+void BranchHistoryTableTableView::adjustColumnCount() {
     QModelIndex idx;
     int cwidth_dh;
     int totwidth;
 
-    BranchPredictorModel *m = dynamic_cast<BranchPredictorModel*>(model());
+    BranchHistoryTableModel *m = dynamic_cast<BranchHistoryTableModel*>(model());
 
     if (m == nullptr)
         return;
@@ -54,14 +54,14 @@ void BranchPredictorTableView::adjustColumnCount() {
     setColumnHidden(2, totwidth > width());
 }
 
-void BranchPredictorTableView::resizeEvent(QResizeEvent *event) {
+void BranchHistoryTableTableView::resizeEvent(QResizeEvent *event) {
     Super::resizeEvent(event);
     adjustColumnCount();
 }
 
-void BranchPredictorTableView::setModel(QAbstractItemModel *model) {
+void BranchHistoryTableTableView::setModel(QAbstractItemModel *model) {
     // This function assumes that we already have a machine.
-    BranchPredictorModel *pmodel = dynamic_cast<BranchPredictorModel*>(model);
+    BranchHistoryTableModel *pmodel = dynamic_cast<BranchHistoryTableModel*>(model);
     QVector<QString> items;
 
     Super::setModel(model);
@@ -87,14 +87,14 @@ void BranchPredictorTableView::setModel(QAbstractItemModel *model) {
     }
 }
 
-void BranchPredictorTableView::focus_row(std::int32_t row) {
-    BranchPredictorModel *pmodel = dynamic_cast<BranchPredictorModel*>(model());
+void BranchHistoryTableTableView::focus_row(std::int32_t row) {
+    BranchHistoryTableModel *pmodel = dynamic_cast<BranchHistoryTableModel*>(model());
 
     scrollTo(pmodel->index(row, 0), QAbstractItemView::PositionAtCenter);
     update();
 }
 
-void BranchPredictorTableView::keyPressEvent(QKeyEvent *event) {
+void BranchHistoryTableTableView::keyPressEvent(QKeyEvent *event) {
     if(event->matches(QKeySequence::Copy)) {
             QString text;
             QItemSelectionRange range = selectionModel()->selection().first();

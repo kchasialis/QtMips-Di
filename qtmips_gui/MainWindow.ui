@@ -580,7 +580,7 @@
   </action>
   <action name="actionBPredictor">
    <property name="text">
-    <string>Branch Predictor</string>
+    <string>Branch History Table</string>
    </property>
    <property name="toolTip">
     <string>Branch Predictor</string>

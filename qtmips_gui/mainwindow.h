@@ -44,7 +44,7 @@
 #include "ui_MainWindow.h"
 #include "newdialog.h"
 #include "coreview.h"
-#include "branchpredictordock.h"
+#include "branchhistorytabledock.h"
 #include "branchtargetbufferdock.h"
 #include "registersdock.h"
 #include "programdock.h"
@@ -154,7 +154,7 @@ private:
     LcdDisplayDock *lcd_display;
     Cop0Dock *cop0dock;
     MessagesDock *messages;
-    BranchPredictorDock *predictor;
+    BranchHistoryTableDock *predictor;
     BranchTargetBufferDock *btb;
     bool load_default_settings;
     bool coreview_shown;

@@ -2,7 +2,7 @@
 #include <QKeyEvent>
 #include <QClipboard>
 #include <QHeaderView>
-#include "branchpredictortableview.h"
+#include "branchhistorytabletableview.h"
 #include "branchtargetbuffertableview.h"
 #include "branchtargetbuffermodel.h"
 #include "comboboxitemdelegate.h"

@@ -1,16 +1,16 @@
-#ifndef BRANCHPREDICTORMODEL_H
-#define BRANCHPREDICTORMODEL_H
+#ifndef BRANCHHISTORYTABLEMODEL_H
+#define BRANCHHISTORYTABLEMODEL_H
 
 #include <QAbstractTableModel>
 #include <QFont>
 #include "qtmipsmachine.h"
 
-class BranchPredictorModel : public QAbstractTableModel {
+class BranchHistoryTableModel : public QAbstractTableModel {
     Q_OBJECT
 
     using Super = QAbstractTableModel;
 public:
-    BranchPredictorModel(QObject *parent);
+    BranchHistoryTableModel(QObject *parent);
     int rowCount(const QModelIndex &parent = QModelIndex()) const override ;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
@@ -32,4 +32,4 @@ private:
     std::int32_t pos_bht_access, pos_bht_update;
 };
 
-#endif // BRANCHPREDICTORMODEL_H
+#endif // BRANCHHISTORYTABLEMODEL_H

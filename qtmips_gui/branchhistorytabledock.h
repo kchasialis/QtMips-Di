@@ -6,15 +6,15 @@
 #include <QLineEdit>
 #include <QTableView>
 #include "qtmipsmachine.h"
-#include "branchpredictormodel.h"
+#include "branchhistorytablemodel.h"
 
-class BranchPredictorDock : public QDockWidget  {
+class BranchHistoryTableDock : public QDockWidget  {
     Q_OBJECT
 
     using Super = QDockWidget;
 
 public:
-    BranchPredictorDock(QWidget *parent);
+    BranchHistoryTableDock(QWidget *parent);
 
     void setup(machine::QtMipsMachine *machine);
 

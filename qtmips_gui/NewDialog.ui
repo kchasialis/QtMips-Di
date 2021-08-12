@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>583</width>
-    <height>449</height>
+    <height>501</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -214,14 +214,14 @@
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="bht_bits_label">
+           <widget class="QLabel" name="bht_btb_label">
             <property name="text">
-             <string>BHT bits</string>
+             <string>BHT/BTB Bits</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="bht_bits">
+           <widget class="QComboBox" name="bht_btb_bits">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
               <horstretch>0</horstretch>

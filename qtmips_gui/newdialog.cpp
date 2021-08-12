@@ -81,7 +81,7 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     ui->predictor_bits->addItem("1");
     ui->predictor_bits->addItem("2");
     for (size_t i = MIN_BHT_BITS ; i <= MAX_BHT_BITS ; i++) {
-        ui->bht_bits->addItem(QString::number(i));
+        ui->bht_btb_bits->addItem(QString::number(i));
     }
     ui->resolution->addItem("ID");
     ui->resolution->addItem("EX");
@@ -259,7 +259,7 @@ void NewDialog::hazard_unit_change() {
 void NewDialog::branch_unit_change() {
     if (ui->branch_predictor->isChecked()) {
         QString predictor_bits = ui->predictor_bits->currentText();
-        QString bht_bits = ui->bht_bits->currentText();
+        QString bht_bits = ui->bht_btb_bits->currentText();
 
         config->set_branch_unit(predictor_bits.toShort() == 1 ?
                                     machine::MachineConfig::BU_ONE_BIT_BP :
@@ -374,10 +374,10 @@ void NewDialog::config_gui() {
     ui->resolution->setCurrentIndex(config->branch_res_id() ? 0 : 1);
     if (config->predictor()) {
         ui->predictor_bits->setCurrentIndex(config->branch_unit() == machine::MachineConfig::BU_ONE_BIT_BP ? 0 : 1);
-        ui->bht_bits->setCurrentIndex(config->bht_bits() - MIN_BHT_BITS);
+        ui->bht_btb_bits->setCurrentIndex(config->bht_bits() - MIN_BHT_BITS);
     } else {
         ui->predictor_bits->setCurrentIndex(0);
-        ui->bht_bits->setCurrentIndex(0);
+        ui->bht_btb_bits->setCurrentIndex(0);
     }
     // Memory
     ui->mem_protec_exec->setChecked(config->memory_execute_protection());
@@ -403,8 +403,8 @@ void NewDialog::config_gui() {
     ui->hazard_unit->setEnabled(config->pipelined());
     ui->none->setEnabled(!config->pipelined());
     ui->branch_predictor->setEnabled(config->pipelined());
-    ui->bht_bits->setEnabled(config->predictor());
-    ui->bht_bits_label->setEnabled(config->predictor());
+    ui->bht_btb_bits->setEnabled(config->predictor());
+    ui->bht_btb_label->setEnabled(config->predictor());
     ui->predictor_bits->setEnabled(config->predictor());
     ui->predictor_bits_label->setEnabled(config->predictor());
     ui->resolution->setEnabled(config->pipelined());
@@ -464,7 +464,7 @@ void NewDialog::load_settings() {
     // Connections need to be done here. A bug is caused otherwise.
     connect(ui->branch_predictor, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
     connect(ui->predictor_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
-    connect(ui->bht_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
+    connect(ui->bht_btb_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
     connect(ui->resolution, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
     connect(ui->delay_slot, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
     connect(ui->none, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
