@@ -124,7 +124,7 @@ public:
 
     bool get_prediction(std::uint32_t bht_idx);
     void update_bht(bool branch, std::uint32_t correct_address);
-    void set_bht_entry(std::uint32_t bht_idx, QString val);
+    void set_bbht_entry(std::uint32_t bht_idx, QString val);
 };
 
 }

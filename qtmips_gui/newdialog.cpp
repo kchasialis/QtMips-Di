@@ -513,7 +513,7 @@ void NewDialogCacheHandler::config_gui(int time_read, int time_write, int time_b
 }
 
 void NewDialogCacheHandler::enabled(bool val) {
-	config->set_enabled(val);
+    config->set_enabled(val);
 
     // We must prohibit the user to enable L2 cache without enabling L1.
     switch (config->type()) {
@@ -521,11 +521,9 @@ void NewDialogCacheHandler::enabled(bool val) {
         if (!val) {
             // L1 cache is disabled.
             nd->l2_cache_dialog()->enabled->setChecked(false);
-            nd->l2_cache_dialog()->enabled->setCheckable(false);
             nd->l2_cache_dialog()->access_time->setEnabled(false);
         } else {
             // L1 cache is enabled, allow user to also enable L2 Cache.
-            nd->l2_cache_dialog()->enabled->setCheckable(true);
             nd->l2_cache_dialog()->access_time->setEnabled(true);
         }
         break;
@@ -533,13 +531,12 @@ void NewDialogCacheHandler::enabled(bool val) {
         if (val) {
             // L2 cache is enabled, check if at least one of L1 program or data cache is also enabled.
             if (!nd->l1_data_cache_handler()->config->enabled() && !nd->l1_program_cache_handler()->config->enabled()) {
-                nd->l2_cache_dialog()->enabled->setChecked(false);
-                nd->l2_cache_dialog()->enabled->setCheckable(false);
-                nd->l2_cache_dialog()->access_time->setEnabled(false);
-
                 QMessageBox messageBox;
                 messageBox.critical(nullptr, "Error", "L2 cache can't be enabled without enabling one of L1 caches");
                 messageBox.setFixedSize(500, 200);
+                nd->l2_cache_dialog()->enabled->setChecked(false);
+                nd->l2_cache_dialog()->access_time->setEnabled(false);
+                config->set_enabled(false);
             }
         }
         break;

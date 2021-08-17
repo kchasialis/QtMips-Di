@@ -203,6 +203,7 @@ void TwoBitBranchPredictor::update_bht(bool branch, std::uint32_t correct_addres
 
     if (!l_jmp) {
         const BranchInfo &b_info = dequeue();
+        bool updated_btb = false;
 
         if (branch == b_info.branch) {
             correct_predictions++;
@@ -214,10 +215,12 @@ void TwoBitBranchPredictor::update_bht(bool branch, std::uint32_t correct_addres
             case FSMStates::STRONGLY_NT:
                 // On taken branches we also update BTB.
                 btb_impl->update(b_info.pos_branch, correct_address);
+                updated_btb = true;
                 bht[b_info.pos_branch] = !branch ? FSMStates::STRONGLY_NT : FSMStates::WEAKLY_NT;
                 break;
             case FSMStates::WEAKLY_NT:
                 btb_impl->update(b_info.pos_branch, correct_address);
+                updated_btb = true;
                 bht[b_info.pos_branch] = !branch ? FSMStates::STRONGLY_NT : FSMStates::WEAKLY_T;
                 break;
             case FSMStates::WEAKLY_T:
@@ -231,6 +234,10 @@ void TwoBitBranchPredictor::update_bht(bool branch, std::uint32_t correct_addres
             }
             emit pred_updated_bht(b_info.pos_branch);
         }
+        
+        if (!updated_btb && b_info.btb_miss) {
+            btb_impl->update(b_info.pos_branch, correct_address);
+        }        
     } else {
         BranchPredictor::handle_update_jump(correct_address);
     }

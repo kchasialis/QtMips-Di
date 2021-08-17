@@ -994,7 +994,7 @@ void CorePipelined::do_step(bool skip_break) {
                     jump_value = true;
                     jump_reg_value = false;
                 } else {
-                    jump_value = false;
+                    jump_value = false;     
                     jump_reg_value = true;
                 }
                 branch_value = false;
@@ -1003,60 +1003,6 @@ void CorePipelined::do_step(bool skip_break) {
             emit fetch_jump_value(jump_value);
             emit fetch_jump_reg_value(jump_reg_value);
             emit fetch_branch_value(branch_value);
-
-
-//            if (!dt_d.jump) {
-//                // If the instruction on ID is not a jump.
-//                bool branch = false;
-
-//                if (branch_res_id ? dt_d.branch : dt_e.branch) {
-//                    std::uint32_t pc_before_prediction = dequeue_pc();
-//                    // Branch is now on ID/EX and can be evaluated.
-//                    branch = branch_result_wrp(dt_d, dt_e, branch_res_id);
-
-//                    if (branch != bp->prediction()) {
-//                        // Prediction was wrong.
-//                        // Flush appropriate stages & move pc accordingly.
-//                        correct_address = get_correct_address(pc_before_prediction, branch, false);
-//                        flush_stages();
-//                        regs->pc_abs_jmp(correct_address - 4);
-//                    }
-//                    bp->update_bht(branch, correct_address);
-//                }
-
-//                jump_value = false;
-//                jump_reg_value = false;
-//                branch_value = branch;
-
-////                emit fetch_jump_value(false);
-////                emit fetch_jump_reg_value(false);
-////                emit fetch_branch_value(branch);
-//            } else {
-//                if (!bp->prediction()) {
-//                    // The second parameter does not mattter here.
-//                    correct_address = get_correct_address(pc_before_jmp, 0, true);
-//                    // We had a BTB miss, flush appropriate stages and update BTB.
-//                    flush_stages();
-//                    regs->pc_abs_jmp(correct_address - 4);
-//                }
-
-//                bp->update_bht(true, correct_address);
-
-//                // Jump is on ID and we can evaluate its address.
-//                if (!dt_d.bjr_req_rs) {
-//                    jump_value = true;
-//                    jump_reg_value = false;
-////                    emit fetch_jump_value(true);
-////                    emit fetch_jump_reg_value(false);
-//                } else {
-//                    jump_value = false;
-//                    jump_reg_value = true;
-////                    emit fetch_jump_value(false);
-////                    emit fetch_jump_reg_value(true);
-//                }
-//                branch_value = false;
-////                emit fetch_branch_value(false);
-//            }
 
             if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
                 // Instruction is branch or jump, we need to save pc in case we predict wrong.
