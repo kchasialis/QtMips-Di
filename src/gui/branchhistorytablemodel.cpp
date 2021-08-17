@@ -1,5 +1,5 @@
 #include "branchpredictor.h"
-#include "branchpredictormodel.h"
+#include "branchhistorytablemodel.h"
 #include <cmath>
 #include <QBrush>
 #include <QDebug>

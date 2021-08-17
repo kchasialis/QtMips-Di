@@ -44,7 +44,7 @@
 #include "ui_MainWindow.h"
 #include "newdialog.h"
 #include "coreview.h"
-#include "branchpredictordock.h"
+#include "branchhistorytabledock.h"
 #include "branchtargetbufferdock.h"
 #include "registersdock.h"
 #include "programdock.h"

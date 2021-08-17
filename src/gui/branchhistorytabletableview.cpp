@@ -4,8 +4,8 @@
 #include <QKeyEvent>
 #include <QClipboard>
 #include <QApplication>
-#include "branchpredictortableview.h"
-#include "branchpredictormodel.h"
+#include "branchhistorytabletableview.h"
+#include "branchhistorytablemodel.h"
 #include "comboboxitemdelegate.h"
 #include "hinttabledelegate.h"
 

@@ -23,9 +23,9 @@ set(qtmips_gui_SOURCES
         branchtargetbufferdock.cpp
         branchtargetbuffermodel.cpp
         branchtargetbuffertableview.cpp
-        branchpredictordock.cpp
-        branchpredictormodel.cpp
-        branchpredictortableview.cpp
+        branchhistorytabledock.cpp
+        branchhistorytablemodel.cpp
+        branchhistorytabletableview.cpp
         comboboxitemdelegate.cpp
         coreview/branchtargetbuffer.cpp
         main.cpp
@@ -85,9 +85,9 @@ set(qtmips_gui_HEADERS
         branchtargetbufferdock.h
         branchtargetbuffermodel.h
         branchtargetbuffertableview.h
-        branchpredictordock.h
-        branchpredictormodel.h
-        branchpredictortableview.h
+        branchhistorytabledock.h
+        branchhistorytablemodel.h
+        branchhistorytabletableview.h
         comboboxitemdelegate.h
         coreview/branchtargetbuffer.h
         mainwindow.h

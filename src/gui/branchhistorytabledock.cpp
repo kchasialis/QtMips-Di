@@ -2,12 +2,12 @@
 #include <QLabel>
 #include <QLineEdit>
 #include "branchpredictor.h"
-#include "branchpredictordock.h"
-#include "branchpredictortableview.h"
+#include "branchhistorytabledock.h"
+#include "branchhistorytabletableview.h"
 
 BranchPredictorDock::BranchPredictorDock(QWidget *parent) : Super(parent) {
-    setObjectName("Branch Predictor");
-    setWindowTitle("Branch Predictor");
+    setObjectName("Branch History Table");
+    setWindowTitle("Branch History Table");
 
     QWidget *content = new QWidget();
 

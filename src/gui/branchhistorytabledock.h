@@ -6,7 +6,7 @@
 #include <QLineEdit>
 #include <QTableView>
 #include "qtmipsmachine.h"
-#include "branchpredictormodel.h"
+#include "branchhistorytablemodel.h"
 
 class BranchPredictorDock : public QDockWidget  {
     Q_OBJECT
