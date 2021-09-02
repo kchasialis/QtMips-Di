@@ -1,6 +1,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <cmath>
 #include "branchpredictor.h"
 #include "branchhistorytabledock.h"
 #include "branchhistorytabletableview.h"

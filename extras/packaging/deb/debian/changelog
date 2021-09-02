@@ -1,0 +1,130 @@
+qtmips (0.8.0-1) unstable; urgency=medium
+
+  * Extended version of QtMips with branch predictor and L2 cache.
+
+ -- Kostas Chasialis <koschasialis@gmail.com>  Thu, 02 Sep 2021 15:15:50 +0300
+
+qtmips (0.7.5) unstable; urgency=medium
+
+  * Debian package updated to version 0.7.5.
+  * Improve UI compatbility with dark color schemes (by Michal Maly, MadCatX)
+  * prepare-release: document alternative Debian package preparation in quilt mode.
+  * Enable dock widows nesting to enable show cache + memory simultaneously (by Frantisek Vacek)
+  * AppImage build run (by Frantisek Vacek)
+  * qtmips_cli: add option to connect serial port input and output to file.
+  * samples: template-os.S template.S fixed SPILED_REG_BASE definition.
+  * README: add documentation how to modify comprocessor 0 regs (by Jan Kaisrlik)
+  * EADME.md: fix reference to uart rx interrupt mask (by Jan Kaisrlik)
+  * Fix open of ELF files using national alphabets in the path names on Windows.
+  * qtmips_gui: fix response to user decision to save modified file when make is invoked.
+
+ -- Pavel Pisa <pisa@cmp.felk.cvut.cz>  Sun, 06 Sep 2020 13:16:34 +0200
+
+qtmips (0.7.4) unstable; urgency=medium
+
+  * Debian package updated to version 0.7.4.
+  * debian packaging: add git attribute to merge changelog.
+  * debian packaging: add watch file for GitHub QtMips repository.
+
+ -- Pavel Pisa <pisa@cmp.felk.cvut.cz>  Sun, 15 Sep 2019 20:32:41 +0200
+
+qtmips (0.7.3) unstable; urgency=medium
+
+  * Debian package updated to version 0.7.3.
+  * Implemented SKIP/SPACE assembler directives.
+  * Add OpenHub statistic page link.
+  * Provide support for include directive in simple assembler.
+  * In include, use content from editor if file is already open.
+  * Add #pragma processing to integrated assembler and its usage to control windows.
+  * Use #pragma in examples to lower initial learning curve.
+  * samples: simple-lw-sw-ia.S: place data section to 0x2000 address.
+ 
+ -- Pavel Pisa <pisa@cmp.felk.cvut.cz>  Thu, 12 Sep 2019 11:47:46 +0200
+
+qtmips (0.7.2) unstable; urgency=medium
+
+  * Debian package updated to version 0.7.2.
+  * More changes to use dialog open instead of exec (Emscripten does not support exec).
+  * Updates to RPM packaging and spec file to better follow Suse rules.
+  * Move fixmatheval and assembly compiler to separate library independent on Qt GUI API.
+  * Implemented message window to report compilation errors.
+  * Store operator text description in the fixmatheval operators tree.
+  * Simple assembler moved to separate class which is independent on Qt GUI API.
+  * Do not open editor twice for same filename.
+  * Enable CLI version to use simple assembler.
+  * Update editor search algorithm to prefer current editor for unnamed buffers.
+  * Add config option to reset machine before internal assembler starts.
+  * Include C language syntax highlighter for alternative sources editing.
+  * Action to execute external make command and ask for unsaved sources.
+  * Ask to save modified files on exit.
+  * Ask for modified source close and handle unnamed sources close.
+  * Replace shortcuts to not hide Ctrl+C and some others.
+  * Implemented ASCII and ASCIZ operations.
+  * Include actions New source and Close source on toolbar.
+  * Make program and memory window visible when address requested from symbol dialog.
+  * Add embedded examples menu and resources.
+
+ -- Pavel Pisa <pisa@cmp.felk.cvut.cz>  Wed, 21 Aug 2019 00:13:06 +0200
+
+qtmips (0.7.1) unstable; urgency=medium
+
+  * Debian package updated to version 0.7.1.
+  * Add option to parse and show symbolic registers names.
+  * Implemented simple integrated assembler - it is not recommended for advanced users.
+  * Updated instructions parsing to be usable for integrated assembler.
+  * Change instruction parsing to allow multiple words pseudo-operations.
+  * Implemented simple expressions and labels/symbols evaluation.
+  * Simple highlighter for assembly language added.
+  * Include simple text editor in QtMips emulator.
+  * Fix memory leakages which repeat during program operation.
+  * Externally caused address-space changes (i.e. from peripherals) update memory view.
+  * Provide option to hide coreview to speedup simulation.
+
+ -- Pavel Pisa <pisa@cmp.felk.cvut.cz>  Wed, 03 Jul 2019 12:18:15 +0200
+
+qtmips (0.7.0) unstable; urgency=medium
+
+  * Debian package updated to version 0.7.0.
+  * Include simple LCD frame-buffer and display implementation.
+  * Simulate push of dial buttons by check box.
+  * Allow to create simulator without loaded executable.
+  * Printing/export to PDF file reduces print area/page to actual image size.
+  * Disable text elide for memory and program views (fix for MAC OS).
+  * Implement standard zoom handling by mouse wheel and keys.
+
+ -- Pavel Pisa <pisa@cmp.felk.cvut.cz>  Fri, 28 Jun 2019 15:38:52 +0200
+
+qtmips (0.6.8) unstable; urgency=medium
+
+  * Debian package updated to version 0.6.8.
+  * Coreview multiplexers updated and added for branch compare forward.
+  * qtmips_gui: set application window icon.
+  * Set gray background to stalled instructions/idled stages.
+  * Setting background color dial
+  * qtmips_cli: start report in decimal mode.
+
+ -- Pavel Pisa <pisa@cmp.felk.cvut.cz>  Mon, 01 Apr 2019 15:26:46 +0200
+
+qtmips (0.6.7) unstable; urgency=medium
+
+  * Debian package updated to version 0.6.7.
+  * Change single cycle core with delay slot to use separate fetch stage.
+  * Program listing and stages use color background.
+  * Correct write through spelling. Reported by Richard Susta.
+  * qtmips_cli can be used for cache statistic and result memory tests.
+
+ -- Pavel Pisa <pisa@cmp.felk.cvut.cz>  Wed, 27 Mar 2019 00:38:24 +0100
+
+qtmips (0.6.6) unstable; urgency=medium
+
+  * Corrected row and column output in cache address fields.
+  * Highlight cache read and write acesses.
+  * Highlight registers and coprocessor 0 read and writes.
+
+ -- Pavel Pisa <pisa@cmp.felk.cvut.cz>  Sun, 17 Mar 2019 20:51:55 +0100
+
+qtmips (0.6.5) unstable; urgency=medium
+
+  * Initial Debian packaging.
+
+ -- Pavel Pisa <pisa@cmp.felk.cvut.cz>  Wed, 13 Mar 2019 19:38:33 +0100
