@@ -49,18 +49,6 @@ set(qtmips_machine_HEADERS
         symboltable.h
         cop0state.h
         )
-set(qtmips_machine_TESTS
-        tests/testalu.cpp
-        tests/testcache.cpp
-        tests/testcore.cpp
-        tests/testinstruction.cpp
-        tests/testmemory.cpp
-        tests/testprogramloader.cpp
-        tests/testregisters.cpp
-        tests/tst_machine.cpp
-        tests/tst_machine.h
-        )
-
 
 # Object library is preferred, because the library archive is never really
 # needed. This option skips the archive creation and links directly .o files.
@@ -71,12 +59,3 @@ target_link_libraries(qtmips_machine
         PRIVATE Qt5::Core
         PUBLIC libelf)
 
-if (NOT ${WASM})
-    # Machine tests (not available on WASM)
-    add_executable(qtmips_machine_unit_tests ${qtmips_machine_TESTS})
-    target_link_libraries(qtmips_machine_unit_tests
-            PRIVATE qtmips_machine Qt5::Core Qt5::Test)
-
-    add_test(NAME qtmips_machine_unit_tests
-            COMMAND qtmips_machine_unit_tests)
-endif ()
