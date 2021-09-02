@@ -224,7 +224,7 @@ if("${DEV_MODE}")
 	set(PACKAGE_LONG_DESCRIPTION "${LONG_DESCRIPTION}")
 	set(PACKAGE_MAINTAINER "${JAKUB_DUPAK}")
 	set(PACKAGE_URL "${PROJECT_HOMEPAGE_URL}")
-	set(PACKAGE_GIT "github.com:kchasialis/Qt-Mips.git")
+	set(PACKAGE_GIT "github.com:kchasialis/QtMips-Di.git")
 	set(PACKAGE_LICENCE "${LICENCE} ")
 
 	include(cmake/PackageTools.cmake)
