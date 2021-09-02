@@ -2,7 +2,7 @@ qtmips (0.8.0-1) unstable; urgency=medium
 
   * Extended version of QtMips with branch predictor and L2 cache.
 
- -- Kostas Chasialis <koschasialis@gmail.com>  Thu, 02 Sep 2021 15:15:50 +0300
+ -- Kostas Chasialis <koschasialis@gmail.com>  Thu, 02 Sep 2021 17:01:50 +0300
 
 qtmips (0.7.5) unstable; urgency=medium
 
