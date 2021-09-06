@@ -3,7 +3,8 @@ name: CMake
 on:
   push:
     branches:
-      - main=packaging
+      - main
+      - main-packaging
   workflow_dispatch:
 
 jobs:
