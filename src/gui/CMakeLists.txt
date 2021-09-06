@@ -1,5 +1,5 @@
 project(qtmips_gui
-        VERSION 0.7.5)
+        VERSION 0.8.0)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -164,3 +164,16 @@ target_link_libraries(qtmips_gui
         PRIVATE Qt5::Core Qt5::Widgets Qt5::Gui
         PRIVATE qtmips_machine qtmips_osemu qtmips_asm
         PUBLIC m)
+
+# =============================================================================
+# Installation
+# =============================================================================
+
+# Prior to CMake version 3.13, installation must be performed in the subdirectory,
+# there the target was created. Therefore executable installation is to be found
+# in corresponding CMakeLists.txt.
+
+install(TARGETS qtmips_gui
+RUNTIME DESTINATION bin
+BUNDLE DESTINATION ${EXECUTABLE_OUTPUT_PATH}
+)

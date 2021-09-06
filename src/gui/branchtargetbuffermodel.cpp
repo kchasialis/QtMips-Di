@@ -2,6 +2,7 @@
 #include "branchpredictor.h"
 #include <QBrush>
 #include <QColor>
+#include <cmath>
 
 BranchTargetBufferModel::BranchTargetBufferModel(QObject *parent) : Super(parent), data_font("Monospace"), machine(nullptr), pos_btb_update(-1), pos_btb_access(-1) {
     data_font.setStyleHint(QFont::TypeWriter);
