@@ -1,0 +1,208 @@
+name: CMake
+
+on:
+  push:
+    branches:
+      - main=packaging
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+            name: "Ubuntu Latest GCC",
+            os: ubuntu-latest,
+            build_type: "Release",
+            cc: "gcc", cxx: "g++", qt_version: "5.11.2"
+          }
+          - {
+            name: "Ubuntu 18 GCC",
+            os: ubuntu-18.04,
+            build_type: "Release",
+            cc: "gcc", cxx: "g++", qt_version: "5.9.6"
+          }
+          - {
+            name: "macOS Latest Clang",
+            os: macos-latest,
+            build_type: "Release",
+            cc: "clang", cxx: "clang++", qt_version: "5.11.2"
+          }
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v2.1.5
+        with:
+          path: ${{ github.workspace }}/Qt
+          key: ${{ runner.os }}-${{ matrix.config.qt_version }}-Qt
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v2
+        with:
+          version: ${{ matrix.config.qt_version }}
+          cached: ${{ steps.cache-qt.outputs.cache-hit }}
+          arch: ${{ matrix.config.qt_arch }}
+          dir: ${{ github.workspace }}/Qt
+
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{ github.workspace }}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{ github.workspace }}/build
+        env:
+          CC: ${{ matrix.config.cc }}
+          CXX: ${{ matrix.config.cxx }}
+        run: "cmake $GITHUB_WORKSPACE
+                    -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}"
+
+      - name: Build
+        working-directory: ${{ github.workspace }}/build
+        run: cmake --build . -j3
+
+      - name: Test
+        working-directory: ${{ github.workspace }}/build
+        shell: bash
+        run: ctest
+
+      - name: Store created artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: target-${{ runner.os }}-qt${{ matrix.config.qt_version }}
+          path: ${{ github.workspace }}/build/target
+
+  build-mingw:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+            name: "Windows Latest MinGW",
+            os: windows-latest,
+            build_type: "Release",
+            cc: "gcc", cxx: "g++", build_system: "MinGW Makefiles",
+            # Older Qt releases do not have 64bit mingw release
+            qt_version: "5.12.9", qt_arch: "win64_mingw73"
+          }
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v2.1.5
+        with:
+          path: ${{ github.workspace }}/Qt
+          key: ${{ runner.os }}-${{ matrix.config.qt_version }}-Qt
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v2
+        with:
+          version: ${{ matrix.config.qt_version }}
+          cached: ${{ steps.cache-qt.outputs.cache-hit }}
+          arch: ${{ matrix.config.qt_arch }}
+          dir: ${{ github.workspace }}/Qt
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: "cmake $GITHUB_WORKSPACE
+                    -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
+                    -DCMAKE_C_COMPILER=${{ matrix.config.cc }}
+                    -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }}
+                    -G \"${{ matrix.config.build_system }}\""
+
+      - name: Build
+        working-directory: ${{ github.workspace }}/build
+        run: cmake --build . -j3
+
+      - name: Test
+        working-directory: ${{ github.workspace }}/build
+        shell: bash
+        run: ctest
+
+      - name: Store created artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: target-${{ runner.os }}-qt${{ matrix.config.qt_version }}
+          path: ${{ github.workspace }}/build/target
+
+  build-emscripten:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+            name: "WASM Linux",
+            os: ubuntu-latest,
+            build_type: Release,
+            qt_arch: wasm_32,
+            emsdk_version: 1.39.20,
+            qt_version: 5.15.2,
+          }
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v2.1.5
+        with:
+          path: ${{ github.workspace }}/Qt
+          key: ${{ runner.os }}-${{ matrix.config.qt_version }}-wasm-Qt
+
+      - name: Setup EMSDK cache
+        id: cache-system-libraries
+        uses: actions/cache@v2
+        with:
+          path: 'emsdk-cache'
+          key: ${{ runner.os }}-${{ matrix.config.emsdk_version }}-${{ matrix.config.qt_version }}-emsdk
+
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v10
+        with:
+          version: ${{ matrix.config.emsdk_version }}
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v2
+        with:
+          version: ${{ matrix.config.qt_version }}
+          cached: ${{ steps.cache-qt.outputs.cache-hit }}
+          arch: ${{ matrix.config.qt_arch }}
+          dir: ${{ github.workspace }}/Qt
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/build
+        run: "emcmake cmake $GITHUB_WORKSPACE
+                    -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
+                    -DCMAKE_PREFIX_PATH=$Qt5_DIR
+                    -DCMAKE_FIND_ROOT_PATH=$Qt5_DIR
+                    -Wno-dev"
+
+      - name: Build
+        working-directory: ${{ github.workspace }}/build
+        run: cmake --build . -j3
+
+      - name: Store created artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: target-wasm-${{ runner.os }}-qt${{ matrix.config.qt_version }}
+          path: ${{ github.workspace }}/build/target
