@@ -90,7 +90,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # - common to all subdirs
 # =============================================================================
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(NOT "${SANITIZERS}" MATCHES "none" AND NOT "${WASM}")
