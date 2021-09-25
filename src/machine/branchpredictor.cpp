@@ -3,8 +3,6 @@
 
 using namespace machine;
 
-#include <QDebug>
-
 BranchPredictor::BranchPredictor(std::uint8_t bht_bits) {
     this->btb_impl = std::make_shared<BranchTargetBuffer>(bht_bits);
     this->bht_bits = bht_bits;

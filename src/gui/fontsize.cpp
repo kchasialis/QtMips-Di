@@ -1,7 +1,6 @@
 #include "fontsize.h"
 
 #include <QFont>
-#include <QDebug>
 #include <QApplication>
 #include <QFontMetrics>
 
@@ -13,7 +12,6 @@ int FontSize::SIZE8 = 8;
 void FontSize::init()
 {
 	int h = QFontMetrics(QApplication::font()).height();
-	qDebug() << "Font size:" << h;
 	h /= 3;
 	int d = h / 4 + 1;
 	FontSize::SIZE5 = h - 2*d;

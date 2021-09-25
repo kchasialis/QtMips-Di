@@ -2,7 +2,6 @@
 #include "branchhistorytablemodel.h"
 #include <cmath>
 #include <QBrush>
-#include <QDebug>
 
 BranchPredictorModel::BranchPredictorModel(QObject *parent) : Super(parent), data_font("Monospace"), machine(nullptr), pos_bht_access(-1), pos_bht_update(-1) {
     data_font.setStyleHint(QFont::TypeWriter);

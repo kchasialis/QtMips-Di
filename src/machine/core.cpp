@@ -38,11 +38,7 @@
 #include "programloader.h"
 #include "utils.h"
 
-#include <QDebug>
-
 using namespace machine;
-
-#include <QDebug>
 
 Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
            std::uint32_t min_cache_row_size, Cop0State *cop0state) :

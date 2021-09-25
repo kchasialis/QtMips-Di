@@ -80,7 +80,6 @@ RegistersDock::RegistersDock(QWidget *parent) : QDockWidget(parent) {
     notation = new QComboBox();
     notation->addItem("Hexadecimal");
     notation->addItem("Decimal");
-    notation->addItem("Binary");
     notation->addItem("Octal");
 
     scrollarea = new QScrollArea(this);
@@ -223,8 +222,6 @@ void RegistersDock::clear_highlights() {
     hi_highlighted = false;
     lo_highlighted = false;
 }
-
-#include <QDebug>
 
 void RegistersDock::notation_change(std::int32_t idx) {
     if (regs) {
