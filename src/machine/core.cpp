@@ -42,6 +42,8 @@
 
 using namespace machine;
 
+#include <QDebug>
+
 Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
            std::uint32_t min_cache_row_size, Cop0State *cop0state) :
            ex_handlers(), hw_breaks() {
@@ -982,8 +984,8 @@ void CorePipelined::do_step(bool skip_break) {
             if (dt_d.jump) {
                 // Jump is on ID and we can evaluate its address.
                 if (!bp->prediction()) {
-                    // The second parameter does not mattter here.
-                    correct_address = get_correct_address(pc_before_jmp, 0, true);
+                    // The second parameter does not matter here.
+                    correct_address = get_correct_address(pc_before_jmp, false, true);
                     // We had a BTB miss, flush appropriate stages and update BTB.
                     flush_stages();
                     regs->pc_abs_jmp(correct_address - 4);

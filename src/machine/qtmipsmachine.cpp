@@ -40,9 +40,11 @@
 
 using namespace machine;
 
+#include <QDebug>
+
 QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool load_executable) :
                              QObject(), mcnf(cc) {
-    MemoryAccess *cpu_mem, *mem_lower;
+    MemoryAccess *cpu_mem;
     std::uint32_t min_cache_row_size;
 
     stat = ST_READY;
@@ -81,22 +83,26 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
     perip_lcd_display = new LcdDisplay();
     addressapce_insert_range(perip_lcd_display, 0xffe00000, 0xffe4afff, true);
 
-    l2_unified = new Cache(cpu_mem, cc.l2_unified_cache(),
-                           cc.l2_unified_cache().upper_mem_access_read(),
-                           cc.l2_unified_cache().upper_mem_access_write(),
-                           cc.l2_unified_cache().upper_mem_access_burst());
+    l2_unified = new Cache(cpu_mem, cc.l2_unified_cache(), cc.ram_access_read(), cc.ram_access_write(),
+                           cc.ram_access_burst());
 
-    /* If L2 cache is enabled, make it the upper level of L1, else use DRAM.  */
-    mem_lower = cc.l2_unified_cache().enabled() ? l2_unified : cpu_mem;
+    if (cc.l2_unified_cache().enabled()) {
+        l1_data = new Cache(l2_unified, cc.l1_data_cache(), cc.l2_unified_cache().mem_access_read(),
+                            cc.l2_unified_cache().mem_access_write(), cc.l2_unified_cache().mem_access_burst());
+        l1_program = new Cache(l2_unified, cc.l1_program_cache(), cc.l2_unified_cache().mem_access_read(),
+                               cc.l2_unified_cache().mem_access_write(), cc.l2_unified_cache().mem_access_burst());
+    } else {
+        l1_data = new Cache(cpu_mem, cc.l1_data_cache(), cc.ram_access_read(), cc.ram_access_write(),
+                            cc.ram_access_burst());
+        l1_program = new Cache(cpu_mem, cc.l1_program_cache(), cc.ram_access_read(), cc.ram_access_write(),
+                               cc.ram_access_burst());
+    }
 
-    l1_data = new Cache(mem_lower, cc.l1_data_cache(),
-                        cc.l1_data_cache().upper_mem_access_read(),
-                        cc.l1_data_cache().upper_mem_access_write(),
-                        cc.l1_data_cache().upper_mem_access_burst());
-    l1_program = new Cache(mem_lower, cc.l1_program_cache(),
-                           cc.l1_program_cache().upper_mem_access_read(),
-                           cc.l1_program_cache().upper_mem_access_write(),
-                           cc.l1_program_cache().upper_mem_access_burst());
+    qDebug() << "mem_lower : " << (cc.l2_unified_cache().enabled() ? "l2_unified" : "cpu_mem");
+    qDebug() << cc.l1_data_cache().mem_access_read() << " " << cc.l1_data_cache().mem_access_write();
+    qDebug() << cc.l2_unified_cache().mem_access_read() << " " << cc.l2_unified_cache().mem_access_write();
+    qDebug() << cc.ram_access_read() << " " << cc.ram_access_write();
+    qDebug();
 
     min_cache_row_size = 16;
     if (cc.l1_data_cache().enabled())

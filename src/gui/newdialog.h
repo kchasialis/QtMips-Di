@@ -125,7 +125,7 @@ private slots:
 
 private:
 	NewDialog *nd;
-	Ui::NewDialogCache *ui;
+	Ui::NewDialogCache *cache_ui;
 	machine::MachineConfigCache *config;
 };
 

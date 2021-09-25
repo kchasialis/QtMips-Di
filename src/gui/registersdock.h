@@ -38,7 +38,9 @@
 
 #include <QDockWidget>
 #include <QLabel>
+#include <QComboBox>
 #include <QFormLayout>
+#include <QVBoxLayout>
 #include <QScrollArea>
 #include <QPropertyAnimation>
 #include <QPalette>
@@ -60,8 +62,15 @@ private slots:
     void gp_read(std::uint8_t i, std::uint32_t val);
     void hi_lo_read(bool hi, std::uint32_t val);
     void clear_highlights();
+    void notation_change(std::int32_t idx);
 
 private:
+    enum NotationOption {
+        HEXADECIMAL,
+        DECIMAL,
+        OCTAL
+    };
+
     StaticTable *widg;
     QScrollArea *scrollarea;
 
@@ -69,6 +78,8 @@ private:
     QLabel *hi;
     QLabel *lo;
     QLabel *gp[32];
+    QComboBox *notation;
+    const machine::Registers *regs;
 
     std::uint32_t gp_highlighted;
     bool hi_highlighted;

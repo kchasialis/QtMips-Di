@@ -301,22 +301,22 @@ void NewDialog::mem_protec_write_change(bool v) {
 }
 
 void NewDialog::mem_time_read_change(int v) {
-    if (config->l2_unified_cache().upper_mem_access_read() != (unsigned)v) {
-        config->access_l2_unified_cache()->set_upper_mem_access_read(v);
+    if (config->l2_unified_cache().mem_access_read() != (unsigned)v) {
+        config->set_ram_access_read(v);
         switch2custom();
     }
 }
 
 void NewDialog::mem_time_write_change(int v) {
-    if (config->l2_unified_cache().upper_mem_access_write() != (unsigned)v) {
-        config->access_l2_unified_cache()->set_upper_mem_access_write(v);
+    if (config->l2_unified_cache().mem_access_write() != (unsigned)v) {
+        config->set_ram_access_write(v);
         switch2custom();
     }
 }
 
 void NewDialog::mem_time_burst_change(int v) {
-    if (config->l2_unified_cache().upper_mem_access_burst() != (unsigned)v) {
-        config->access_l2_unified_cache()->set_upper_mem_access_burst(v);
+    if (config->l2_unified_cache().mem_access_burst() != (unsigned)v) {
+        config->set_ram_access_burst(v);
         switch2custom();
     }
 }
@@ -382,15 +382,15 @@ void NewDialog::config_gui() {
     // Memory
     ui->mem_protec_exec->setChecked(config->memory_execute_protection());
     ui->mem_protec_write->setChecked(config->memory_write_protection());
-    ui->mem_access_read->setValue(config->l2_unified_cache().upper_mem_access_read());
-    ui->mem_access_write->setValue(config->l2_unified_cache().upper_mem_access_write());
-    ui->mem_access_burst->setValue(config->l2_unified_cache().upper_mem_access_burst());
+    ui->mem_access_read->setValue(config->ram_access_read());
+    ui->mem_access_write->setValue(config->ram_access_write());
+    ui->mem_access_burst->setValue(config->ram_access_burst());
     // Cache
     l1_d_cache_handler->config_gui();
     l1_p_cache_handler->config_gui();
-    l2_u_cache_handler->config_gui(config->l1_data_cache().upper_mem_access_read(),
-                                   config->l1_data_cache().upper_mem_access_write(),
-                                   config->l1_data_cache().upper_mem_access_burst());
+    l2_u_cache_handler->config_gui(config->l2_unified_cache().mem_access_read(),
+                                   config->l2_unified_cache().mem_access_write(),
+                                   config->l2_unified_cache().mem_access_burst());
     // Operating system and exceptions
     ui->osemu_enable->setChecked(config->osemu_enable());
     ui->osemu_known_syscall_stop->setChecked(config->osemu_known_syscall_stop());
@@ -483,17 +483,17 @@ void NewDialog::store_settings() {
 
 NewDialogCacheHandler::NewDialogCacheHandler(NewDialog *nd, Ui::NewDialogCache *cui) {
 	this->nd = nd;
-	this->ui = cui;
+	this->cache_ui = cui;
 	this->config = nullptr;
-	connect(ui->enabled, SIGNAL(clicked(bool)), this, SLOT(enabled(bool)));
-	connect(ui->number_of_sets, SIGNAL(editingFinished()), this, SLOT(numsets()));
-	connect(ui->block_size, SIGNAL(editingFinished()), this, SLOT(blocksize()));
-	connect(ui->degree_of_associativity, SIGNAL(editingFinished()), this, SLOT(degreeassociativity()));
-	connect(ui->replacement_policy, SIGNAL(activated(int)), this, SLOT(replacement(int)));
-	connect(ui->writeback_policy, SIGNAL(activated(int)), this, SLOT(writeback(int)));
-    connect(ui->l2_access_read, SIGNAL(valueChanged(int)), this, SLOT(access_read(int)));
-    connect(ui->l2_access_write, SIGNAL(valueChanged(int)), this, SLOT(access_write(int)));
-    connect(ui->l2_access_burst, SIGNAL(valueChanged(int)), this, SLOT(access_burst(int)));
+	connect(cache_ui->enabled, SIGNAL(clicked(bool)), this, SLOT(enabled(bool)));
+	connect(cache_ui->number_of_sets, SIGNAL(editingFinished()), this, SLOT(numsets()));
+	connect(cache_ui->block_size, SIGNAL(editingFinished()), this, SLOT(blocksize()));
+	connect(cache_ui->degree_of_associativity, SIGNAL(editingFinished()), this, SLOT(degreeassociativity()));
+	connect(cache_ui->replacement_policy, SIGNAL(activated(int)), this, SLOT(replacement(int)));
+	connect(cache_ui->writeback_policy, SIGNAL(activated(int)), this, SLOT(writeback(int)));
+    connect(cache_ui->access_read, SIGNAL(valueChanged(int)), this, SLOT(access_read(int)));
+    connect(cache_ui->access_write, SIGNAL(valueChanged(int)), this, SLOT(access_write(int)));
+    connect(cache_ui->access_burst, SIGNAL(valueChanged(int)), this, SLOT(access_burst(int)));
 }
 
 void NewDialogCacheHandler::set_config(machine::MachineConfigCache *config) {
@@ -501,15 +501,15 @@ void NewDialogCacheHandler::set_config(machine::MachineConfigCache *config) {
 }
 
 void NewDialogCacheHandler::config_gui(int time_read, int time_write, int time_burst) {
-    ui->enabled->setChecked(config->enabled());
-    ui->number_of_sets->setValue(config->sets());
-    ui->block_size->setValue(config->blocks());
-    ui->degree_of_associativity->setValue(config->associativity());
-    ui->replacement_policy->setCurrentIndex((int)config->replacement_policy());
-    ui->writeback_policy->setCurrentIndex((int)config->write_policy());
-    ui->l2_access_read->setValue(time_read);
-    ui->l2_access_write->setValue(time_write);
-    ui->l2_access_burst->setValue(time_burst);
+    cache_ui->enabled->setChecked(config->enabled());
+    cache_ui->number_of_sets->setValue(config->sets());
+    cache_ui->block_size->setValue(config->blocks());
+    cache_ui->degree_of_associativity->setValue(config->associativity());
+    cache_ui->replacement_policy->setCurrentIndex((int)config->replacement_policy());
+    cache_ui->writeback_policy->setCurrentIndex((int)config->write_policy());
+    cache_ui->access_read->setValue(time_read);
+    cache_ui->access_write->setValue(time_write);
+    cache_ui->access_burst->setValue(time_burst);
 }
 
 void NewDialogCacheHandler::enabled(bool val) {
@@ -551,17 +551,17 @@ void NewDialogCacheHandler::enabled(bool val) {
 }
 
 void NewDialogCacheHandler::numsets() {
-	config->set_sets(ui->number_of_sets->value());
+	config->set_sets(cache_ui->number_of_sets->value());
 	nd->switch2custom();
 }
 
 void NewDialogCacheHandler::blocksize() {
-	config->set_blocks(ui->block_size->value());
+	config->set_blocks(cache_ui->block_size->value());
 	nd->switch2custom();
 }
 
 void NewDialogCacheHandler::degreeassociativity() {
-	config->set_associativity(ui->degree_of_associativity->value());
+	config->set_associativity(cache_ui->degree_of_associativity->value());
 	nd->switch2custom();
 }
 
@@ -576,22 +576,16 @@ void NewDialogCacheHandler::writeback(int val) {
 }
 
 void NewDialogCacheHandler::access_read(int val) {
-    if (config->type() == machine::MemoryAccess::MemoryType::L1_CACHE) {
-        config->set_upper_mem_access_read(val);
-        nd->switch2custom();
-    }
+    config->set_mem_access_read(val);
+    nd->switch2custom();
 }
 
 void NewDialogCacheHandler::access_write(int val) {
-    if (config->type() == machine::MemoryAccess::MemoryType::L1_CACHE) {
-        config->set_upper_mem_access_write(val);
-        nd->switch2custom();
-    }
+    config->set_mem_access_write(val);
+    nd->switch2custom();
 }
 
 void NewDialogCacheHandler::access_burst(int val) {
-    if (config->type() == machine::MemoryAccess::MemoryType::L1_CACHE) {
-        config->set_upper_mem_access_burst(val);
-        nd->switch2custom();
-    }
+    config->set_mem_access_burst(val);
+    nd->switch2custom();
 }

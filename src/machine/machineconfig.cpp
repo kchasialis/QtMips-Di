@@ -47,13 +47,16 @@ using namespace machine;
 #define DF_HUNIT HU_STALL_FORWARD
 #define DF_EXEC_PROTEC false
 #define DF_WRITE_PROTEC false
+#define DF_DRAM_ACC_READ 80
+#define DF_DRAM_ACC_WRITE 80
+#define DF_DRAM_ACC_BURST 0
 #define DF_ELF QString("")
 //////////////////////////////////////////////////////////////////////////////
 /// Default config of MachineConfigCache
 #define DFC_EN false
-#define DFC_MEM_ACC_READ 80
-#define DFC_MEM_ACC_WRITE 80
-#define DFC_MEM_ACC_BURST 0
+#define DFC_L1_ACC_READ 1
+#define DFC_L1_ACC_WRITE 1
+#define DFC_L1_ACC_BURST 0
 #define DFC_L2_ACC_READ 5
 #define DFC_L2_ACC_WRITE 5
 #define DFC_L2_ACC_BURST 0
@@ -67,14 +70,14 @@ using namespace machine;
 MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct) {
     switch (ct) {
     case MemoryAccess::MemoryType::L1_CACHE:
-        upper_mem_time_read = DFC_L2_ACC_READ;
-        upper_mem_time_write = DFC_L2_ACC_WRITE;
-        upper_mem_time_burst = DFC_L2_ACC_BURST;
+        m_time_read = DFC_L1_ACC_READ;
+        m_time_write = DFC_L1_ACC_WRITE;
+        m_time_burst = DFC_L1_ACC_BURST;
         break;
     case MemoryAccess::MemoryType::L2_CACHE:
-        upper_mem_time_read = DFC_MEM_ACC_READ;
-        upper_mem_time_write = DFC_MEM_ACC_WRITE;
-        upper_mem_time_burst = DFC_MEM_ACC_BURST;
+        m_time_read = DFC_L2_ACC_READ;
+        m_time_write = DFC_L2_ACC_WRITE;
+        m_time_burst = DFC_L2_ACC_BURST;
         break;
     case MemoryAccess::MemoryType::DRAM:
     default:
@@ -98,14 +101,14 @@ MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct, const QSetti
     cache_type = (MemoryAccess::MemoryType)sts->value(N("CacheType"), (int32_t) ct).toUInt();
     switch (cache_type) {
     case MemoryAccess::MemoryType::L1_CACHE:
-        upper_mem_time_read = sts->value(N("UpperAccessTimeRead"), DFC_L2_ACC_READ).toUInt();
-        upper_mem_time_write = sts->value(N("UpperAccessTimeWrite"), DFC_L2_ACC_WRITE).toUInt();
-        upper_mem_time_burst = sts->value(N("UpperAccessTimeBurst"), DFC_L2_ACC_BURST).toUInt();
+        m_time_read = sts->value(N("AccessTimeRead"), DFC_L1_ACC_READ).toUInt();
+        m_time_write = sts->value(N("AccessTimeWrite"), DFC_L1_ACC_WRITE).toUInt();
+        m_time_burst = sts->value(N("AccessTimeBurst"), DFC_L1_ACC_BURST).toUInt();
         break;
     case MemoryAccess::MemoryType::L2_CACHE:
-        upper_mem_time_read = sts->value(N("UpperAccessTimeRead"), DFC_MEM_ACC_READ).toUInt();
-        upper_mem_time_write = sts->value(N("UpperAccessTimeWrite"), DFC_MEM_ACC_WRITE).toUInt();
-        upper_mem_time_burst = sts->value(N("UpperAccessTimeBurst"), DFC_MEM_ACC_BURST).toUInt();
+        m_time_read = sts->value(N("AccessTimeRead"), DFC_L2_ACC_READ).toUInt();
+        m_time_write = sts->value(N("AccessTimeWrite"), DFC_L2_ACC_WRITE).toUInt();
+        m_time_burst = sts->value(N("AccessTimeBurst"), DFC_L2_ACC_BURST).toUInt();
         break;
     case MemoryAccess::MemoryType::DRAM:
     default:
@@ -121,9 +124,9 @@ MachineConfigCache::MachineConfigCache(MemoryAccess::MemoryType ct, const QSetti
 
 void MachineConfigCache::store(QSettings *sts, const QString &prefix) {
     sts->setValue(N("Enabled"), enabled());
-    sts->setValue(N("UpperAccessTimeRead"), upper_mem_access_read());
-    sts->setValue(N("UpperAccessTimeWrite"), upper_mem_access_write());
-    sts->setValue(N("UpperAccessTimeBurst"), upper_mem_access_burst());
+    sts->setValue(N("AccessTimeRead"), mem_access_read());
+    sts->setValue(N("AccessTimeWrite"), mem_access_write());
+    sts->setValue(N("AccessTimeBurst"), mem_access_burst());
     sts->setValue(N("Sets"), sets());
     sts->setValue(N("Blocks"), blocks());
     sts->setValue(N("Associativity"), associativity());
@@ -141,15 +144,15 @@ void MachineConfigCache::preset(ConfigPresets p) {
     case MemoryAccess::MemoryType::L1_CACHE:
         // Default settings for L1.
         is_level1 = true;
-        set_upper_mem_access_read(DFC_L2_ACC_READ);
-        set_upper_mem_access_write(DFC_L2_ACC_WRITE);
-        set_upper_mem_access_burst(DFC_L2_ACC_BURST);
+        set_mem_access_read(DFC_L1_ACC_READ);
+        set_mem_access_write(DFC_L1_ACC_WRITE);
+        set_mem_access_burst(DFC_L1_ACC_BURST);
         break;
     case MemoryAccess::MemoryType::L2_CACHE:
         is_level1 = false;
-        set_upper_mem_access_read(DFC_MEM_ACC_READ);
-        set_upper_mem_access_write(DFC_MEM_ACC_WRITE);
-        set_upper_mem_access_burst(DFC_MEM_ACC_BURST);
+        set_mem_access_read(DFC_L2_ACC_READ);
+        set_mem_access_write(DFC_L2_ACC_WRITE);
+        set_mem_access_burst(DFC_L2_ACC_BURST);
         break;
     case MemoryAccess::MemoryType::DRAM:
     default:
@@ -185,16 +188,16 @@ void MachineConfigCache::set_enabled(bool e) {
     en = e;
 }
 
-void MachineConfigCache::set_upper_mem_access_read(std::uint32_t ar) {
-    upper_mem_time_read = ar;
+void MachineConfigCache::set_mem_access_read(std::uint32_t ar) {
+    m_time_read = ar;
 }
 
-void MachineConfigCache::set_upper_mem_access_write(std::uint32_t aw) {
-    upper_mem_time_write = aw;
+void MachineConfigCache::set_mem_access_write(std::uint32_t aw) {
+    m_time_write = aw;
 }
 
-void MachineConfigCache::set_upper_mem_access_burst(std::uint32_t ab) {
-    upper_mem_time_burst = ab;
+void MachineConfigCache::set_mem_access_burst(std::uint32_t ab) {
+    m_time_burst = ab;
 }
 
 void MachineConfigCache::set_sets(std::uint32_t s) {
@@ -225,16 +228,16 @@ bool MachineConfigCache::enabled() const {
     return en;
 }
 
-std::uint32_t MachineConfigCache::upper_mem_access_read() const {
-    return upper_mem_time_read;
+std::uint32_t MachineConfigCache::mem_access_read() const {
+    return m_time_read;
 }
 
-std::uint32_t MachineConfigCache::upper_mem_access_write() const {
-    return upper_mem_time_write;
+std::uint32_t MachineConfigCache::mem_access_write() const {
+    return m_time_write;
 }
 
-std::uint32_t MachineConfigCache::upper_mem_access_burst() const {
-    return upper_mem_time_burst;
+std::uint32_t MachineConfigCache::mem_access_burst() const {
+    return m_time_burst;
 }
 
 unsigned MachineConfigCache::sets() const {
@@ -264,9 +267,9 @@ MemoryAccess::MemoryType MachineConfigCache::type() const {
 bool MachineConfigCache::operator==(const MachineConfigCache &c) const {
 #define CMP(GETTER) (GETTER)() == (c.GETTER)()
     return CMP(enabled) && \
-            CMP(upper_mem_access_read) && \
-            CMP(upper_mem_access_write) && \
-            CMP(upper_mem_access_burst) && \
+            CMP(mem_access_read) && \
+            CMP(mem_access_write) && \
+            CMP(mem_access_burst) && \
             CMP(sets) && \
             CMP(blocks) && \
             CMP(associativity) && \
@@ -295,6 +298,9 @@ MachineConfig::MachineConfig() {
     osem_fs_root = "";
     res_at_compile = true;
     elf_path = DF_ELF;
+    dram_access_read = DF_DRAM_ACC_READ;
+    dram_access_write = DF_DRAM_ACC_WRITE;
+    dram_access_burst = DF_DRAM_ACC_BURST;
     l1_data = MachineConfigCache(MemoryAccess::MemoryType::L1_CACHE);
     l1_program = MachineConfigCache(MemoryAccess::MemoryType::L1_CACHE);
     l2_unified = MachineConfigCache(MemoryAccess::MemoryType::L2_CACHE);
@@ -316,6 +322,9 @@ MachineConfig::MachineConfig(const MachineConfig& cc) noexcept {
     this->osem_fs_root = cc.osemu_fs_root();
     this->res_at_compile = cc.reset_at_compile();
     this->elf_path = cc.elf();
+    this->dram_access_read = cc.ram_access_read();
+    this->dram_access_write = cc.ram_access_write();
+    this->dram_access_burst = cc.ram_access_burst();
     this->l1_data = cc.l1_data_cache();
     this->l1_program = cc.l1_program_cache();
     this->l2_unified = cc.l2_unified_cache();
@@ -339,6 +348,9 @@ MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) {
     osem_fs_root = sts->value(N("OsemuFilesystemRoot"), "").toString();
     res_at_compile = sts->value(N("ResetAtCompile"), true).toBool();
     elf_path = sts->value(N("Elf"), DF_ELF).toString();
+    dram_access_read = sts->value(N("DRAMAccessRead"), DF_DRAM_ACC_READ).toUInt();
+    dram_access_write = sts->value(N("DRAMAccessWrite"), DF_DRAM_ACC_WRITE).toUInt();
+    dram_access_burst = sts->value(N("DRAMAccessBurst"), DF_DRAM_ACC_BURST).toUInt();
     l1_data = MachineConfigCache(MemoryAccess::MemoryType::L1_CACHE, sts, N("L1DataCache_"));
     l1_program = MachineConfigCache(MemoryAccess::MemoryType::L1_CACHE, sts, N("L1ProgramCache_"));
     l2_unified = MachineConfigCache(MemoryAccess::MemoryType::L2_CACHE, sts, N("L2UnifiedCache_"));
@@ -358,6 +370,9 @@ void MachineConfig::store(QSettings *sts, const QString &prefix) {
     sts->setValue(N("OsemuFilesystemRoot"), osemu_fs_root());
     sts->setValue(N("ResetAtCompile"), reset_at_compile());
     sts->setValue(N("Elf"), elf());
+    sts->setValue(N("DRAMAccessRead"), ram_access_read());
+    sts->setValue(N("DRAMAccessWrite"), ram_access_write());
+    sts->setValue(N("DRAMAccessBurst"), ram_access_burst());
     l1_data.store(sts, N("L1DataCache_"));
     l1_program.store(sts, N("L1ProgramCache_"));
     l2_unified.store(sts, N("L2UnifiedCache_"));
@@ -468,6 +483,18 @@ void MachineConfig::set_elf(QString path) {
     elf_path = path;
 }
 
+void MachineConfig::set_ram_access_read(std::uint32_t dar) {
+    dram_access_read = dar;
+}
+
+void MachineConfig::set_ram_access_write(std::uint32_t daw) {
+    dram_access_write = daw;
+}
+
+void MachineConfig::set_ram_access_burst(std::uint32_t dab) {
+    dram_access_burst = dab;
+}
+
 void MachineConfig::set_l1_data_cache(const MachineConfigCache& l1_d) {
     l1_data = l1_d;
 }
@@ -542,6 +569,18 @@ bool MachineConfig::reset_at_compile() const {
 
 QString MachineConfig::elf() const {
     return elf_path;
+}
+
+std::uint32_t MachineConfig::ram_access_read() const {
+    return dram_access_read;
+}
+
+std::uint32_t MachineConfig::ram_access_write() const {
+    return dram_access_write;
+}
+
+std::uint32_t MachineConfig::ram_access_burst() const {
+    return dram_access_burst;
 }
 
 const MachineConfigCache &MachineConfig::l1_data_cache() const {

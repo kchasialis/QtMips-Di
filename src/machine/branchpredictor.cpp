@@ -3,6 +3,8 @@
 
 using namespace machine;
 
+#include <QDebug>
+
 BranchPredictor::BranchPredictor(std::uint8_t bht_bits) {
     this->btb_impl = std::make_shared<BranchTargetBuffer>(bht_bits);
     this->bht_bits = bht_bits;
@@ -44,10 +46,10 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
     idx = bht_idx(pc);
 
     if (l_jmp) {
-        j_info.btb_miss = btb_impl->pc_address(idx, pc, &address);
+        j_info.btb_miss = !btb_impl->pc_address(idx, pc, &address);
         j_info.pos_jmp = idx;
 
-        return j_info.btb_miss ? address : (pc + 4);
+        return j_info.btb_miss ? (pc + 4) : address;
     } else if (bj_instr.flags() & IMF_BRANCH) {
         BranchInfo b_info;
 
@@ -55,8 +57,8 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
         b_info.branch = get_prediction(idx);
         b_info.btb_miss = false;
         if (b_info.branch) {
-            b_info.btb_miss = btb_impl->pc_address(idx, pc, &address);
-            b_info.branch = b_info.btb_miss;
+            b_info.btb_miss = !btb_impl->pc_address(idx, pc, &address);
+            b_info.branch = !b_info.btb_miss;
         }
         b_info.pos_branch = idx;
 
@@ -92,11 +94,11 @@ double BranchPredictor::accuracy() const {
 }
 
 bool BranchPredictor::prediction() const {
-    return l_jmp ? j_info.btb_miss : b_infos[0].branch;
+    return l_jmp ? !j_info.btb_miss : b_infos[0].branch;
 }
 
 std::uint32_t BranchPredictor::pos_predicted() const {
-    return l_jmp ? j_info.pos_jmp : b_infos[0].pos_branch;
+    return l_jmp ? !j_info.pos_jmp : b_infos[0].pos_branch;
 }
 
 const BranchTargetBuffer *BranchPredictor::btb() const {
@@ -147,7 +149,6 @@ bool OneBitBranchPredictor::get_prediction(std::uint32_t bht_idx) {
 }
 
 void OneBitBranchPredictor::update_bht(bool branch, std::uint32_t correct_address) {
-
     if (!l_jmp) {
         const BranchInfo &b_info = dequeue();
         bool updated_btb = false;
@@ -208,8 +209,6 @@ void TwoBitBranchPredictor::update_bht(bool branch, std::uint32_t correct_addres
         if (branch == b_info.branch) {
             correct_predictions++;
         } else {
-            const BranchInfo &b_info = dequeue();
-
             // Last instruction was a branch and we predicted the wrong result or we had a btb miss.
             switch (bht[b_info.pos_branch]) {
             case FSMStates::STRONGLY_NT:

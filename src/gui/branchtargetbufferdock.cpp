@@ -8,8 +8,8 @@ BranchTargetBufferDock::BranchTargetBufferDock(QWidget *parent) : Super(parent) 
     layout = new QHBoxLayout();
     btb_content = new BranchTargetBufferTableView(this);
 
-    setObjectName("BranchTargetBuffer");
-    setWindowTitle("BranchTargetBuffer");
+    setObjectName("Branch Target Buffer");
+    setWindowTitle("Branch Target Buffer");
     layout->addWidget(btb_content);
     content->setLayout(layout);
     setWidget(content);

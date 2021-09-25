@@ -74,9 +74,9 @@ public:
 
     // If cache should be used or not
     void set_enabled(bool e);
-    void set_upper_mem_access_read(std::uint32_t ar);
-    void set_upper_mem_access_write(std::uint32_t aw);
-    void set_upper_mem_access_burst(std::uint32_t ab);
+    void set_mem_access_read(std::uint32_t ar);
+    void set_mem_access_write(std::uint32_t aw);
+    void set_mem_access_burst(std::uint32_t ab);
     void set_sets(std::uint32_t s); // Number of sets
     void set_blocks(std::uint32_t b); // Number of blocks
     void set_associativity(std::uint32_t a); // Degree of associativity
@@ -85,9 +85,9 @@ public:
     void set_type(MemoryAccess::MemoryType ct);
 
     bool enabled() const;
-    std::uint32_t upper_mem_access_read() const;
-    std::uint32_t upper_mem_access_write() const;
-    std::uint32_t upper_mem_access_burst() const;
+    std::uint32_t mem_access_read() const;
+    std::uint32_t mem_access_write() const;
+    std::uint32_t mem_access_burst() const;
     std::uint32_t sets() const;
     std::uint32_t blocks() const;
     std::uint32_t associativity() const;
@@ -100,7 +100,7 @@ public:
 
 private:
     bool en;
-    std::uint32_t upper_mem_time_read, upper_mem_time_write, upper_mem_time_burst;
+    std::uint32_t m_time_read, m_time_write, m_time_burst;
     std::uint32_t n_sets, n_blocks, d_associativity;
     ReplacementPolicy replac_pol;
     WritePolicy write_pol;
@@ -159,6 +159,10 @@ public:
     void set_reset_at_compile(bool);
     // Set path to source elf file. This has to be set before core is initialized.
     void set_elf(QString);
+    // Configure DRAM access times.
+    void set_ram_access_read(std::uint32_t);
+    void set_ram_access_write(std::uint32_t);
+    void set_ram_access_burst(std::uint32_t);
     // Configure cache
     void set_l1_data_cache(const MachineConfigCache&);
     void set_l1_program_cache(const MachineConfigCache&);
@@ -180,10 +184,13 @@ public:
     QString osemu_fs_root() const;
     bool reset_at_compile() const;
     QString elf() const;
+    std::uint32_t ram_access_read() const;
+    std::uint32_t ram_access_write() const;
+    std::uint32_t ram_access_burst() const;
+
     const MachineConfigCache &l1_data_cache() const;
     const MachineConfigCache &l1_program_cache() const;
     const MachineConfigCache &l2_unified_cache() const;
-
     MachineConfigCache *access_l1_data_cache();
     MachineConfigCache *access_l1_program_cache();
     MachineConfigCache *access_l2_unified_cache();
@@ -207,6 +214,7 @@ private:
     MachineConfigCache l1_data, l1_program;
     // L2 cache is unified.
     MachineConfigCache l2_unified;
+    std::uint32_t dram_access_read, dram_access_write, dram_access_burst;
 };
 
 }

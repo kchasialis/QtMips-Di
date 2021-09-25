@@ -37,9 +37,12 @@
 
 using namespace machine;
 
+#include <QDebug>
+
 Cache::Cache(MemoryAccess *m, const MachineConfigCache& cc, std::uint32_t lower_access_penalty_r,
              std::uint32_t lower_access_penalty_w, std::uint32_t lower_access_penalty_b) : cnf(cc) {
     mem_lower = m;
+    qDebug() << lower_access_penalty_r << " " << lower_access_penalty_w;
     access_pen_r = lower_access_penalty_r;
     access_pen_w = lower_access_penalty_w;
     access_pen_b = lower_access_penalty_b;

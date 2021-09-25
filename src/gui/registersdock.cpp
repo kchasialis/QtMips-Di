@@ -73,6 +73,16 @@ static const QString labels[] = {
 RegistersDock::RegistersDock(QWidget *parent) : QDockWidget(parent) {
     static const QColor defaultTextColor(0, 0, 0);
 
+    regs = nullptr;
+
+    QVBoxLayout *vlay = new QVBoxLayout(this);
+
+    notation = new QComboBox();
+    notation->addItem("Hexadecimal");
+    notation->addItem("Decimal");
+    notation->addItem("Binary");
+    notation->addItem("Octal");
+
     scrollarea = new QScrollArea(this);
     scrollarea->setWidgetResizable(true);
     widg = new StaticTable(scrollarea);
@@ -84,14 +94,14 @@ RegistersDock::RegistersDock(QWidget *parent) : QDockWidget(parent) {
     pal_normal.setColor(QPalette::WindowText, defaultTextColor);
 
 #define INIT(X, LABEL) do{ \
-        X = new QLabel("0x00000000", widg); \
-        X->setFixedSize(X->sizeHint()); \
-        X->setText(""); \
-	X->setPalette(pal_normal); \
-        X->setTextInteractionFlags(Qt::TextSelectableByMouse); \
+        (X) = new QLabel("2147483647", widg); \
+        (X)->setFixedSize((X)->sizeHint()); \
+        (X)->setText(""); \
+    (X)->setPalette(pal_normal); \
+        (X)->setTextInteractionFlags(Qt::TextSelectableByMouse); \
 	QLabel *l = new QLabel(LABEL, widg); \
 	l->setPalette(pal_normal); \
-        widg->addRow({l, X}); \
+        widg->addRow({l, (X)}); \
     } while(false)
 
     for (int i = 0; i < 32; i++)
@@ -100,7 +110,9 @@ RegistersDock::RegistersDock(QWidget *parent) : QDockWidget(parent) {
     INIT(lo, "lo");
     INIT(hi, "hi");
 #undef INIT
-    scrollarea->setWidget(widg);
+    vlay->addWidget(notation);
+    vlay->addWidget(widg);
+    scrollarea->setLayout(vlay);
 
     setWidget(scrollarea);
     setObjectName("Registers");
@@ -133,7 +145,7 @@ void RegistersDock::setup(machine::QtMipsMachine *machine) {
         return;
     }
 
-    const machine::Registers *regs = machine->registers();
+    regs = machine->registers();
 
     // Load values
     labelVal(pc, regs->read_pc());
@@ -147,6 +159,7 @@ void RegistersDock::setup(machine::QtMipsMachine *machine) {
     connect(regs, SIGNAL(hi_lo_update(bool,std::uint32_t)), this, SLOT(hi_lo_changed(bool,std::uint32_t)));
     connect(regs, SIGNAL(gp_read(std::uint8_t,std::uint32_t)), this, SLOT(gp_read(std::uint8_t,std::uint32_t)));
     connect(regs, SIGNAL(hi_lo_read(bool,std::uint32_t)), this, SLOT(hi_lo_read(bool,std::uint32_t)));
+    connect(notation, QOverload<int>::of(&QComboBox::currentIndexChanged), this,  QOverload<int>::of(&RegistersDock::notation_change));
     connect(machine, SIGNAL(tick()), this, SLOT(clear_highlights()));
 }
 
@@ -211,7 +224,59 @@ void RegistersDock::clear_highlights() {
     lo_highlighted = false;
 }
 
+#include <QDebug>
+
+void RegistersDock::notation_change(std::int32_t idx) {
+    if (regs) {
+        int base;
+        QString prefix;
+        switch (idx) {
+        case HEXADECIMAL:
+            base = 16;
+            prefix = QString("0x");
+            break;
+        case DECIMAL:
+            base = 10;
+            prefix = "";
+            break;
+        case OCTAL:
+            base = 8;
+            prefix = "0";
+            break;
+        default:
+            SANITY_ASSERT(0, "Undefined notation");
+        }
+
+        for (std::int8_t reg = 0 ; reg < 32 ; reg++) {
+            gp[reg]->setText(prefix + QString::number(regs->read_gp(reg), base));
+        }
+        pc->setText(prefix + QString::number(regs->read_pc(), base));
+        lo->setText(prefix + QString::number(regs->read_hi_lo(false), base));
+        hi->setText(prefix + QString::number(regs->read_hi_lo(true), base));
+    }
+}
+
 void RegistersDock::labelVal(QLabel *label, std::uint32_t value) {
-    QString t = QString("0x") + QString::number(value, 16);
+    int base;
+    QString prefix;
+
+    switch (notation->currentIndex()) {
+    case HEXADECIMAL:
+        base = 16;
+        prefix = "0x";
+        break;
+    case DECIMAL:
+        base = 10;
+        prefix = "";
+        break;
+    case OCTAL:
+        base = 8;
+        prefix = "0";
+        break;
+    default:
+        SANITY_ASSERT(0, "Undefined notation");
+    }
+
+    QString t = prefix + QString::number(value, base);
     label->setText(t);
 }
