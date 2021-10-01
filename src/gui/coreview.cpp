@@ -247,10 +247,16 @@ CoreViewScene::CoreViewScene(machine::QtMipsMachine *machine) : QGraphicsScene()
     NEW_V(320, 390, decode_rd_num_value, false, 2, 0, 10, ' ');
     NEW_V(320, 500, writeback_regw_num_value, false, 2, 0, 10, ' ');
 
-    new_label("Cycles", 440, SC_HEIGHT - 14);
-    NEW_V(500, SC_HEIGHT - 9, cycles_c_value, false, 10, 0, 10, ' ', false);
-    new_label("Stalls", 570, SC_HEIGHT - 14);
-    NEW_V(630, SC_HEIGHT - 9, stalls_c_value, false, 10, 0, 10, ' ', false);
+//    new_label("Cycles:", 440, SC_HEIGHT - 14);
+//    NEW_V(420, SC_HEIGHT - 9, cycles_c_value, false, 10, 0, 10, ' ', false);
+//    new_label("Core Stalls", 500, SC_HEIGHT - 14);
+//    NEW_V(630, SC_HEIGHT - 9, stalls_c_value, false, 10, 0, 10, ' ', false);
+//    new_label("L1 Program Stalls", 560, SC_HEIGHT - 14);
+//    NEW_V(730, SC_HEIGHT - 9, l1_program_stalls_value, false, 10, 0, 10, ' ', false);
+//    new_label("L1 Data Stalls", 620, SC_HEIGHT - 14);
+//    NEW_V(830, SC_HEIGHT - 9, l1_data_stalls_value, false, 10, 0, 10, ' ', false);
+//    new_label("L2 Unified Stalls", 680, SC_HEIGHT - 14);
+//    NEW_V(930, SC_HEIGHT - 9, l2_unified_stalls_value, false, 10, 0, 10, ' ', false);
 
     setBackgroundBrush(QBrush(Qt::white));
 

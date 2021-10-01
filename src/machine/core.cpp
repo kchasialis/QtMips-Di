@@ -43,8 +43,8 @@ using namespace machine;
 Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
            std::uint32_t min_cache_row_size, Cop0State *cop0state) :
            ex_handlers(), hw_breaks() {
-    cycles = 0;
-    stalls = 0;
+    this->cycles = 0;
+    this->stalls = 0;
     this->regs = regs;
     this->cop0state = cop0state;
     this->mem_program = mem_program;
@@ -67,7 +67,6 @@ Core::~Core() {
 
 void Core::step(bool skip_break) {
     cycles++;
-    emit cycles_c_value(cycles + stalls);
     do_step(skip_break);
 }
 
@@ -81,27 +80,17 @@ unsigned Core::get_cycles() const {
     return cycles;
 }
 
-void Core::set_cycles(std::uint32_t c) {
-    cycles = c;
-}
-
-std::uint32_t Core::get_stalls() const {
+uint32_t Core::get_stalls() const {
     return stalls;
 }
 
-void Core::set_stalls(std::uint32_t s) {
-   stalls = s;
-   emit stalls_c_value(stalls);
-}
-
-Registers *Core::get_regs() {
+Registers *Core::get_regs() const {
     return regs;
 }
 
-Cop0State *Core::get_cop0state() {
+Cop0State *Core::get_cop0state() const {
     return cop0state;
 }
-
 
 MemoryAccess *Core::get_mem_data() const {
     return mem_data;
@@ -111,6 +100,14 @@ MemoryAccess *Core::get_mem_program() const {
     return mem_program;
 }
 
+void Core::set_cycles(uint32_t c) {
+    cycles = c;
+}
+
+void Core::set_stalls(uint32_t s) {
+    stalls = s;
+    emit stall_value_changed(s);
+}
 
 Core::hwBreak::hwBreak(std::uint32_t addr) {
     this->addr = addr;

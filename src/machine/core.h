@@ -84,13 +84,14 @@ public:
 
     virtual BranchPredictor *predictor() = 0;
 
-    std::uint32_t get_cycles() const; // Returns number of executed cycles
-    void set_cycles(std::uint32_t);
-    std::uint32_t get_stalls() const; // Returns number of stall cycles
-    void set_stalls(std::uint32_t);
+    uint32_t get_cycles() const;
+    uint32_t get_stalls() const;
 
-    Registers *get_regs();
-    Cop0State *get_cop0state();
+    void set_cycles(uint32_t);
+    void set_stalls(uint32_t);
+
+    Registers *get_regs() const;
+    Cop0State *get_cop0state() const;
     MemoryAccess *get_mem_data() const;
     MemoryAccess *get_mem_program() const;
     void register_exception_handler(ExceptionCause excause, ExceptionHandler *exhandler);
@@ -176,8 +177,7 @@ signals:
     void hu_stall_value(std::uint32_t);
     void branch_forward_value(std::uint32_t);
 
-    void cycles_c_value(std::uint32_t);
-    void stalls_c_value(std::uint32_t);
+    void stall_value_changed(uint32_t);
 
     void stop_on_exception_reached();
 
@@ -302,7 +302,7 @@ protected:
     void dtMemoryInit(struct dtMemory &dt);
 
 protected:
-    std::uint32_t stalls;
+    uint32_t stalls;
 private:
     struct hwBreak{
         hwBreak(std::uint32_t addr);
@@ -310,9 +310,9 @@ private:
         std::uint32_t flags;
         std::uint32_t count;
     };
-    std::uint32_t cycles;
-    std::uint32_t min_cache_row_size;
-    std::uint32_t hwr_userlocal;
+    uint32_t cycles;
+    uint32_t min_cache_row_size;
+    uint32_t hwr_userlocal;
     QMap<std::uint32_t, hwBreak *> hw_breaks;
     bool stop_on_exception[EXCAUSE_COUNT];
     bool step_over_exception[EXCAUSE_COUNT];

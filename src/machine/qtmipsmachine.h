@@ -54,6 +54,14 @@
 
 namespace machine {
 
+    struct CycleStatistics {
+        uint32_t cycles;
+        uint32_t core_stalls;
+        uint32_t l1_data_stalls;
+        uint32_t l1_program_stalls;
+        uint32_t l2_unified_stalls;
+    };
+
 class QtMipsMachine : public QObject {
     Q_OBJECT
 public:
@@ -93,6 +101,7 @@ public:
         ST_EXIT, // Machine exited
         ST_TRAPPED // Machine exited with failure
     };
+
     Status status();
     bool exited();
     void register_exception_handler(ExceptionCause excause, ExceptionHandler *exhandler);
@@ -121,6 +130,7 @@ signals:
     void tick(); // Time tick
     void post_tick(); // Emitted after tick to allow updates
     void set_interrupt_signal(uint irq_num, bool active);
+    void cycle_stats_update(const CycleStatistics&);
 
 private slots:
     void step_timer();
@@ -138,7 +148,7 @@ private:
     LcdDisplay *perip_lcd_display;
     Cache *l1_program, *l1_data;
     Cache *l2_unified;
-    std::uint32_t prev_cache_stalls;
+    CycleStatistics cycle_stats;
     Cop0State *cop0st;
     Core *cr;
     QTimer *run_t;

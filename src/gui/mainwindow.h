@@ -60,6 +60,7 @@
 #include "machineconfig.h"
 #include "srceditor.h"
 #include "assembler/simpleasm.h"
+#include "cyclestatisticsdock.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -112,6 +113,7 @@ public slots:
     void show_messages();
     void show_predictor();
     void show_btb();
+    void show_cycle_stats();
     // Actions - help menu
     void about_qtmips();
     void about_qt();
@@ -156,6 +158,7 @@ private:
     MessagesDock *messages;
     BranchPredictorDock *predictor;
     BranchTargetBufferDock *btb;
+    CycleStatisticsDock *cycle_stats;
     bool load_default_settings;
     bool coreview_shown;
     SrcEditor  *current_srceditor;

@@ -37,12 +37,17 @@
 
 using namespace machine;
 
-Cache::Cache(MemoryAccess *m, const MachineConfigCache& cc, std::uint32_t lower_access_penalty_r,
-             std::uint32_t lower_access_penalty_w, std::uint32_t lower_access_penalty_b) : cnf(cc) {
+#include <QDebug>
+
+Cache::Cache(MemoryAccess *m, const MachineConfigCache &cc, uint32_t acc_read, uint32_t acc_write, uint32_t acc_burst,
+             uint32_t lower_acc_pen_r, uint32_t lower_acc_pen_w, uint32_t lower_acc_pen_b) : cnf(cc) {
     mem_lower = m;
-    access_pen_r = lower_access_penalty_r;
-    access_pen_w = lower_access_penalty_w;
-    access_pen_b = lower_access_penalty_b;
+    access_read = acc_read;
+    access_write = acc_write;
+    access_burst = acc_burst;
+    access_pen_read = lower_acc_pen_r;
+    access_pen_write = lower_acc_pen_w;
+    access_pen_burst = lower_acc_pen_b;
     uncached_start = 0xf0000000;
     uncached_last = 0xffffffff;
     cache_type = cc.type();
@@ -223,17 +228,19 @@ std::uint32_t Cache::ml_writes() const {
 }
 
 std::uint32_t Cache::stalled_cycles() const {
-    std::uint32_t st_cycles = mem_lower_reads * (access_pen_r - 1) +
-                              mem_lower_writes * (access_pen_w - 1);
-    if (access_pen_b != 0)
-        st_cycles -= burst_reads * (access_pen_r - access_pen_b) +
-                     burst_writes * (access_pen_w - access_pen_b);
+    uint32_t st_cycles = read_misses * access_read + write_misses * access_write +
+                         mem_lower_reads * access_pen_read + mem_lower_writes * access_pen_write;
+
+    if (access_pen_burst != 0)
+        st_cycles -= burst_reads * (access_pen_read - access_pen_burst) +
+                     burst_writes * (access_pen_write - access_pen_burst);
+
     return st_cycles;
 }
 
 double Cache::speed_improvement() const {
     std::uint32_t lookup_time;
-    std::uint32_t mem_access_time;
+    std::uint32_t lower_access_time;
     std::uint32_t comp = read_hits + write_hits + read_misses + write_misses;
 
     if (comp == 0)
@@ -244,15 +251,15 @@ double Cache::speed_improvement() const {
     if (cnf.write_policy() == MachineConfigCache::WritePolicy::WP_BACK)
         lookup_time += write_hits + write_misses;
 
-    mem_access_time = mem_lower_reads * access_pen_r +
-                      mem_lower_writes * access_pen_w;
+    lower_access_time = mem_lower_reads * access_pen_read +
+                      mem_lower_writes * access_pen_write;
 
-    if (access_pen_b != 0)
-        mem_access_time -= burst_reads * (access_pen_r - access_pen_b) +
-                           burst_writes * (access_pen_w - access_pen_b);
+    if (access_pen_burst != 0)
+        lower_access_time -= burst_reads * (access_pen_read - access_pen_burst) +
+                           burst_writes * (access_pen_write - access_pen_burst);
 
-    return (double)((read_hits + read_misses) * access_pen_r + (write_hits + write_misses) * access_pen_w) \
-            / (double)(lookup_time + mem_access_time) \
+    return (double)((read_hits + read_misses) * access_pen_read + (write_hits + write_misses) * access_pen_write) \
+            / (double)(lookup_time + lower_access_time) \
             * 100;
 }
 
@@ -436,7 +443,7 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
         update_statistics();
     }
 
-    // Update replcement data
+    // Update replacement data
     switch (cnf.replacement_policy()) {
     case MachineConfigCache::ReplacementPolicy::RP_LRU:
     {

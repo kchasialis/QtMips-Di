@@ -46,8 +46,8 @@ namespace machine {
 class Cache : public MemoryAccess {
     Q_OBJECT
 public:
-    Cache(MemoryAccess *m, const MachineConfigCache &cc, std::uint32_t lower_access_penalty_r,
-          std::uint32_t lower_access_penalty_w, std::uint32_t lower_access_penalty_b);
+    Cache(MemoryAccess *m, const MachineConfigCache &cc, uint32_t acc_read, uint32_t acc_write, uint32_t acc_burst,
+          uint32_t lower_acc_pen_r, uint32_t lower_acc_pen_w, uint32_t lower_acc_pen_b);
     ~Cache();
 
     bool wword(std::uint32_t address, std::uint32_t value) override;
@@ -85,9 +85,10 @@ signals:
 private:
     MachineConfigCache cnf;
     MemoryAccess *mem_lower;
-    std::uint32_t access_pen_r, access_pen_w, access_pen_b;
-    std::uint32_t uncached_start;
-    std::uint32_t uncached_last;
+    uint32_t access_read, access_write, access_burst;
+    uint32_t access_pen_read, access_pen_write, access_pen_burst;
+    uint32_t uncached_start;
+    uint32_t uncached_last;
     MemoryType cache_type;
     mutable std::uint32_t read_hits, read_misses, write_hits, write_misses;
     mutable std::uint32_t mem_lower_reads, mem_lower_writes;

@@ -66,7 +66,7 @@ set(qtmips_gui_SOURCES
         extprocess.cpp
         savechangeddialog.cpp
         textsignalaction.cpp
-        )
+        cyclestatisticsdock.cpp)
 set(qtmips_gui_HEADERS
         coreview/programcounter.h
         coreview/multiplexer.h
@@ -127,7 +127,7 @@ set(qtmips_gui_HEADERS
         extprocess.h
         savechangeddialog.h
         textsignalaction.h
-        )
+        cyclestatisticsdock.h)
 set(qtmips_gui_UI
         gotosymboldialog.ui
         NewDialog.ui
@@ -138,7 +138,7 @@ set(qtmips_gui_UI
 set(qtmips_gui_RESOURCES
         icons.qrc
         samples.qrc
-        )
+        cyclestatisticsdock.cpp cyclestatisticsdock.h)
 
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Emscripten")
     message("qtmips_gui :: Including WASM only files.")

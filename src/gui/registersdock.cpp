@@ -75,7 +75,7 @@ RegistersDock::RegistersDock(QWidget *parent) : QDockWidget(parent) {
 
     regs = nullptr;
 
-    QVBoxLayout *vlay = new QVBoxLayout(this);
+    QVBoxLayout *vlay = new QVBoxLayout();
 
     notation = new QComboBox();
     notation->addItem("Hexadecimal");

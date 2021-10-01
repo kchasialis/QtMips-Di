@@ -93,6 +93,7 @@
     <addaction name="actionMessages"/>
     <addaction name="actionBPredictor"/>
     <addaction name="actionBtb"/>
+    <addaction name="actionCycle_Statistics"/>
    </widget>
    <widget class="QMenu" name="menuMachine">
     <property name="title">
@@ -597,6 +598,11 @@
    </property>
    <property name="toolTip">
     <string>Branch Target Buffer</string>
+   </property>
+  </action>
+  <action name="actionCycle_Statistics">
+   <property name="text">
+    <string>Cycle Statistics</string>
    </property>
   </action>
  </widget>

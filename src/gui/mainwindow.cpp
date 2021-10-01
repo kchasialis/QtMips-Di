@@ -110,6 +110,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     predictor->hide();
     btb = new BranchTargetBufferDock(this);
     btb->hide();
+    cycle_stats = new CycleStatisticsDock(this);
+    cycle_stats->hide();
 
     // Execution speed actions
     speed_group = new QActionGroup(this);
@@ -149,6 +151,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(ui->actionMessages, SIGNAL(triggered(bool)), this, SLOT(show_messages()));
     connect(ui->actionBPredictor, SIGNAL(triggered(bool)), this, SLOT(show_predictor()));
     connect(ui->actionBtb, SIGNAL(triggered(bool)), this, SLOT(show_btb()));
+    connect(ui->actionCycle_Statistics, SIGNAL(triggered(bool)), this, SLOT(show_cycle_stats()));
     connect(ui->actionAbout, SIGNAL(triggered(bool)), this, SLOT(about_qtmips()));
     connect(ui->actionAboutQt, SIGNAL(triggered(bool)), this, SLOT(about_qt()));
     connect(ui->ips1, SIGNAL(toggled(bool)), this, SLOT(set_speed()));
@@ -213,6 +216,7 @@ MainWindow::~MainWindow() {
     delete ui;
     delete predictor;
     delete btb;
+    delete cycle_stats;
     if (machine != nullptr)
         delete machine;
     settings->sync();
@@ -327,6 +331,7 @@ void MainWindow::create_core(const machine::MachineConfig &config, bool load_exe
         predictor->setup(machine);
         btb->setup(machine);
     }
+    cycle_stats->setup(machine);
 
     // Connect signals for instruction address followup
     connect(machine->core(), SIGNAL(fetch_inst_addr_value(std::uint32_t)),
@@ -417,6 +422,7 @@ SHOW_HANDLER(cop0dock, Qt::TopDockWidgetArea)
 SHOW_HANDLER(messages, Qt::BottomDockWidgetArea)
 SHOW_HANDLER(predictor, Qt::RightDockWidgetArea)
 SHOW_HANDLER(btb, Qt::RightDockWidgetArea)
+SHOW_HANDLER(cycle_stats, Qt::RightDockWidgetArea)
 #undef SHOW_HANDLER
 
 void MainWindow::show_symbol_dialog(){

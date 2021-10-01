@@ -48,7 +48,7 @@ class TerminalDock : public QDockWidget {
     Q_OBJECT
 public:
     TerminalDock(QWidget *parent, QSettings *settings);
-    ~TerminalDock();
+    ~TerminalDock() override;
 
     void setup(machine::SerialPort *ser_port);
 
