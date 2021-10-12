@@ -14,13 +14,13 @@ public:
 
     void setup(machine::QtMipsMachine *machine) const;
 
-private slots:
+public slots:
     void cycle_stats_update(const machine::CycleStatistics &stats);
 
 private:
     enum CycleStatIndex {
         TOTAL_CYCLES,
-        CYCLES,
+        CPU_CYCLES,
         CORE_STALLS,
         L1_DATA_STALLS,
         L1_PROGRAM_STALLS,

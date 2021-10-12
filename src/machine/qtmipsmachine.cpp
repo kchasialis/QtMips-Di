@@ -40,9 +40,11 @@
 
 using namespace machine;
 
+#include <QDebug>
+
 QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool load_executable) :
                              QObject(), mcnf(cc) {
-    MemoryAccess *cpu_mem;
+    MemoryAccess *cpu_mem, *core_mem_data, *core_mem_program;
     std::uint32_t min_cache_row_size;
 
     stat = ST_READY;
@@ -51,7 +53,7 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
     regs = new Registers();
     if (load_executable) {
         ProgramLoader program(cc.elf());
-        mem_program_only = new Memory();
+        mem_program_only = new Memory(cc.ram_access_read(), cc.ram_access_write(), cc.ram_access_burst());
         program.to_memory(mem_program_only);
         if (load_symtab)
             symtab = program.get_symbol_table();
@@ -62,10 +64,10 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
     } else {
         program_end = 0xf0000000;
         mem_program_only = nullptr;
-        mem = new Memory();
+        mem = new Memory(cc.ram_access_read(), cc.ram_access_write(), cc.ram_access_burst());
     }
 
-    physaddrspace = new PhysAddrSpace();
+    physaddrspace = new PhysAddrSpace(cc.ram_access_read(), cc.ram_access_write(), cc.ram_access_burst());
     physaddrspace->insert_range(mem, 0x00000000, 0xefffffff, false);
     cpu_mem = physaddrspace;
 
@@ -106,6 +108,9 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
                                cc.ram_access_read(), cc.ram_access_write(), cc.ram_access_burst());
     }
 
+    core_mem_data = cc.l1_data_cache().enabled() ? l1_data : cpu_mem;
+    core_mem_program = cc.l1_program_cache().enabled() ? l1_program : cpu_mem;
+
     min_cache_row_size = 16;
     if (cc.l1_data_cache().enabled())
         min_cache_row_size = cc.l1_data_cache().blocks() * 4;
@@ -113,20 +118,14 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
         cc.l1_program_cache().blocks() < min_cache_row_size)
         min_cache_row_size = cc.l1_program_cache().blocks() * 4;
 
-    cycle_stats.cycles = 0;
-    cycle_stats.core_stalls = 0;
-    cycle_stats.l1_data_stalls = 0;
-    cycle_stats.l1_program_stalls = 0;
-    cycle_stats.l2_unified_stalls = 0;
-
     cop0st = new Cop0State();
 
     if (cc.pipelined())
-        cr = new CorePipelined(regs, l1_program, l1_data, cc.hazard_unit(),
+        cr = new CorePipelined(regs, core_mem_program, core_mem_data, cc.hazard_unit(),
                                cc.branch_unit(), cc.bht_bits(), cc.branch_res_id(),
                                min_cache_row_size, cop0st);
     else
-        cr = new CoreSingle(regs, l1_program, l1_data,
+        cr = new CoreSingle(regs, core_mem_program, core_mem_data,
                             cc.branch_unit() == machine::MachineConfig::BU_DELAY_SLOT,
                             min_cache_row_size, cop0st);
 
@@ -329,11 +328,14 @@ void QtMipsMachine::step_internal(bool skip_break) {
         do {
             cr->step(skip_break);
             // Update cycles for cache misses in every step
-            cycle_stats.cycles = cr->get_cycles();
+            cycle_stats.cpu_cycles = cr->get_cycles();
             cycle_stats.core_stalls = cr->get_stalls();
             cycle_stats.l1_program_stalls = l1_program->stalled_cycles();
             cycle_stats.l1_data_stalls = l1_data->stalled_cycles();
             cycle_stats.l2_unified_stalls = l2_unified->stalled_cycles();
+            cycle_stats.total_cycles = cycle_stats.cpu_cycles + cycle_stats.core_stalls +
+                    l1_program->get_access_cycles() + l1_data->get_access_cycles() + l2_unified->get_access_cycles()
+                    + physaddrspace->get_access_cycles();
             emit cycle_stats_update(cycle_stats);
         } while(time_chunk != 0 && stat == ST_BUSY && skip_break == false &&
                 start_time.msecsTo(QTime::currentTime()) < (int)time_chunk);

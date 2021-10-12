@@ -40,11 +40,8 @@ using namespace machine;
 #include <QDebug>
 
 Cache::Cache(MemoryAccess *m, const MachineConfigCache &cc, uint32_t acc_read, uint32_t acc_write, uint32_t acc_burst,
-             uint32_t lower_acc_pen_r, uint32_t lower_acc_pen_w, uint32_t lower_acc_pen_b) : cnf(cc) {
+             uint32_t lower_acc_pen_r, uint32_t lower_acc_pen_w, uint32_t lower_acc_pen_b) : MemoryAccess(acc_read, acc_write, acc_burst), cnf(cc) {
     mem_lower = m;
-    access_read = acc_read;
-    access_write = acc_write;
-    access_burst = acc_burst;
     access_pen_read = lower_acc_pen_r;
     access_pen_write = lower_acc_pen_w;
     access_pen_burst = lower_acc_pen_b;
@@ -142,12 +139,13 @@ bool Cache::wword(std::uint32_t address, std::uint32_t value) {
     bool out_of_bounds = address >= uncached_start && address <= uncached_last;
 
     if (!cnf.enabled() || out_of_bounds) {
+        SANITY_ASSERT(0, "I shouldn't get called");
         mem_lower_writes++;
         emit_mem_lower_signal(false);
         update_statistics();
         return mem_lower->write_word(address, value);
     }
-
+    writes++;
     changed = access(address, &data, true, value);
 
     if (cnf.write_policy() != MachineConfigCache::WritePolicy::WP_BACK) {
@@ -165,6 +163,7 @@ std::uint32_t Cache::rword(std::uint32_t address, bool debug_access) const {
     bool out_of_bounds = address >= uncached_start && address <= uncached_last;
 
     if (!cnf.enabled() || out_of_bounds) {
+        SANITY_ASSERT(0, "I shouldn't get called.");
         mem_lower_reads++;
         emit_mem_lower_signal(true);
         update_statistics();
@@ -177,6 +176,7 @@ std::uint32_t Cache::rword(std::uint32_t address, bool debug_access) const {
         return debug_rword(address);
     }
 
+    reads++;
     access(address, &data, false);
 
     return data;
@@ -391,7 +391,7 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
             break;
         case MachineConfigCache::ReplacementPolicy::RP_LFU:
             {
-                std::uint32_t lowest = replc.lfu[row][0];
+                uint32_t lowest = replc.lfu[row][0];
                 indx = 0;
                 for (size_t i = 1; i < cnf.associativity(); i++) {
                     if (!dt[i][row].valid) {
@@ -447,9 +447,9 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
     switch (cnf.replacement_policy()) {
     case MachineConfigCache::ReplacementPolicy::RP_LRU:
     {
-        std::uint32_t next_asi = indx;
+        uint32_t next_asi = indx;
         int i = cnf.associativity() - 1;
-        std::uint32_t tmp_asi = replc.lru[row][i];
+        uint32_t tmp_asi = replc.lru[row][i];
         while (tmp_asi != indx) {
             SANITY_ASSERT(i >= 0, "LRU lost the way from priority queue - access");
             tmp_asi = replc.lru[row][i];
@@ -472,9 +472,7 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
     cd.valid = true; // We either write to it or we read from memory. Either way it's valid when we leave Cache class
     cd.dirty = cd.dirty || write;
     cd.tag = tag;
-//    *data = cd.data[col];
-    if (data)
-        *data = cd.data[col];
+    *data = cd.data[col];
 
     if (write) {
         changed = cd.data[col] != value;

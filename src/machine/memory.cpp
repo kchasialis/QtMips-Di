@@ -45,6 +45,14 @@ using namespace machine;
 #define SH_NTH_16(OFFSET) (((OFFSET) & 0b10) * 8)
 #endif
 
+MemoryAccess::MemoryAccess(uint32_t access_read, uint32_t access_write, uint32_t access_burst) {
+    this->access_read = access_read;
+    this->access_write = access_write;
+    this->access_burst = access_burst;
+    this->reads = 0;
+    this->writes = 0;
+}
+
 bool MemoryAccess::write_byte(std::uint32_t offset, std::uint8_t value) {
     int nth = SH_NTH_8(offset);
     std::uint32_t mask = 0xff << nth; // Mask for n-th byte
@@ -129,6 +137,18 @@ LocationStatus MemoryAccess::location_status(std::uint32_t address) const {
 
 MemoryAccess::MemoryType MemoryAccess::type() const {
     return MemoryType::DRAM;
+}
+
+uint32_t MemoryAccess::get_access_cycles() const {
+    return access_read * reads + access_write * writes;
+}
+
+uint32_t MemoryAccess::get_reads() const {
+    return reads;
+}
+
+uint32_t MemoryAccess::get_writes() const {
+    return writes;
 }
 
 MemorySection::MemorySection(std::uint32_t length) {
@@ -221,7 +241,11 @@ Memory::Memory() {
     this->mt_root = allocate_section_tree();
 }
 
-Memory::Memory(const Memory &m) {
+Memory::Memory(uint32_t access_read, uint32_t access_write, uint32_t access_burst) : MemoryAccess(access_read, access_write, access_burst) {
+    this->mt_root = allocate_section_tree();
+}
+
+Memory::Memory(const Memory &m) : MemoryAccess(m.access_read, m.access_write, m.access_burst) {
     this->mt_root = copy_section_tree(m.get_memorytree_root(), 0);
     change_counter = 0;
     write_counter = 0;
@@ -270,6 +294,7 @@ bool Memory::wword(std::uint32_t address, std::uint32_t value) {
     bool changed;
     MemorySection *section = this->get_section(address, true);
     changed = section->write_word(SECTION_OFFSET_MASK(address), value);
+    writes++;
     write_counter++;
     if (changed)
         change_counter++;
@@ -280,8 +305,10 @@ std::uint32_t Memory::rword(std::uint32_t address, bool debug_access) const {
     MemorySection *section = this->get_section(address, false);
     if (section == nullptr)
         return 0;
-    else
+    else {
+        reads++;
         return section->read_word(SECTION_OFFSET_MASK(address), debug_access);
+    }
 }
 
 std::uint32_t Memory::get_change_counter() const {

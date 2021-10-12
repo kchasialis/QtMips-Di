@@ -47,6 +47,9 @@ namespace machine {
 class MemoryAccess : public QObject {
     Q_OBJECT
 public:
+    MemoryAccess() = default;
+    MemoryAccess(uint32_t access_read, uint32_t access_write, uint32_t access_burst);
+
     enum class MemoryType {
         L1_CACHE,
         L2_CACHE,
@@ -70,11 +73,16 @@ public:
     virtual MemoryType type() const;
     virtual std::uint32_t get_change_counter() const = 0;
 
+    uint32_t get_access_cycles() const;
+    uint32_t get_reads() const;
+    uint32_t get_writes() const;
 signals:
-    void external_change_notify(const MemoryAccess *mem_access, std::uint32_t start_addr,
-                                std::uint32_t last_addr, bool external) const;
+    void external_change_notify(const MemoryAccess *mem_access, uint32_t start_addr,
+                                uint32_t last_addr, bool external) const;
 
 protected:
+    uint32_t access_read, access_write, access_burst;
+    mutable uint32_t reads, writes;
     virtual bool wword(std::uint32_t offset, std::uint32_t value) = 0;
     virtual std::uint32_t rword(std::uint32_t offset, bool debug_access = false) const = 0;
 
@@ -114,6 +122,7 @@ class Memory : public MemoryAccess {
     Q_OBJECT
 public:
     Memory();
+    Memory(uint32_t access_read, uint32_t access_write, uint32_t access_burst);
     Memory(const Memory&);
     ~Memory();
     void reset(); // Reset whole content of memory (removes old tree and creates new one)

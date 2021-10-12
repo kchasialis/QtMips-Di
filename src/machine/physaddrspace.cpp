@@ -37,7 +37,7 @@
 
 using namespace machine;
 
-PhysAddrSpace::PhysAddrSpace() {
+PhysAddrSpace::PhysAddrSpace(uint32_t access_read, uint32_t access_write, uint32_t access_burst) : MemoryAccess(access_read, access_write, access_burst) {
     change_counter = 0;
 }
 
@@ -52,25 +52,29 @@ PhysAddrSpace::~PhysAddrSpace() {
     }
 }
 
+#include <QDebug>
+
 bool PhysAddrSpace::wword(std::uint32_t address, std::uint32_t value) {
     bool changed;
     RangeDesc *p_range = find_range(address);
     if (p_range == nullptr)
         return false;
+    writes++;
     changed = p_range->mem_acces->write_word(address - p_range->start_addr, value);
     if (changed)
         change_counter++;
     return changed;
 }
 
-std::uint32_t PhysAddrSpace::rword(std::uint32_t address, bool debug_access) const {
+uint32_t PhysAddrSpace::rword(std::uint32_t address, bool debug_access) const {
     const RangeDesc *p_range = find_range(address);
     if (p_range == nullptr)
         return 0x00000000;
+    reads++;
     return p_range->mem_acces->read_word(address - p_range->start_addr, debug_access);
 }
 
-std::uint32_t PhysAddrSpace::get_change_counter() const {
+uint32_t PhysAddrSpace::get_change_counter() const {
     return change_counter;
 }
 
@@ -101,8 +105,8 @@ bool PhysAddrSpace::insert_range(MemoryAccess *mem_acces, std::uint32_t start_ad
     }
     ranges_by_addr.insert(last_addr, p_range);
     ranges_by_access.insert(mem_acces, p_range);
-    connect(mem_acces, SIGNAL(external_change_notify(const MemoryAccess*,std::uint32_t,std::uint32_t,bool)),
-            this, SLOT(range_external_change(const MemoryAccess*,std::uint32_t,std::uint32_t,bool)));
+    connect(mem_acces, SIGNAL(external_change_notify(const MemoryAccess*,uint32_t,uint32_t,bool)),
+            this, SLOT(range_external_change(const MemoryAccess*,uint32_t,uint32_t,bool)));
     return true;
 }
 

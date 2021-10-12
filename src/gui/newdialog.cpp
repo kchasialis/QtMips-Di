@@ -518,15 +518,15 @@ void NewDialogCacheHandler::enabled(bool val) {
     // We must prohibit the user to enable L2 cache without enabling L1.
     switch (config->type()) {
     case machine::MemoryAccess::MemoryType::L1_CACHE:
-        if (!val) {
-            // L1 cache is disabled.
+        if (nd->l1_data_cache_handler()->config->enabled() || nd->l1_program_cache_handler()->config->enabled()) {
+            // L1 program or data cache are enabled, allow user to also enable L2 Cache.
+            nd->l2_cache_dialog()->enabled->setCheckable(true);
+            nd->l2_cache_dialog()->access_time->setEnabled(true);
+        } else {
+            // L1 program and data cache are both disabled, also disable L2 cache.
             nd->l2_cache_dialog()->enabled->setChecked(false);
             nd->l2_cache_dialog()->enabled->setCheckable(false);
             nd->l2_cache_dialog()->access_time->setEnabled(false);
-        } else {
-            // L1 cache is enabled, allow user to also enable L2 Cache.
-            nd->l2_cache_dialog()->enabled->setCheckable(true);
-            nd->l2_cache_dialog()->access_time->setEnabled(true);
         }
         break;
     case machine::MemoryAccess::MemoryType::L2_CACHE:

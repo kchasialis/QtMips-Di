@@ -85,7 +85,6 @@ signals:
 private:
     MachineConfigCache cnf;
     MemoryAccess *mem_lower;
-    uint32_t access_read, access_write, access_burst;
     uint32_t access_pen_read, access_pen_write, access_pen_burst;
     uint32_t uncached_start;
     uint32_t uncached_last;

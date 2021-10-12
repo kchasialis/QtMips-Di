@@ -372,6 +372,9 @@ void MainWindow::machine_reload(bool force_memory_reset, bool force_elf_load) {
         msg.setWindowTitle("Error while initializing new machine");
         msg.exec();
     }
+    machine::CycleStatistics c_stats;
+    memset(&c_stats, 0, sizeof(c_stats));
+    cycle_stats->cycle_stats_update(c_stats);
 }
 
 void MainWindow::print_action() {

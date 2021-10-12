@@ -55,7 +55,8 @@
 namespace machine {
 
     struct CycleStatistics {
-        uint32_t cycles;
+        uint32_t total_cycles;
+        uint32_t cpu_cycles;
         uint32_t core_stalls;
         uint32_t l1_data_stalls;
         uint32_t l1_program_stalls;
