@@ -524,7 +524,7 @@ void NewDialogCacheHandler::enabled(bool val) {
             nd->l2_cache_dialog()->access_time->setEnabled(true);
         } else {
             // L1 program and data cache are both disabled, also disable L2 cache.
-            nd->l2_cache_dialog()->enabled->setChecked(false);
+            nd->l2_cache_dialog()->enabled->clicked(false);
             nd->l2_cache_dialog()->enabled->setCheckable(false);
             nd->l2_cache_dialog()->access_time->setEnabled(false);
         }
@@ -533,7 +533,7 @@ void NewDialogCacheHandler::enabled(bool val) {
         if (val) {
             // L2 cache is enabled, check if at least one of L1 program or data cache is also enabled.
             if (!nd->l1_data_cache_handler()->config->enabled() && !nd->l1_program_cache_handler()->config->enabled()) {
-                nd->l2_cache_dialog()->enabled->setChecked(false);
+                nd->l2_cache_dialog()->enabled->clicked(false);
                 nd->l2_cache_dialog()->enabled->setCheckable(false);
                 nd->l2_cache_dialog()->access_time->setEnabled(false);
 

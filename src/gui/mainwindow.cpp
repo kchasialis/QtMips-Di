@@ -332,6 +332,9 @@ void MainWindow::create_core(const machine::MachineConfig &config, bool load_exe
         btb->setup(machine);
     }
     cycle_stats->setup(machine);
+    machine::CycleStatistics c_stats;
+    memset(&c_stats, 0, sizeof(c_stats));
+    cycle_stats->cycle_stats_update(c_stats);
 
     // Connect signals for instruction address followup
     connect(machine->core(), SIGNAL(fetch_inst_addr_value(std::uint32_t)),

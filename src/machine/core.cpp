@@ -842,7 +842,6 @@ void CorePipelined::do_step(bool skip_break) {
     dt_d.ff_rs = ForwardFrom::FORWARD_NONE;
     dt_d.ff_rt = ForwardFrom::FORWARD_NONE;
 
-    // TODO: implement forwarding for branches being evaluated at EX
     if (hazard_unit != MachineConfig::HU_NONE) {
         // Note: We make exception wmith $0 as that has no effect when written and is used in nop instruction
 

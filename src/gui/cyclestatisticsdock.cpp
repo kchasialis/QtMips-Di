@@ -40,6 +40,7 @@ void CycleStatisticsDock::setup(machine::QtMipsMachine *machine) const {
 }
 
 void CycleStatisticsDock::cycle_stats_update(const machine::CycleStatistics &cycle_stats) {
+//    cycle_stats_labels[TOTAL_CYCLES]->setText(QString::number(cycle_stats.cpu_cycles + cycle_stats.core_stalls));
     cycle_stats_labels[TOTAL_CYCLES]->setText(QString::number(cycle_stats.total_cycles));
     cycle_stats_labels[CPU_CYCLES]->setText(QString::number(cycle_stats.cpu_cycles));
     cycle_stats_labels[CORE_STALLS]->setText(QString::number(cycle_stats.core_stalls));

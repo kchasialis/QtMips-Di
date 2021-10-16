@@ -317,6 +317,8 @@ void QtMipsMachine::pause() {
     run_t->stop();
 }
 
+#include <QDebug>
+
 void QtMipsMachine::step_internal(bool skip_break) {
 
     CTL_GUARD;
@@ -333,6 +335,10 @@ void QtMipsMachine::step_internal(bool skip_break) {
             cycle_stats.l1_program_stalls = l1_program->stalled_cycles();
             cycle_stats.l1_data_stalls = l1_data->stalled_cycles();
             cycle_stats.l2_unified_stalls = l2_unified->stalled_cycles();
+            qDebug() << "l1_program accessed cycles: " << l1_program->get_access_cycles();
+            qDebug() << "l1_data accessed cycles: " << l1_data->get_access_cycles();
+            qDebug() << "l2_unified accessed cycles: " << l2_unified->get_access_cycles();
+            qDebug() << "physaddrspace accessed cycles: " << physaddrspace->get_access_cycles();
             cycle_stats.total_cycles = cycle_stats.cpu_cycles + cycle_stats.core_stalls +
                     l1_program->get_access_cycles() + l1_data->get_access_cycles() + l2_unified->get_access_cycles()
                     + physaddrspace->get_access_cycles();
