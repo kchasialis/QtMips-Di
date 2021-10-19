@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>583</width>
-    <height>449</height>
+    <height>531</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -149,34 +149,38 @@
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="branch_unit">
+        <widget class="QGroupBox" name="control_hazard_unit">
          <property name="title">
-          <string>Branch unit</string>
+          <string>Control Hazard Unit</string>
          </property>
          <property name="checkable">
           <bool>false</bool>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
-           <widget class="QRadioButton" name="none">
-            <property name="text">
-             <string>None</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="delay_slot">
-            <property name="text">
-             <string>Delay slot</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="branch_predictor">
-            <property name="text">
-             <string>Branch predictor</string>
-            </property>
-           </widget>
+           <layout class="QGridLayout" name="gridLayout">
+            <item row="1" column="0">
+             <widget class="QRadioButton" name="delay_slot">
+              <property name="text">
+               <string>Delay slot</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QRadioButton" name="stall">
+              <property name="text">
+               <string>Stall</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QRadioButton" name="branch_predictor">
+              <property name="text">
+               <string>Branch predictor</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
           <item>
            <widget class="QLabel" name="predictor_bits_label">
@@ -254,12 +258,12 @@
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="hazard_unit">
+        <widget class="QGroupBox" name="data_hazard_unit">
          <property name="enabled">
           <bool>true</bool>
          </property>
          <property name="title">
-          <string>Hazard unit</string>
+          <string>Data Hazard unit</string>
          </property>
          <property name="checkable">
           <bool>true</bool>
@@ -269,16 +273,16 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
-           <widget class="QRadioButton" name="hazard_stall">
+           <widget class="QRadioButton" name="data_hazard_stall">
             <property name="text">
-             <string>Stall when hazard is detected</string>
+             <string>Stall when data hazard is detected</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QRadioButton" name="hazard_stall_forward">
+           <widget class="QRadioButton" name="data_hazard_stall_forward">
             <property name="text">
-             <string>Stall or forward when hazard is detected</string>
+             <string>Stall or forward when data hazard is detected</string>
             </property>
             <property name="checked">
              <bool>true</bool>

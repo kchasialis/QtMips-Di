@@ -174,7 +174,7 @@ signals:
     void writeback_regw_value(std::uint32_t);
     void writeback_regw_num_value(std::uint32_t);
 
-    void hu_stall_value(std::uint32_t);
+    void dhu_stall_value(std::uint32_t);
     void branch_forward_value(std::uint32_t);
 
     void stall_value_changed(uint32_t);
@@ -276,7 +276,7 @@ protected:
         bool is_valid;
     };
 
-    struct dtFetch fetch(bool skip_break = false);
+    struct dtFetch fetch(bool skip_break = false, bool signal = true);
     struct dtDecode decode(const struct dtFetch&);
     struct dtExecute execute(const struct dtDecode&);
     struct dtMemory memory(const struct dtExecute&);
@@ -337,8 +337,8 @@ private:
 class CorePipelined : public Core {
 public:
     CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
-                  MachineConfig::HazardUnit hazard_unit = MachineConfig::HU_STALL_FORWARD,
-                  MachineConfig::BranchUnit branch_unit = MachineConfig::BU_DELAY_SLOT,
+                  MachineConfig::DataHazardUnit hazard_unit = MachineConfig::DHU_STALL_FORWARD,
+                  MachineConfig::ControlHazardUnit branch_unit = MachineConfig::CHU_DELAY_SLOT,
                   int8_t bp_bits = -1, bool branch_res_id = true,
                   std::uint32_t min_cache_row_size = 1,
                   Cop0State *cop0state = nullptr);
@@ -352,6 +352,9 @@ protected:
     void enqueue_pc(std::uint32_t pc);
     std::uint32_t dequeue_pc();
     void remove_pc(std::uint32_t inst_addr);
+    bool handle_fetch_stall();
+    void handle_fetch_dls();
+    void handle_fetch_bp();
 
 private:
     struct Core::dtFetch dt_f;
@@ -361,8 +364,8 @@ private:
 
     BranchPredictor *bp;
     bool branch_res_id;
-    enum MachineConfig::BranchUnit branch_unit;
-    enum MachineConfig::HazardUnit hazard_unit;
+    enum MachineConfig::DataHazardUnit dhunit;
+    enum MachineConfig::ControlHazardUnit chunit;
     // Variables used for branch predictor.
     QVector<std::uint32_t> pcs; // Save pc for each prediction we make.
     std::uint32_t pc_before_jmp;

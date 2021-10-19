@@ -317,13 +317,13 @@ CoreViewSceneSimple::CoreViewSceneSimple(machine::QtMipsMachine *machine) : Core
     struct coreview::Latch::ConnectorPair lp_ft_inst, lp_ft_pc;
 
     NEW_I(inst_prim, 230, 60, instruction_executed, QColor(255, 173, 230));
-    if (machine->config().branch_unit() == machine::MachineConfig::BU_DELAY_SLOT) {
+    if (machine->config().control_hazard_unit() == machine::MachineConfig::CHU_DELAY_SLOT) {
         NEW(Latch, latch_if_id, 158, 250, machine, 220);
         NEW_I(inst_fetch,  79, 60, instruction_fetched, QColor(255, 173, 173));
     }
 
     // Fetch stage
-    if (machine->config().branch_unit() == machine::MachineConfig::BU_DELAY_SLOT) {
+    if (machine->config().control_hazard_unit() == machine::MachineConfig::CHU_DELAY_SLOT) {
         lp_ft_inst = latch_if_id->new_connector(mem_program->connector_instruction()->y() - latch_if_id->y());
         new_bus(mem_program->connector_instruction(), lp_ft_inst.in);
         lp_ft_pc = latch_if_id->new_connector(210);
@@ -413,13 +413,13 @@ CoreViewScenePipelined::CoreViewScenePipelined(machine::QtMipsMachine *machine) 
     NEW_I(inst_mem, 620, 12, instruction_memory, QColor(173, 255, 229));
     NEW_I(inst_wrb, 820, 12, instruction_writeback, QColor(255, 173, 230));
 
-    if (machine->config().hazard_unit() != machine::MachineConfig::HU_NONE) {
+    if (machine->config().data_hazard_unit() != machine::MachineConfig::DHU_NONE) {
         NEW(LogicBlock, hazard_unit, SC_WIDTH/2, SC_HEIGHT - 15, "Hazard Unit");
         hazard_unit->setSize(SC_WIDTH - 100, 12);
         static QMap<std::uint32_t, QString> stall_map = {{0, "NORMAL"},{1, "STALL"},{2, "FORWARD"}};
         NEW_MULTI(hu.multi_stall, 480, 447, execute_stall_forward_value, stall_map);
         NEW_MULTI(hu.multi_stall, 310, 340, branch_forward_value, stall_map);
-        NEW_MULTI(hu.multi_stall, 250, SC_HEIGHT - 15, hu_stall_value, stall_map);
+        NEW_MULTI(hu.multi_stall, 250, SC_HEIGHT - 15, dhu_stall_value, stall_map);
     }
 
     // Fetch stage
@@ -435,7 +435,7 @@ CoreViewScenePipelined::CoreViewScenePipelined(machine::QtMipsMachine *machine) 
     lp_dc_rt = latch_id_ex->new_connector(regs->connector_read2()->y() - latch_id_ex->y());
     regs_bus1 = new_bus(regs->connector_read1(), lp_dc_rs.in);
     regs_bus2 = new_bus(regs->connector_read2(), lp_dc_rt.in);
-    if (machine->config().hazard_unit() != machine::MachineConfig::HU_STALL_FORWARD) {
+    if (machine->config().data_hazard_unit() != machine::MachineConfig::DHU_STALL_FORWARD) {
         regs_bus_con = dc.cmp->new_connector(-0.5, 1);
         new_bus(regs_bus1->new_connector(regs_bus_con->point(), coreview::Connector::AX_Y), regs_bus_con);
         regs_bus_con = dc.cmp->new_connector(0.5, 1);
@@ -470,7 +470,7 @@ CoreViewScenePipelined::CoreViewScenePipelined(machine::QtMipsMachine *machine) 
     new_signal(ctl_cnt, ctl_rgw_de.in);
 
     // Execute
-    if (machine->config().hazard_unit() != machine::MachineConfig::HU_STALL_FORWARD) {
+    if (machine->config().data_hazard_unit() != machine::MachineConfig::DHU_STALL_FORWARD) {
         new_bus(lp_dc_rs.out, alu->connector_in_a())->setAxes({CON_AXIS_Y(445)});;
         new_bus(lp_dc_rt.out, ex.mux_imm->connector_in(0))->setAxes({CON_AXIS_Y(450)});
     }
@@ -543,7 +543,7 @@ CoreViewScenePipelined::CoreViewScenePipelined(machine::QtMipsMachine *machine) 
     NEW_V(510, 385, execute_regw_num_value, false, 2, 0, 10, ' ');
     NEW_V(610, 385, memory_regw_num_value, false, 2, 0, 10, ' ');
 
-    if (machine->config().hazard_unit() == machine::MachineConfig::HU_STALL_FORWARD) {
+    if (machine->config().data_hazard_unit() == machine::MachineConfig::DHU_STALL_FORWARD) {
         NEW_MUX(hu.mux_alu_reg_a, 430, 232, execute_reg1_ff_value, 3, false);
         NEW_MUX(hu.mux_alu_reg_b, 430, 285, execute_reg2_ff_value, 3, false);
         NEW_MINIMUX(hu.mux_branch_reg_a, 296, 228, forward_m_d_rs_value, 2, false);

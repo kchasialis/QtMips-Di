@@ -98,10 +98,18 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     connect(ui->reset_at_compile, SIGNAL(clicked(bool)), this, SLOT(reset_at_compile_change(bool)));
 
     connect(ui->pipelined, SIGNAL(clicked(bool)), this, SLOT(pipelined_change(bool)));
-    connect(ui->hazard_unit, SIGNAL(clicked(bool)), this, SLOT(hazard_unit_change()));
-    connect(ui->hazard_stall, SIGNAL(clicked(bool)), this, SLOT(hazard_unit_change()));
-    connect(ui->hazard_stall_forward, SIGNAL(clicked(bool)), this, SLOT(hazard_unit_change()));
+    connect(ui->data_hazard_unit, SIGNAL(clicked(bool)), this, SLOT(data_hazard_unit_change()));
+    connect(ui->data_hazard_stall, SIGNAL(clicked(bool)), this, SLOT(data_hazard_unit_change()));
+    connect(ui->data_hazard_stall_forward, SIGNAL(clicked(bool)), this, SLOT(data_hazard_unit_change()));
     // Connections for branch unit are being done on load_settings() function.
+
+    // Connections need to be done here. A bug is caused otherwise.
+    connect(ui->stall, SIGNAL(clicked(bool)), this, SLOT(branch_hazard_unit_change()));
+    connect(ui->delay_slot, SIGNAL(clicked(bool)), this, SLOT(branch_hazard_unit_change()));
+    connect(ui->branch_predictor, SIGNAL(clicked(bool)), this, SLOT(branch_hazard_unit_change()));
+    connect(ui->predictor_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_hazard_unit_change()));
+    connect(ui->bht_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_hazard_unit_change()));
+    connect(ui->resolution, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_hazard_unit_change()));
 
     connect(ui->mem_protec_exec, SIGNAL(clicked(bool)), this, SLOT(mem_protec_exec_change(bool)));
     connect(ui->mem_protec_write, SIGNAL(clicked(bool)), this, SLOT(mem_protec_write_change(bool)));
@@ -236,55 +244,40 @@ void NewDialog::set_preset() {
 
 void NewDialog::pipelined_change(bool val) {
     config->set_pipelined(val);
-    if (!config->pipelined() && config->predictor()) {
-        config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
-    }
-    if (config->pipelined() && ui->none->isChecked()) {
-        config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
-        ui->delay_slot->click();
-    }
 
 	switch2custom();
 }
 
-void NewDialog::hazard_unit_change() {
-    if (ui->hazard_unit->isChecked()) {
-        config->set_hazard_unit(ui->hazard_stall->isChecked() ? machine::MachineConfig::HU_STALL : machine::MachineConfig::HU_STALL_FORWARD);
+void NewDialog::data_hazard_unit_change() {
+    if (ui->data_hazard_unit->isChecked()) {
+        config->set_data_hazard_unit(ui->data_hazard_stall->isChecked() ? machine::MachineConfig::DHU_STALL : machine::MachineConfig::DHU_STALL_FORWARD);
 	} else {
-        config->set_hazard_unit(machine::MachineConfig::HU_NONE);
+        config->set_data_hazard_unit(machine::MachineConfig::DHU_NONE);
 	}
     switch2custom();
 }
 
-void NewDialog::branch_unit_change() {
-    if (ui->branch_predictor->isChecked()) {
-        QString predictor_bits = ui->predictor_bits->currentText();
-        QString bht_bits = ui->bht_bits->currentText();
-
-        config->set_branch_unit(predictor_bits.toShort() == 1 ?
-                                    machine::MachineConfig::BU_ONE_BIT_BP :
-                                    machine::MachineConfig::BU_TWO_BIT_BP);
-        config->set_bht_bits(bht_bits.toShort());
-        config->set_branch_res_id(ui->resolution->currentText() == "ID");
-    } else if (ui->delay_slot->isChecked()) {
-        config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
-        config->set_bht_bits(0);
-        config->set_branch_res_id(ui->resolution->currentText() == "ID");
-    } else {
-        config->set_branch_unit(machine::MachineConfig::BU_NONE);
-        config->set_bht_bits(0);
-    }
-
+void NewDialog::branch_hazard_unit_change() {
     if (config->pipelined()) {
-        SANITY_ASSERT(config->branch_unit() != machine::MachineConfig::BU_NONE, "Debug me :)");
-    } else {
-        SANITY_ASSERT(config->branch_unit() == machine::MachineConfig::BU_NONE
-               || config->branch_unit() == machine::MachineConfig::BU_DELAY_SLOT, "Debug me :)");
-    }
+        uint8_t bht_bits_num = 0;
+        if (ui->branch_predictor->isChecked()) {
+            QString predictor_bits = ui->predictor_bits->currentText();
+            QString bht_bits = ui->bht_bits->currentText();
 
-    if (!config->pipelined() && config->predictor()) {
-        // If not pipelined and user ticked predictor somehow, change that to delay slot.
-        config->set_branch_unit(machine::MachineConfig::BU_DELAY_SLOT);
+            config->set_control_hazard_unit(predictor_bits.toShort() == 1 ?
+                                            machine::MachineConfig::CHU_ONE_BIT_BP :
+                                            machine::MachineConfig::CHU_TWO_BIT_BP);
+            bht_bits_num = bht_bits.toShort();
+        } else if (ui->delay_slot->isChecked()) {
+            config->set_control_hazard_unit(machine::MachineConfig::CHU_DELAY_SLOT);
+        } else {
+            config->set_control_hazard_unit(machine::MachineConfig::CHU_STALL);
+        }
+        config->set_bht_bits(bht_bits_num);
+        config->set_branch_res_id(ui->resolution->currentText() == "ID");
+    } else {
+        config->set_control_hazard_unit(machine::MachineConfig::CHU_NONE);
+        config->set_bht_bits(0);
     }
 
     switch2custom();
@@ -365,20 +358,24 @@ void NewDialog::config_gui() {
     ui->reset_at_compile->setChecked(config->reset_at_compile());
     // Core
     ui->pipelined->setChecked(config->pipelined());
-    ui->hazard_unit->setChecked(config->hazard_unit() != machine::MachineConfig::HU_NONE);
-    ui->hazard_stall->setChecked(config->hazard_unit() == machine::MachineConfig::HU_STALL);
-    ui->hazard_stall_forward->setChecked(config->hazard_unit() == machine::MachineConfig::HU_STALL_FORWARD);
-    ui->branch_predictor->setChecked(config->predictor());
-    ui->delay_slot->setChecked(config->branch_unit() == machine::MachineConfig::BU_DELAY_SLOT);
-    ui->none->setChecked(config->branch_unit() == machine::MachineConfig::BU_NONE);
-    ui->resolution->setCurrentIndex(config->branch_res_id() ? 0 : 1);
-    if (config->predictor()) {
-        ui->predictor_bits->setCurrentIndex(config->branch_unit() == machine::MachineConfig::BU_ONE_BIT_BP ? 0 : 1);
-        ui->bht_bits->setCurrentIndex(config->bht_bits() - MIN_BHT_BITS);
-    } else {
-        ui->predictor_bits->setCurrentIndex(0);
-        ui->bht_bits->setCurrentIndex(0);
+    ui->data_hazard_unit->setChecked(config->data_hazard_unit() != machine::MachineConfig::DHU_NONE);
+    ui->data_hazard_stall->setChecked(config->data_hazard_unit() == machine::MachineConfig::DHU_STALL);
+    ui->data_hazard_stall_forward->setChecked(config->data_hazard_unit() == machine::MachineConfig::DHU_STALL_FORWARD);
+    if (config->control_hazard_unit() != machine::MachineConfig::CHU_NONE) {
+        ui->stall->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_STALL);
+        ui->delay_slot->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_DELAY_SLOT);
+        ui->branch_predictor->setChecked(config->predictor());
+        ui->resolution->setCurrentIndex(config->branch_res_id() ? 0 : 1);
+        if (config->predictor()) {
+            ui->predictor_bits->setCurrentIndex(
+                    config->control_hazard_unit() == machine::MachineConfig::CHU_ONE_BIT_BP ? 0 : 1);
+            ui->bht_bits->setCurrentIndex(config->bht_bits() - MIN_BHT_BITS);
+        } else {
+            ui->predictor_bits->setCurrentIndex(0);
+            ui->bht_bits->setCurrentIndex(0);
+        }
     }
+
     // Memory
     ui->mem_protec_exec->setChecked(config->memory_execute_protection());
     ui->mem_protec_write->setChecked(config->memory_write_protection());
@@ -400,15 +397,17 @@ void NewDialog::config_gui() {
     ui->osemu_fs_root->setText(config->osemu_fs_root());
 
     // Disable various sections according to configuration
-    ui->hazard_unit->setEnabled(config->pipelined());
-    ui->none->setEnabled(!config->pipelined());
+    ui->data_hazard_unit->setEnabled(config->pipelined());
+    ui->control_hazard_unit->setEnabled(config->pipelined());
+    ui->stall->setEnabled(config->pipelined());
+    ui->delay_slot->setEnabled(config->pipelined());
     ui->branch_predictor->setEnabled(config->pipelined());
-    ui->bht_bits->setEnabled(config->predictor());
     ui->bht_bits_label->setEnabled(config->predictor());
-    ui->predictor_bits->setEnabled(config->predictor());
+    ui->bht_bits->setEnabled(config->predictor());
     ui->predictor_bits_label->setEnabled(config->predictor());
-    ui->resolution->setEnabled(config->pipelined());
+    ui->predictor_bits->setEnabled(config->predictor());
     ui->resolution_label->setEnabled(config->pipelined());
+    ui->resolution->setEnabled(config->pipelined());
 }
 
 unsigned NewDialog::preset_number() {
@@ -460,14 +459,6 @@ void NewDialog::load_settings() {
     }
 
     config_gui();
-
-    // Connections need to be done here. A bug is caused otherwise.
-    connect(ui->branch_predictor, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
-    connect(ui->predictor_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
-    connect(ui->bht_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
-    connect(ui->resolution, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_unit_change()));
-    connect(ui->delay_slot, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
-    connect(ui->none, SIGNAL(clicked(bool)), this, SLOT(branch_unit_change()));
 }
 
 void NewDialog::store_settings() {

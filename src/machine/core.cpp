@@ -38,6 +38,8 @@
 #include "programloader.h"
 #include "utils.h"
 
+#include <QDebug>
+
 using namespace machine;
 
 Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
@@ -267,7 +269,7 @@ ExceptionCause Core::memory_special(AccessControl memctl,
 }
 
 
-struct Core::dtFetch Core::fetch(bool skip_break) {
+struct Core::dtFetch Core::fetch(bool skip_break, bool signal) {
     ExceptionCause excause = EXCAUSE_NONE;
     std::uint32_t inst_addr = regs->read_pc();
     Instruction inst(mem_program->read_word(inst_addr));
@@ -284,9 +286,11 @@ struct Core::dtFetch Core::fetch(bool skip_break) {
         }
     }
 
-    emit fetch_inst_addr_value(inst_addr);
-    emit fetch_instr_instr_value(inst);
-    emit instruction_fetched(inst, inst_addr, excause, true);
+    if (signal) {
+        emit fetch_inst_addr_value(inst_addr);
+        emit fetch_instr_instr_value(inst);
+        emit instruction_fetched(inst, inst_addr, excause, true);
+    }
     return {
         .inst = inst,
         .inst_addr = inst_addr,
@@ -734,28 +738,25 @@ BranchPredictor *CoreSingle::predictor() {
 }
 
 CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
-                             MachineConfig::HazardUnit hazard_unit,
-                             MachineConfig::BranchUnit branch_unit,
+                             MachineConfig::DataHazardUnit dhunit,
+                             MachineConfig::ControlHazardUnit chunit,
                              int8_t bp_bits, bool branch_res_id,
                              unsigned int min_cache_row_size,
                              Cop0State *cop0state) :
     Core(regs, mem_program, mem_data, min_cache_row_size, cop0state) {
 
-    this->hazard_unit = hazard_unit;
-    this->branch_unit = branch_unit;
+    this->dhunit = dhunit;
+    this->chunit = chunit;
     this->branch_res_id = branch_res_id;
-    switch (branch_unit) {
-    case MachineConfig::BU_NONE:
-        // This is not allowed on a pipelined core.
-        SANITY_ASSERT(0, "Branch unit is none in a pipelined mode");
-        break;
-    case MachineConfig::BU_DELAY_SLOT:
+    switch (this->chunit) {
+    case MachineConfig::CHU_STALL:
+    case MachineConfig::CHU_DELAY_SLOT:
         this->bp = nullptr;
         break;
-    case MachineConfig::BU_ONE_BIT_BP:
+    case MachineConfig::CHU_ONE_BIT_BP:
         this->bp = new OneBitBranchPredictor(bp_bits);
         break;
-    case MachineConfig::BU_TWO_BIT_BP:
+    case MachineConfig::CHU_TWO_BIT_BP:
         this->bp = new TwoBitBranchPredictor(bp_bits);
         break;
     default:
@@ -802,7 +803,9 @@ std::uint32_t CorePipelined::get_correct_address(std::uint32_t pc, bool branch_t
 
 void CorePipelined::do_step(bool skip_break) {
     bool stall = false;
-    bool branch_stall = false;
+    static bool control_hazard = false;
+    bool data_hazard = false;
+    bool data_branch_hazard = false;
     bool excpt_in_progress = false;
     std::uint32_t jump_branch_pc = dt_m.inst_addr;
 
@@ -842,7 +845,7 @@ void CorePipelined::do_step(bool skip_break) {
     dt_d.ff_rs = ForwardFrom::FORWARD_NONE;
     dt_d.ff_rt = ForwardFrom::FORWARD_NONE;
 
-    if (hazard_unit != MachineConfig::HU_NONE) {
+    if (dhunit != MachineConfig::DHU_NONE) {
         // Note: We make exception wmith $0 as that has no effect when written and is used in nop instruction
 
 #define HAZARD(STAGE) ( \
@@ -854,7 +857,7 @@ void CorePipelined::do_step(bool skip_break) {
         // Write back stage combinatoricly propagates written instruction to decode stage so nothing has to be done for that stage
         if (HAZARD(dt_m)) {
             // Hazard with instruction in memory stage
-            if (hazard_unit == MachineConfig::HU_STALL_FORWARD) {
+            if (dhunit == MachineConfig::DHU_STALL_FORWARD) {
                 // Forward result value
                 if (dt_d.alu_req_rs && dt_m.rwrite == dt_d.num_rs) {
                     dt_d.val_rs = dt_m.towrite_val;
@@ -865,13 +868,13 @@ void CorePipelined::do_step(bool skip_break) {
                     dt_d.ff_rt = ForwardFrom::FORWARD_FROM_W;
                 }
             } else
-                stall = true;
+                data_hazard = true;
         }
         if (HAZARD(dt_e)) {
             // Hazard with instruction in execute stage
-            if (hazard_unit == MachineConfig::HU_STALL_FORWARD) {
+            if (dhunit == MachineConfig::DHU_STALL_FORWARD) {
                 if (dt_e.memread)
-                    stall = true;
+                    data_hazard = true;
                 else {
                     // Forward result value
                     if (dt_d.alu_req_rs && dt_e.rwrite == dt_d.num_rs) {
@@ -884,20 +887,20 @@ void CorePipelined::do_step(bool skip_break) {
                     }
                 }
             } else
-                stall = true;
+                data_hazard = true;
         }
 #undef HAZARD
         if (dt_e.rwrite != 0 && dt_e.regwrite &&
             ((dt_d.bjr_req_rs && dt_d.num_rs == dt_e.rwrite) ||
              (dt_d.bjr_req_rt && dt_d.num_rt == dt_e.rwrite))) {
-            stall = true;
-            branch_stall = true;
+            data_hazard = true;
+            data_branch_hazard = true;
         } else {
-            if (hazard_unit != MachineConfig::HU_STALL_FORWARD || dt_m.memtoreg) {
+            if (dhunit != MachineConfig::DHU_STALL_FORWARD || dt_m.memtoreg) {
                 if (dt_m.rwrite != 0 && dt_m.regwrite &&
                     ((dt_d.bjr_req_rs && dt_d.num_rs == dt_m.rwrite) ||
                      (dt_d.bjr_req_rt && dt_d.num_rt == dt_m.rwrite)))
-                    stall = true;
+                    data_hazard = true;
             } else {
                 if (dt_m.rwrite != 0 && dt_m.regwrite &&
                     dt_d.bjr_req_rs && dt_d.num_rs == dt_m.rwrite) {
@@ -914,7 +917,7 @@ void CorePipelined::do_step(bool skip_break) {
         emit forward_m_d_rs_value(dt_d.forward_m_d_rs);
         emit forward_m_d_rt_value(dt_d.forward_m_d_rt);
     }
-    emit branch_forward_value((dt_d.forward_m_d_rs || dt_d.forward_m_d_rt)? 2: branch_stall);
+    emit branch_forward_value((dt_d.forward_m_d_rs || dt_d.forward_m_d_rt)? 2: data_branch_hazard);
 #if 0
     if (stall)
         printf("STALL\n");
@@ -929,88 +932,36 @@ void CorePipelined::do_step(bool skip_break) {
 #if 0
     printf("PC 0x%08lx\n", (unsigned long)dt_f.inst_addr);
 #endif
-
-    if (dt_e.stop_if || dt_m.stop_if)
+    if (dt_e.stop_if || dt_m.stop_if || data_hazard)
         stall = true;
 
-    emit hu_stall_value(stall);
+    emit dhu_stall_value(stall);
 
     // Now process program counter (loop connections from decode stage)
     if (!stall && !dt_d.stop_if) {
         dt_d.stall = false;
-        dt_f = fetch(skip_break);
-        if (!bp) {
-            // We have delay slot enabled.
-            if (handle_pc_wpr(dt_d, dt_e, branch_res_id)) {
-                dt_f.in_delay_slot = true;
-                if (!branch_res_id)
-                    // if we evaluate at EX, dt_d will also be in delay slot.
-                    dt_d.in_delay_slot = true;
-            } else {
-                if (dt_d.nb_skip_ds) {
-                    dtFetchInit(dt_f);
-                    emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
-                    emit fetch_inst_addr_value(STAGEADDR_NONE);
-                }
-            }
-        } else {
-            std::uint32_t correct_address = 0;
-            bool jump_value = false, jump_reg_value = false, branch_value = false;
-
-            if (branch_res_id ? dt_d.branch : dt_e.branch) {
-                // Branch is now on ID/EX and can be evaluated.
-                std::uint32_t pc_before_prediction = dequeue_pc();
-                bool branch = branch_result_wrp(dt_d, dt_e, branch_res_id);
-
-                if (branch != bp->prediction()) {
-                    // Prediction was wrong.
-                    // Flush appropriate stages & move pc accordingly.
-                    correct_address = get_correct_address(pc_before_prediction, branch, false);
-                    flush_stages();
-                    regs->pc_abs_jmp(correct_address - 4);
-                }
-                bp->update_bht(branch, correct_address);
-
-                branch_value = branch;
-            }
-            if (dt_d.jump) {
-                // Jump is on ID and we can evaluate its address.
-                if (!bp->prediction()) {
-                    // The second parameter does not matter here.
-                    correct_address = get_correct_address(pc_before_jmp, false, true);
-                    // We had a BTB miss, flush appropriate stages and update BTB.
-                    flush_stages();
-                    regs->pc_abs_jmp(correct_address - 4);
-                }
-                bp->update_bht(true, correct_address);
-
-                if (!dt_d.bjr_req_rs) {
-                    jump_value = true;
-                    jump_reg_value = false;
-                } else {
-                    jump_value = false;     
-                    jump_reg_value = true;
-                }
-                branch_value = false;
-            }
-
-            emit fetch_jump_value(jump_value);
-            emit fetch_jump_reg_value(jump_reg_value);
-            emit fetch_branch_value(branch_value);
-
-            if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
-                // Instruction is branch or jump, we need to save pc in case we predict wrong.
-                if (dt_f.inst.flags() & IMF_JUMP) {
-                    // Instruction is a jump, save pc before jumping.
-                    pc_before_jmp = regs->read_pc();
-                } else {
-                    // Instruction is a branch, store pc in a queue because we need to cover resolutions both in ID and EX.
-                    enqueue_pc(regs->read_pc());
-                }
-                regs->pc_abs_jmp(bp->predict(dt_f.inst, regs->read_pc()));
-            } else {
-                regs->pc_inc();
-            }
+        if (!control_hazard)
+            dt_f = fetch(skip_break);
+        else {
+            dtFetchInit(dt_f);
+            emit instruction_fetched(dt_f.inst, dt_f.inst_addr,
+                                     dt_f.excause, dt_f.is_valid);
+            emit fetch_inst_addr_value(STAGEADDR_NONE);
+            set_stalls(stalls + 1);
+        }
+        switch (chunit) {
+            case MachineConfig::CHU_STALL:
+                control_hazard = handle_fetch_stall();
+                break;
+            case MachineConfig::CHU_DELAY_SLOT:
+                handle_fetch_dls();
+                break;
+            case MachineConfig::CHU_ONE_BIT_BP:
+            case MachineConfig::CHU_TWO_BIT_BP:
+                handle_fetch_bp();
+                break;
+            default:
+                SANITY_ASSERT(0, "Undefined control hazard unit!");
         }
     } else {
         // Run fetch stage on empty
@@ -1065,6 +1016,96 @@ void CorePipelined::remove_pc(std::uint32_t pc) {
     }
 
     pcs.remove(idx);
+}
+
+bool CorePipelined::handle_fetch_stall() {
+    if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
+        return true;
+    }
+    if (!branch_res_id && dt_d.branch) {
+        // Branches are resolved in EX, we should add another bubble.
+        return true;
+    }
+
+    handle_pc_wpr(dt_d, dt_e, branch_res_id);
+
+    return false;
+}
+
+void CorePipelined::handle_fetch_dls() {
+    // We have delay slot enabled.
+    if (handle_pc_wpr(dt_d, dt_e, branch_res_id)) {
+        dt_f.in_delay_slot = true;
+        if (!branch_res_id)
+            // if we evaluate at EX, dt_d will also be in delay slot.
+            dt_d.in_delay_slot = true;
+    } else {
+        if (dt_d.nb_skip_ds) {
+            dtFetchInit(dt_f);
+            emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
+            emit fetch_inst_addr_value(STAGEADDR_NONE);
+        }
+    }
+}
+
+void CorePipelined::handle_fetch_bp() {
+    std::uint32_t correct_address = 0;
+    bool jump_value = false, jump_reg_value = false, branch_value = false;
+
+    if (branch_res_id ? dt_d.branch : dt_e.branch) {
+        // Branch is now on ID/EX and can be evaluated.
+        std::uint32_t pc_before_prediction = dequeue_pc();
+        bool branch = branch_result_wrp(dt_d, dt_e, branch_res_id);
+
+        if (branch != bp->prediction()) {
+            // Prediction was wrong.
+            // Flush appropriate stages & move pc accordingly.
+            correct_address = get_correct_address(pc_before_prediction, branch, false);
+            flush_stages();
+            regs->pc_abs_jmp(correct_address - 4);
+        }
+        bp->update_bht(branch, correct_address);
+
+        branch_value = branch;
+    }
+    if (dt_d.jump) {
+        // Jump is on ID and we can evaluate its address.
+        if (!bp->prediction()) {
+            // The second parameter does not matter here.
+            correct_address = get_correct_address(pc_before_jmp, false, true);
+            // We had a BTB miss, flush appropriate stages and update BTB.
+            flush_stages();
+            regs->pc_abs_jmp(correct_address - 4);
+        }
+        bp->update_bht(true, correct_address);
+
+        if (!dt_d.bjr_req_rs) {
+            jump_value = true;
+            jump_reg_value = false;
+        } else {
+            jump_value = false;
+            jump_reg_value = true;
+        }
+        branch_value = false;
+    }
+
+    emit fetch_jump_value(jump_value);
+    emit fetch_jump_reg_value(jump_reg_value);
+    emit fetch_branch_value(branch_value);
+
+    if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
+        // Instruction is branch or jump, we need to save pc in case we predict wrong.
+        if (dt_f.inst.flags() & IMF_JUMP) {
+            // Instruction is a jump, save pc before jumping.
+            pc_before_jmp = regs->read_pc();
+        } else {
+            // Instruction is a branch, store pc in a queue because we need to cover resolutions both in ID and EX.
+            enqueue_pc(regs->read_pc());
+        }
+        regs->pc_abs_jmp(bp->predict(dt_f.inst, regs->read_pc()));
+    } else {
+        regs->pc_inc();
+    }
 }
 
 bool StopExceptionHandler::handle_exception(Core *core, Registers *regs,

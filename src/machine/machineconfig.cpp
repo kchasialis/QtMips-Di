@@ -41,10 +41,10 @@ using namespace machine;
 //////////////////////////////////////////////////////////////////////////////
 /// Default config of MachineConfig
 #define DF_PIPELINE false
-#define DF_BUNIT BU_DELAY_SLOT
+#define DF_DHUNIT DHU_STALL_FORWARD
+#define DF_CHUNIT CHU_DELAY_SLOT
 #define DF_BP_BITS 0
 #define DF_B_RES_ID true
-#define DF_HUNIT HU_STALL_FORWARD
 #define DF_EXEC_PROTEC false
 #define DF_WRITE_PROTEC false
 #define DF_DRAM_ACC_READ 80
@@ -284,10 +284,10 @@ bool MachineConfigCache::operator!=(const MachineConfigCache &c) const {
 
 MachineConfig::MachineConfig() {
     pipeline = DF_PIPELINE;
-    bunit = DF_BUNIT;
+    dhunit = DF_DHUNIT;
+    chunit = DF_CHUNIT;
     bp_bits = DF_BP_BITS;
     b_res_id = DF_B_RES_ID;
-    hunit = DF_HUNIT;
     exec_protect = DF_EXEC_PROTEC;
     write_protect = DF_WRITE_PROTEC;
     osem_enable = true;
@@ -308,10 +308,10 @@ MachineConfig::MachineConfig() {
 
 MachineConfig::MachineConfig(const MachineConfig& cc) noexcept {
     this->pipeline = cc.pipelined();
-    this->bunit = cc.branch_unit();
+    this->dhunit = cc.data_hazard_unit();
+    this->chunit = cc.control_hazard_unit();
     this->bp_bits = cc.bht_bits();
     this->b_res_id = cc.branch_res_id();
-    this->hunit = cc.hazard_unit();
     this->exec_protect = cc.memory_execute_protection();
     this->write_protect = cc.memory_write_protection();
     this->osem_enable = cc.osemu_enable();
@@ -334,10 +334,10 @@ MachineConfig::MachineConfig(const MachineConfig& cc) noexcept {
 
 MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) {
     pipeline = sts->value(N("Pipelined"), DF_PIPELINE).toBool();
-    bunit = (BranchUnit)sts->value(N("BranchUnit"), DF_BUNIT).toUInt();
+    dhunit = (DataHazardUnit)sts->value(N("DataHazardUnit"), DF_DHUNIT).toUInt();
+    chunit = (ControlHazardUnit)sts->value(N("ControlHazardUnit"), DF_CHUNIT).toUInt();
     bp_bits = sts->value(N("BPbits"), DF_BP_BITS).toInt();
     b_res_id = sts->value(N("BResId"), DF_B_RES_ID).toBool();
-    hunit = (HazardUnit)sts->value(N("HazardUnit"), DF_HUNIT).toUInt();
     exec_protect = sts->value(N("MemoryExecuteProtection"), DF_EXEC_PROTEC).toBool();
     write_protect = sts->value(N("MemoryWriteProtection"), DF_WRITE_PROTEC).toBool();
     osem_enable = sts->value(N("OsemuEnable"), true).toBool();
@@ -358,10 +358,10 @@ MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) {
 
 void MachineConfig::store(QSettings *sts, const QString &prefix) {
     sts->setValue(N("Pipelined"), pipelined());
-    sts->setValue(N("BranchUnit"), (unsigned)branch_unit());
+    sts->setValue(N("DataHazardUnit"), (unsigned)data_hazard_unit());
+    sts->setValue(N("ControlHazardUnit"), (unsigned)control_hazard_unit());
     sts->setValue(N("BPbits"), bht_bits());
     sts->setValue(N("BResId"), branch_res_id());
-    sts->setValue(N("HazardUnit"), (unsigned)hazard_unit());
     sts->setValue(N("OsemuEnable"), osemu_enable());
     sts->setValue(N("OsemuKnownSyscallStop"), osemu_known_syscall_stop());
     sts->setValue(N("OsemuUnknownSyscallStop"), osemu_unknown_syscall_stop());
@@ -382,7 +382,7 @@ void MachineConfig::store(QSettings *sts, const QString &prefix) {
 
 void MachineConfig::preset(enum ConfigPresets p) {
     // Note: we set just a minimal subset to get preset (preserving as much of hidden configuration as possible)
-    set_branch_unit(BranchUnit::BU_DELAY_SLOT);
+    set_control_hazard_unit(ControlHazardUnit::CHU_DELAY_SLOT);
     set_bht_bits(-1);
 
     switch (p) {
@@ -392,11 +392,11 @@ void MachineConfig::preset(enum ConfigPresets p) {
         break;
     case ConfigPresets::CP_PIPE_NO_HAZARD:
         set_pipelined(true);
-        set_hazard_unit(MachineConfig::HU_NONE);
+        set_data_hazard_unit(MachineConfig::DHU_NONE);
         break;
     case ConfigPresets::CP_PIPE:
         set_pipelined(true);
-        set_hazard_unit(MachineConfig::HU_STALL_FORWARD);
+        set_data_hazard_unit(MachineConfig::DHU_STALL_FORWARD);
         break;
     }
     // Some common configurations
@@ -412,27 +412,27 @@ void MachineConfig::set_pipelined(bool v) {
     pipeline = v;
 }
 
-void MachineConfig::set_hazard_unit(enum MachineConfig::HazardUnit hu)  {
-    hunit = hu;
+void MachineConfig::set_data_hazard_unit(enum MachineConfig::DataHazardUnit dhu)  {
+    dhunit = dhu;
 }
 
-bool MachineConfig::set_hazard_unit(QString hukind) {
-    static QMap<QString, enum HazardUnit> hukind_map =  {
-        {"none",  HU_NONE},
-        {"stall", HU_STALL},
-        {"forward", HU_STALL_FORWARD},
-        {"stall-forward", HU_STALL_FORWARD},
+bool MachineConfig::set_data_hazard_unit(QString dhukind) {
+    static QMap<QString, enum DataHazardUnit> dhukind_map =  {
+        {"none",  DHU_NONE},
+        {"stall", DHU_STALL},
+        {"forward", DHU_STALL_FORWARD},
+        {"stall-forward", DHU_STALL_FORWARD},
     };
-    if (!hukind_map.contains(hukind))
+    if (!dhukind_map.contains(dhukind))
         return false;
 
-    set_hazard_unit(hukind_map.value(hukind));
+    set_data_hazard_unit(dhukind_map.value(dhukind));
 
     return true;
 }
 
-void MachineConfig::set_branch_unit(MachineConfig::BranchUnit bu) {
-    bunit = bu;
+void MachineConfig::set_control_hazard_unit(MachineConfig::ControlHazardUnit chu) {
+    chunit = chu;
 }
 
 void MachineConfig::set_bht_bits(int8_t b) {
@@ -513,13 +513,7 @@ bool MachineConfig::pipelined() const {
 
 // Returns true if predictor is enabled.
 bool MachineConfig::predictor() const {
-    return bunit == BU_ONE_BIT_BP || bunit == BU_TWO_BIT_BP;
-}
-
-// When pipelined, delay_slot or branch predictor are only possible options.
-// When not pipelined, none and delay_slot are only possible options.
-enum MachineConfig::BranchUnit MachineConfig::branch_unit() const {
-    return bunit;
+    return chunit == CHU_ONE_BIT_BP || chunit == CHU_TWO_BIT_BP;
 }
 
 int8_t MachineConfig::bht_bits() const {
@@ -530,9 +524,15 @@ bool MachineConfig::branch_res_id() const {
     return b_res_id;
 }
 
-enum MachineConfig::HazardUnit MachineConfig::hazard_unit() const {
+enum MachineConfig::DataHazardUnit MachineConfig::data_hazard_unit() const {
     // Hazard unit is always off when there is no pipeline
-    return pipeline ? hunit : machine::MachineConfig::HU_NONE;
+    return pipeline ? dhunit : machine::MachineConfig::DHU_NONE;
+}
+
+// When pipelined, delay_slot or branch predictor are only possible options.
+// When not pipelined, none and delay_slot are only possible options.
+enum MachineConfig::ControlHazardUnit MachineConfig::control_hazard_unit() const {
+    return chunit;
 }
 
 bool MachineConfig::memory_execute_protection() const {
@@ -610,9 +610,9 @@ MachineConfigCache *MachineConfig::access_l2_unified_cache() {
 bool MachineConfig::operator==(const MachineConfig &c) const {
 #define CMP(GETTER) (GETTER)() == (c.GETTER)()
     return CMP(pipelined) && \
-            CMP(branch_unit) && \
+            CMP(data_hazard_unit) && \
+            CMP(control_hazard_unit) && \
             CMP(bht_bits) && \
-            CMP(hazard_unit) && \
             CMP(memory_execute_protection) && \
             CMP(memory_write_protection) && \
             CMP(elf) && \

@@ -67,12 +67,12 @@ void BranchPredictorTableView::setModel(QAbstractItemModel *model) {
     Super::setModel(model);
 
     if (pmodel) {
-        switch (pmodel->getMachine()->config().branch_unit()) {
-        case machine::MachineConfig::BU_ONE_BIT_BP:
+        switch (pmodel->getMachine()->config().control_hazard_unit()) {
+        case machine::MachineConfig::CHU_ONE_BIT_BP:
             items.append("NT");
             items.append("T");
             break;
-        case machine::MachineConfig::BU_TWO_BIT_BP:
+        case machine::MachineConfig::CHU_TWO_BIT_BP:
             items.append("STRONGLY_NT");
             items.append("WEAKLY_NT");
             items.append("WEAKLY_T");

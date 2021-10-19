@@ -120,14 +120,19 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
 
     cop0st = new Cop0State();
 
-    if (cc.pipelined())
-        cr = new CorePipelined(regs, core_mem_program, core_mem_data, cc.hazard_unit(),
-                               cc.branch_unit(), cc.bht_bits(), cc.branch_res_id(),
+    if (cc.pipelined()) {
+        // Control hazard unit cannot be none if we are in pipeline mode.
+        SANITY_ASSERT(cc.control_hazard_unit() != MachineConfig::CHU_NONE, "Invalid configuration for control branch unit.");
+        cr = new CorePipelined(regs, core_mem_program, core_mem_data, cc.data_hazard_unit(),
+                               cc.control_hazard_unit(), cc.bht_bits(), cc.branch_res_id(),
                                min_cache_row_size, cop0st);
-    else
+    }
+    else {
+        SANITY_ASSERT(cc.control_hazard_unit() == MachineConfig::CHU_NONE, "Invalid configuration for control branch unit.");
         cr = new CoreSingle(regs, core_mem_program, core_mem_data,
-                            cc.branch_unit() == machine::MachineConfig::BU_DELAY_SLOT,
+                            cc.control_hazard_unit() == machine::MachineConfig::CHU_DELAY_SLOT,
                             min_cache_row_size, cop0st);
+    }
 
     connect(this, SIGNAL(set_interrupt_signal(uint,bool)),
             cop0st, SLOT(set_interrupt_signal(uint,bool)));
@@ -335,10 +340,10 @@ void QtMipsMachine::step_internal(bool skip_break) {
             cycle_stats.l1_program_stalls = l1_program->stalled_cycles();
             cycle_stats.l1_data_stalls = l1_data->stalled_cycles();
             cycle_stats.l2_unified_stalls = l2_unified->stalled_cycles();
-            qDebug() << "l1_program accessed cycles: " << l1_program->get_access_cycles();
-            qDebug() << "l1_data accessed cycles: " << l1_data->get_access_cycles();
-            qDebug() << "l2_unified accessed cycles: " << l2_unified->get_access_cycles();
-            qDebug() << "physaddrspace accessed cycles: " << physaddrspace->get_access_cycles();
+//            qDebug() << "l1_program accessed cycles: " << l1_program->get_access_cycles();
+//            qDebug() << "l1_data accessed cycles: " << l1_data->get_access_cycles();
+//            qDebug() << "l2_unified accessed cycles: " << l2_unified->get_access_cycles();
+//            qDebug() << "physaddrspace accessed cycles: " << physaddrspace->get_access_cycles();
             cycle_stats.total_cycles = cycle_stats.cpu_cycles + cycle_stats.core_stalls +
                     l1_program->get_access_cycles() + l1_data->get_access_cycles() + l2_unified->get_access_cycles()
                     + physaddrspace->get_access_cycles();

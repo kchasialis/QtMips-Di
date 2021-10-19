@@ -46,7 +46,7 @@ QVariant BranchPredictorModel::data(const QModelIndex &index, int role) const {
             case1 = true;
         case 2:
         {
-            int one_bit_pred = machine->config().branch_unit() == machine::MachineConfig::BU_ONE_BIT_BP;
+            int one_bit_pred = machine->config().control_hazard_unit() == machine::MachineConfig::CHU_ONE_BIT_BP;
             int8_t bht_entry = machine->bp()->bht_entry(index.row());
 
             if (one_bit_pred) {

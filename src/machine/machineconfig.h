@@ -117,29 +117,28 @@ public:
 
     void preset(enum ConfigPresets);
 
-    enum HazardUnit {
-        HU_NONE,
-        HU_STALL,
-        HU_STALL_FORWARD
+    enum DataHazardUnit {
+        DHU_NONE,
+        DHU_STALL,
+        DHU_STALL_FORWARD
     };
 
-    enum BranchUnit {
-        BU_NONE, // Neither delay slot nor branch predictor
-        BU_DELAY_SLOT, // Delay slot approach
-        BU_ONE_BIT_BP, // 1-bit branch predictor
-        BU_TWO_BIT_BP // 2-bit branch predictor
+    enum ControlHazardUnit {
+        CHU_NONE,
+        CHU_STALL,
+        CHU_DELAY_SLOT,
+        CHU_ONE_BIT_BP,
+        CHU_TWO_BIT_BP
     };
 
     // Configure if CPU is pipelined
     // In default disabled.
     void set_pipelined(bool);
     // Hazard unit
-    void set_hazard_unit(HazardUnit);
-    bool set_hazard_unit(QString);
-    // Branch unit
-    // When pipelined, delay slot or branch predictor are only possible options.
-    // When not pipelined, none and delay slot are only possible options.
-    void set_branch_unit(BranchUnit);
+    void set_data_hazard_unit(DataHazardUnit);
+    bool set_data_hazard_unit(QString);
+    // Control Hazard Unit unit
+    void set_control_hazard_unit(ControlHazardUnit);
     // Branch history table lookup bits
     void set_bht_bits(std::int8_t);
     // Wether or not branch resolution is done on ID.
@@ -170,10 +169,10 @@ public:
 
     bool pipelined() const;
     bool predictor() const;
-    enum BranchUnit branch_unit() const;
+    enum DataHazardUnit data_hazard_unit() const;
+    enum ControlHazardUnit control_hazard_unit() const;
     std::int8_t bht_bits() const;
     bool branch_res_id() const;
-    enum HazardUnit hazard_unit() const;
     bool memory_execute_protection() const;
     bool memory_write_protection() const;
     bool osemu_enable() const;
@@ -200,10 +199,10 @@ public:
 
 private:
     bool pipeline;
-    BranchUnit bunit;
+    DataHazardUnit dhunit;
+    ControlHazardUnit chunit;
     std::uint8_t bp_bits;
     bool b_res_id;
-    HazardUnit hunit;
     bool exec_protect, write_protect;
     bool osem_enable, osem_known_syscall_stop, osem_unknown_syscall_stop;
     bool osem_interrupt_stop, osem_exception_stop;

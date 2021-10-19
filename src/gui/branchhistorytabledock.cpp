@@ -87,11 +87,11 @@ void BranchPredictorDock::setup(machine::QtMipsMachine *machine) {
     connect(machine->bp(), SIGNAL(pred_accessed_bht(std::int32_t)), predictor_content, SLOT(focus_row(std::int32_t)));
     connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), predictor_content, SLOT(focus_row(std::int32_t)));
 
-    switch (this->machine->config().branch_unit()) {
-    case machine::MachineConfig::BU_ONE_BIT_BP:
+    switch (this->machine->config().control_hazard_unit()) {
+    case machine::MachineConfig::CHU_ONE_BIT_BP:
         text = "One Bit";
         break;
-    case machine::MachineConfig::BU_TWO_BIT_BP:
+    case machine::MachineConfig::CHU_TWO_BIT_BP:
         text = "Two Bit";
         break;
     default:
