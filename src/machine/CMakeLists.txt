@@ -48,7 +48,7 @@ set(qtmips_machine_HEADERS
         lcddisplay.h
         symboltable.h
         cop0state.h
-        )
+        cyclestatistics.h)
 
 # Object library is preferred, because the library archive is never really
 # needed. This option skips the archive creation and links directly .o files.

@@ -52,9 +52,9 @@ enum class ConfigPresets {
 
 class MachineConfigCache {
 public:
-    MachineConfigCache(MemoryAccess::MemoryType ct = MemoryAccess::MemoryType::L1_CACHE);
-    MachineConfigCache(const MachineConfigCache &cc) = default;
-    MachineConfigCache(MemoryAccess::MemoryType ct, const QSettings*, const QString &prefix = "");
+    explicit MachineConfigCache(const MemoryAccess::MemoryType& = MemoryAccess::MemoryType::L1_PROGRAM_CACHE);
+    MachineConfigCache(const MachineConfigCache &cc);
+    MachineConfigCache(const MemoryAccess::MemoryType &ct, const QSettings*, const QString &prefix = "");
 
     void store(QSettings*, const QString &prefix = "");
 
@@ -206,14 +206,14 @@ private:
     bool exec_protect, write_protect;
     bool osem_enable, osem_known_syscall_stop, osem_unknown_syscall_stop;
     bool osem_interrupt_stop, osem_exception_stop;
-    bool res_at_compile;
     QString osem_fs_root;
+    bool res_at_compile;
     QString elf_path;
+    std::uint32_t dram_access_read, dram_access_write, dram_access_burst;
     // L1 cache is split to data/program cache.
-    MachineConfigCache l1_data, l1_program;
+    MachineConfigCache l1_program, l1_data;
     // L2 cache is unified.
     MachineConfigCache l2_unified;
-    std::uint32_t dram_access_read, dram_access_write, dram_access_burst;
 };
 
 }

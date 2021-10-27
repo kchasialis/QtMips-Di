@@ -37,27 +37,16 @@
 
 using namespace machine;
 
-#include <QDebug>
+extern CycleStatistics cycle_stats;
 
-Cache::Cache(MemoryAccess *m, const MachineConfigCache &cc, uint32_t acc_read, uint32_t acc_write, uint32_t acc_burst,
-             uint32_t lower_acc_pen_r, uint32_t lower_acc_pen_w, uint32_t lower_acc_pen_b) : MemoryAccess(acc_read, acc_write, acc_burst), cnf(cc) {
-    mem_lower = m;
-    access_pen_read = lower_acc_pen_r;
-    access_pen_write = lower_acc_pen_w;
-    access_pen_burst = lower_acc_pen_b;
-    uncached_start = 0xf0000000;
-    uncached_last = 0xffffffff;
-    cache_type = cc.type();
-    read_hits = 0;
-    read_misses = 0;
-    write_hits = 0;
-    write_misses = 0;
-    mem_lower_reads = 0;
-    mem_lower_writes = 0;
-    burst_reads = 0;
-    burst_writes = 0;
-    change_counter = 0;
-    dt = nullptr;
+Cache::Cache(const MachineConfigCache &cc, MemoryAccess *m, uint32_t acc_read, uint32_t acc_write,
+             uint32_t acc_burst, uint32_t lower_acc_pen_r, uint32_t lower_acc_pen_w, uint32_t lower_acc_pen_b) :
+                MemoryAccess(acc_read, acc_write, acc_burst), cnf(cc), mem_lower(m),
+                access_pen_read(lower_acc_pen_r), access_pen_write(lower_acc_pen_w),
+                access_pen_burst(lower_acc_pen_b), uncached_start(0xf0000000), uncached_last(0xffffffff),
+                cache_type(cc.type()), read_hits(0), read_misses(0), write_hits(0), write_misses(0),
+                mem_lower_reads(0), mem_lower_writes(0), burst_reads(0), burst_writes(0),
+                change_counter(0), dt(nullptr), replc() {
     replc.lfu = nullptr;
     replc.lru = nullptr;
 
@@ -104,8 +93,7 @@ Cache::~Cache(){
         for (size_t i = 0; i < cnf.associativity(); i++) {
             if (dt[i]) {
                     for (size_t y = 0; y < cnf.sets(); y++) {
-                        if (dt[i][y].data != nullptr)
-                            delete[] dt[i][y].data;
+                        delete[] dt[i][y].data;
                     }
                     delete[] dt[i];
                 }
@@ -132,7 +120,6 @@ Cache::~Cache(){
     }
 }
 
-
 bool Cache::wword(std::uint32_t address, std::uint32_t value) {
     std::uint32_t data;
     bool changed;
@@ -140,11 +127,12 @@ bool Cache::wword(std::uint32_t address, std::uint32_t value) {
 
     if (!cnf.enabled() || out_of_bounds) {
         SANITY_ASSERT(0, "I shouldn't get called");
-        mem_lower_writes++;
-        emit_mem_lower_signal(false);
-        update_statistics();
-        return mem_lower->write_word(address, value);
+//        mem_lower_writes++;
+//        emit_mem_lower_signal(false);
+//        update_statistics();
+//        return mem_lower->write_word(address, value);
     }
+
     writes++;
     changed = access(address, &data, true, value);
 
@@ -152,6 +140,7 @@ bool Cache::wword(std::uint32_t address, std::uint32_t value) {
         mem_lower_writes++;
         emit_mem_lower_signal(false);
         update_statistics();
+        mem_lower->set_update_stats(true);
         return mem_lower->write_word(address, value);
     }
 
@@ -171,6 +160,7 @@ std::uint32_t Cache::rword(std::uint32_t address, bool debug_access) const {
     }
 
     if (debug_access) {
+        SANITY_ASSERT(0, "I dont want this to be executed now.");
         if (!(location_status(address) & LOCSTAT_CACHED))
             return mem_lower->read_word(address, debug_access);
         return debug_rword(address);
@@ -198,7 +188,7 @@ void Cache::flush() {
         for (size_t st = 0; st < cnf.sets(); st++) {
             if (dt[as][st].valid) {
                 kick(as, st);
-                emit cache_update(as, st, 0, false, false, 0, 0, false);
+                emit cache_update(as, st, 0, false, false, 0, nullptr, false);
             }
         }
     }
@@ -219,13 +209,13 @@ std::uint32_t Cache::miss() const {
     return read_misses + write_misses;
 }
 
-std::uint32_t Cache::ml_reads() const {
-    return mem_lower_reads;
-}
-
-std::uint32_t Cache::ml_writes() const {
-    return mem_lower_writes;
-}
+//std::uint32_t Cache::ml_reads() const {
+//    return mem_lower_reads;
+//}
+//
+//std::uint32_t Cache::ml_writes() const {
+//    return mem_lower_writes;
+//}
 
 std::uint32_t Cache::stalled_cycles() const {
     uint32_t st_cycles = read_misses * access_read + write_misses * access_write +
@@ -327,24 +317,24 @@ enum LocationStatus Cache::location_status(std::uint32_t address) const {
 
 void Cache::emit_mem_lower_signal(bool read) const {
     switch (mem_lower->type()) {
-    case MemoryType::L1_CACHE:
-        SANITY_ASSERT(0, "lower level cannot be L1 cache.");
-        break;
-    case MemoryType::L2_CACHE:
-        if (read)
-            emit level2_cache_reads_update(mem_lower_reads);
-        else
-            emit level2_cache_writes_update(mem_lower_writes);
-        break;
-    case MemoryType::DRAM:
-        if (read)
-            emit memory_reads_update(mem_lower_reads);
-        else
-            emit memory_writes_update(mem_lower_writes);
-        break;
-    default:
-        SANITY_ASSERT(0, "Unknown memory type.");
-        break;
+        case MemoryType::L1_PROGRAM_CACHE:
+        case MemoryType::L1_DATA_CACHE:
+            SANITY_ASSERT(0, "Lower level cannot be an L1 cache.");
+            break;
+        case MemoryType::L2_UNIFIED_CACHE:
+            if (read)
+                emit level2_cache_reads_update(mem_lower_reads);
+            else
+                emit level2_cache_writes_update(mem_lower_writes);
+            break;
+        case MemoryType::DRAM:
+            if (read)
+                emit memory_reads_update(mem_lower_reads);
+            else
+                emit memory_writes_update(mem_lower_writes);
+            break;
+        default:
+            SANITY_ASSERT(0, "Unknown memory type.");
     }
 }
 
@@ -361,6 +351,8 @@ std::uint32_t Cache::debug_rword(std::uint32_t address) const {
     return 0;
 }
 
+#include <QDebug>
+
 bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::uint32_t value) const {
     bool changed = false;
     std::uint32_t row, col, tag, indx;
@@ -376,7 +368,7 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
         // if write through we do not need to allocate cache line does not allocate
         if (write && cnf.write_policy() ==
                 MachineConfigCache::WritePolicy::WP_THROUGH_NOALLOC) {
-            write_misses++;
+            update_misses(false);
             emit miss_update(miss());
             update_statistics();
             return false;
@@ -420,19 +412,21 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
     // Update statistics and otherwise read from memory
     if (cd.valid) {
         if (write)
-            write_hits++;
+            update_hits(false);
         else
-            read_hits++;
+            update_hits(true);
+
         emit hit_update(hit());
         update_statistics();
     } else {
         if (write)
-            write_misses++;
+            update_misses(false);
         else
-            read_misses++;
+            update_misses(true);
         emit miss_update(miss());
 
         for (size_t i = 0; i < cnf.blocks(); i++) {
+            mem_lower->set_update_stats(i == 0);
             cd.data[i] = mem_lower->read_word(base_address(tag, row) + (4*i));
             change_counter++;
         }
@@ -445,28 +439,28 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
 
     // Update replacement data
     switch (cnf.replacement_policy()) {
-    case MachineConfigCache::ReplacementPolicy::RP_LRU:
-    {
-        uint32_t next_asi = indx;
-        int i = cnf.associativity() - 1;
-        uint32_t tmp_asi = replc.lru[row][i];
-        while (tmp_asi != indx) {
-            SANITY_ASSERT(i >= 0, "LRU lost the way from priority queue - access");
-            tmp_asi = replc.lru[row][i];
-            replc.lru[row][i] = next_asi;
-            next_asi = tmp_asi;
-            i--;
+        case MachineConfigCache::ReplacementPolicy::RP_LRU:
+        {
+            uint32_t next_asi = indx;
+            int i = cnf.associativity() - 1;
+            uint32_t tmp_asi = replc.lru[row][i];
+            while (tmp_asi != indx) {
+                SANITY_ASSERT(i >= 0, "LRU lost the way from priority queue - access");
+                tmp_asi = replc.lru[row][i];
+                replc.lru[row][i] = next_asi;
+                next_asi = tmp_asi;
+                i--;
+            }
+            break;
         }
-        break;
-    }
-    case MachineConfigCache::ReplacementPolicy::RP_LFU:
-        if (cd.valid)
-            replc.lfu[row][indx]++;
-        else
-            replc.lfu[row][indx] = 0;
-        break;
-    default:
-        break;
+        case MachineConfigCache::ReplacementPolicy::RP_LFU:
+            if (cd.valid)
+                replc.lfu[row][indx]++;
+            else
+                replc.lfu[row][indx] = 0;
+            break;
+        default:
+            break;
     }
 
     cd.valid = true; // We either write to it or we read from memory. Either way it's valid when we leave Cache class
@@ -490,6 +484,7 @@ void Cache::kick(std::uint32_t associat_indx, std::uint32_t row) const {
 
     if (cd.dirty && cnf.write_policy() == MachineConfigCache::WritePolicy::WP_BACK) {
         for (size_t i = 0; i < cnf.blocks(); i++) {
+            mem_lower->set_update_stats(i == 0);
             mem_lower->write_word(base_address(cd.tag, row) + (4*i), cd.data[i]);
         }
 
@@ -502,25 +497,25 @@ void Cache::kick(std::uint32_t associat_indx, std::uint32_t row) const {
     cd.dirty = false;
 
     switch (cnf.replacement_policy()) {
-    case MachineConfigCache::ReplacementPolicy::RP_LRU:
-    {
-        std::uint32_t next_asi = associat_indx;
-        std::uint32_t tmp_asi = replc.lru[row][0];
-        int i = 1;
-        while (tmp_asi != associat_indx) {
-            SANITY_ASSERT(i < (int)cnf.associativity(), "LRU lost the way from priority queue - kick");
-            tmp_asi = replc.lru[row][i];
-            replc.lru[row][i] = next_asi;
-            next_asi = tmp_asi;
-            i++;
+        case MachineConfigCache::ReplacementPolicy::RP_LRU:
+        {
+            std::uint32_t next_asi = associat_indx;
+            std::uint32_t tmp_asi = replc.lru[row][0];
+            int i = 1;
+            while (tmp_asi != associat_indx) {
+                SANITY_ASSERT(i < (int)cnf.associativity(), "LRU lost the way from priority queue - kick");
+                tmp_asi = replc.lru[row][i];
+                replc.lru[row][i] = next_asi;
+                next_asi = tmp_asi;
+                i++;
+            }
+            break;
         }
-        break;
-    }
-    case MachineConfigCache::ReplacementPolicy::RP_LFU:
-        replc.lfu[row][associat_indx] = 0;
-        break;
-    default:
-        break;
+        case MachineConfigCache::ReplacementPolicy::RP_LFU:
+            replc.lfu[row][associat_indx] = 0;
+            break;
+        default:
+            break;
     }
 }
 
@@ -530,4 +525,45 @@ std::uint32_t Cache::base_address(std::uint32_t tag, std::uint32_t row) const {
 
 void Cache::update_statistics() const {
     emit statistics_update(stalled_cycles(), speed_improvement(), hit_rate());
+}
+
+/* TODO: check if these work with various configurations for write policy!  */
+void Cache::update_misses(bool read) const {
+    if (update_stats) {
+        read_misses += read ? 1 : 0;
+        write_misses += read ? 0 : 1;
+        switch (cnf.type()) {
+            case MemoryType::L1_PROGRAM_CACHE:
+                cycle_stats.l1_program_stall_cycles += read ? access_pen_read : access_pen_write;
+                break;
+            case MemoryType::L1_DATA_CACHE:
+                cycle_stats.l1_data_stall_cycles += read ? access_pen_read : access_pen_write;
+                break;
+            case MemoryType::L2_UNIFIED_CACHE:
+                cycle_stats.l2_unified_stall_cycles += read ? access_pen_read : access_pen_write;
+                break;
+            default:
+                SANITY_ASSERT(0, "Wrong type for cache.");
+        }
+    }
+}
+
+void Cache::update_hits(bool read) const {
+    if (update_stats) {
+        read_hits += read ? 1 : 0;
+        write_hits += read ? 0 : 1;
+//        switch (cnf.type()) {
+//            case MemoryType::L1_PROGRAM_CACHE:
+//                cycle_stats.l1_program_access_cycles += read ? cnf.mem_access_read() : cnf.mem_access_write();
+//                break;
+//            case MemoryType::L1_DATA_CACHE:
+//                cycle_stats.l1_data_access_cycles += read ? cnf.mem_access_read() : cnf.mem_access_write();
+//                break;
+//            case MemoryType::L2_UNIFIED_CACHE:
+//                cycle_stats.l2_unified_access_cycles += read ? cnf.mem_access_read() : cnf.mem_access_write();
+//                break;
+//            default:
+//                SANITY_ASSERT(0, "Wrong type for cache.");
+//        }
+    }
 }

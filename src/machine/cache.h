@@ -36,32 +36,33 @@
 #ifndef CACHE_H
 #define CACHE_H
 
+#include "cyclestatistics.h"
 #include <memory.h>
 #include <machineconfig.h>
-#include <stdint.h>
-#include <time.h>
+#include <cstdint>
+#include <ctime>
 
 namespace machine {
 
 class Cache : public MemoryAccess {
     Q_OBJECT
 public:
-    Cache(MemoryAccess *m, const MachineConfigCache &cc, uint32_t acc_read, uint32_t acc_write, uint32_t acc_burst,
-          uint32_t lower_acc_pen_r, uint32_t lower_acc_pen_w, uint32_t lower_acc_pen_b);
-    ~Cache();
+    Cache(const MachineConfigCache &cc, MemoryAccess *m, uint32_t acc_read, uint32_t acc_write,
+          uint32_t acc_burst, uint32_t lower_acc_pen_r, uint32_t lower_acc_pen_w, uint32_t lower_acc_pen_b);
+    ~Cache() override;
 
     bool wword(std::uint32_t address, std::uint32_t value) override;
     std::uint32_t rword(std::uint32_t address, bool debug_access = false) const override;
-    virtual std::uint32_t get_change_counter() const override;
-    virtual MemoryType type() const override;
+    std::uint32_t get_change_counter() const override;
+    MemoryType type() const override;
 
     void flush(); // flush cache.
     void sync() override; // Same as flush.
 
     std::uint32_t hit() const; // Number of recorded hits.
     std::uint32_t miss() const; // Number of recorded misses.
-    std::uint32_t ml_reads() const; // Number of reads on the lower level (L* or memory).
-    std::uint32_t ml_writes() const; // Number of writes on the lower level (L* or memory).
+//    std::uint32_t ml_reads() const; // Number of reads on the lower level (L* or memory).
+//    std::uint32_t ml_writes() const; // Number of writes on the lower level (L* or memory).
     std::uint32_t stalled_cycles() const; // Number of wasted cycles in lower level.
     double speed_improvement() const; // Speed improvement in percents in comare with no used cache.
     double hit_rate() const; // Usage efficiency in percents.
@@ -123,6 +124,9 @@ private:
         row = index / cnf.blocks();
         col = index % cnf.blocks();
     }
+
+    void update_misses(bool read) const;
+    void update_hits(bool read) const;
 };
 
 }

@@ -10,7 +10,8 @@ CycleStatisticsDock::CycleStatisticsDock(QWidget *parent) : QDockWidget(parent) 
     std::vector<const char *> labels = {
         "Total Cycles:",
         "CPU Cycles:",
-        "Core Stalls:",
+        "Data Hazard Stalls:",
+        "Control Hazard Stalls:",
         "L1 Data Stalls:",
         "L1 Program Stalls:",
         "L2 Unified Stalls:"
@@ -40,11 +41,13 @@ void CycleStatisticsDock::setup(machine::QtMipsMachine *machine) const {
 }
 
 void CycleStatisticsDock::cycle_stats_update(const machine::CycleStatistics &cycle_stats) {
-//    cycle_stats_labels[TOTAL_CYCLES]->setText(QString::number(cycle_stats.cpu_cycles + cycle_stats.core_stalls));
-    cycle_stats_labels[TOTAL_CYCLES]->setText(QString::number(cycle_stats.total_cycles));
+    uint32_t total_cycles = cycle_stats.cpu_cycles + cycle_stats.l1_data_stall_cycles + cycle_stats.l1_program_stall_cycles
+                            + cycle_stats.l2_unified_stall_cycles + cycle_stats.data_hazard_stalls + cycle_stats.control_hazard_stalls;
+    cycle_stats_labels[TOTAL_CYCLES]->setText(QString::number(total_cycles));
     cycle_stats_labels[CPU_CYCLES]->setText(QString::number(cycle_stats.cpu_cycles));
-    cycle_stats_labels[CORE_STALLS]->setText(QString::number(cycle_stats.core_stalls));
-    cycle_stats_labels[L1_DATA_STALLS]->setText(QString::number(cycle_stats.l1_data_stalls));
-    cycle_stats_labels[L1_PROGRAM_STALLS]->setText(QString::number(cycle_stats.l1_program_stalls));
-    cycle_stats_labels[L2_UNIFIED_STALLS]->setText(QString::number(cycle_stats.l2_unified_stalls));
+    cycle_stats_labels[DATA_HAZARD_STALLS]->setText(QString::number(cycle_stats.data_hazard_stalls));
+    cycle_stats_labels[CONTROL_HAZARD_STALLS]->setText(QString::number(cycle_stats.control_hazard_stalls));
+    cycle_stats_labels[L1_DATA_STALLS]->setText(QString::number(cycle_stats.l1_data_stall_cycles));
+    cycle_stats_labels[L1_PROGRAM_STALLS]->setText(QString::number(cycle_stats.l1_program_stall_cycles));
+    cycle_stats_labels[L2_UNIFIED_STALLS]->setText(QString::number(cycle_stats.l2_unified_stall_cycles));
 }

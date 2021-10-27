@@ -42,6 +42,8 @@ using namespace machine;
 
 #include <QDebug>
 
+CycleStatistics cycle_stats;
+
 QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool load_executable) :
                              QObject(), mcnf(cc) {
     MemoryAccess *cpu_mem, *core_mem_data, *core_mem_program;
@@ -83,7 +85,7 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
     perip_lcd_display = new LcdDisplay();
     addressapce_insert_range(perip_lcd_display, 0xffe00000, 0xffe4afff, true);
 
-    l2_unified = new Cache(cpu_mem, cc.l2_unified_cache(), cc.l2_unified_cache().mem_access_read(),
+    l2_unified = new Cache(cc.l2_unified_cache(), cpu_mem, cc.l2_unified_cache().mem_access_read(),
                            cc.l2_unified_cache().mem_access_write(), cc.l2_unified_cache().mem_access_burst(),
                            cc.ram_access_read(), cc.ram_access_write(), cc.ram_access_burst());
     if (cc.l2_unified_cache().enabled()) {
@@ -91,25 +93,25 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
     }
 
     if (cc.l2_unified_cache().enabled()) {
-        l1_data = new Cache(l2_unified, cc.l1_data_cache(), cc.l1_data_cache().mem_access_read(),
-                            cc.l1_data_cache().mem_access_write(), cc.l1_data_cache().mem_access_burst(),
-                            cc.l2_unified_cache().mem_access_read(), cc.l2_unified_cache().mem_access_write(),
-                            cc.l2_unified_cache().mem_access_burst());
-        l1_program = new Cache(l2_unified, cc.l1_program_cache(), cc.l1_program_cache().mem_access_read(),
+        l1_program = new Cache(cc.l1_program_cache(), l2_unified, cc.l1_program_cache().mem_access_read(),
                                cc.l1_program_cache().mem_access_write(), cc.l1_program_cache().mem_access_burst(),
                                cc.l2_unified_cache().mem_access_read(), cc.l2_unified_cache().mem_access_write(),
                                cc.l2_unified_cache().mem_access_burst());
-    } else {
-        l1_data = new Cache(cpu_mem, cc.l1_data_cache(), cc.l1_data_cache().mem_access_read(),
+        l1_data = new Cache(cc.l1_data_cache(), l2_unified, cc.l1_data_cache().mem_access_read(),
                             cc.l1_data_cache().mem_access_write(), cc.l1_data_cache().mem_access_burst(),
-                            cc.ram_access_read(), cc.ram_access_write(), cc.ram_access_burst());
-        l1_program = new Cache(cpu_mem, cc.l1_program_cache(), cc.l1_program_cache().mem_access_read(),
+                            cc.l2_unified_cache().mem_access_read(), cc.l2_unified_cache().mem_access_write(),
+                            cc.l2_unified_cache().mem_access_burst());
+    } else {
+        l1_program = new Cache(cc.l1_program_cache(), cpu_mem, cc.l1_program_cache().mem_access_read(),
                                cc.l1_program_cache().mem_access_write(), cc.l1_program_cache().mem_access_burst(),
                                cc.ram_access_read(), cc.ram_access_write(), cc.ram_access_burst());
+        l1_data = new Cache(cc.l1_data_cache(), cpu_mem, cc.l1_data_cache().mem_access_read(),
+                            cc.l1_data_cache().mem_access_write(), cc.l1_data_cache().mem_access_burst(),
+                            cc.ram_access_read(), cc.ram_access_write(), cc.ram_access_burst());
     }
 
-    core_mem_data = cc.l1_data_cache().enabled() ? l1_data : cpu_mem;
     core_mem_program = cc.l1_program_cache().enabled() ? l1_program : cpu_mem;
+    core_mem_data = cc.l1_data_cache().enabled() ? l1_data : cpu_mem;
 
     min_cache_row_size = 16;
     if (cc.l1_data_cache().enabled())
@@ -153,39 +155,17 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
 }
 
 QtMipsMachine::~QtMipsMachine() {
-    if (run_t != nullptr)
-        delete run_t;
-    run_t = nullptr;
-    if (cr != nullptr)
-        delete cr;
-    cr = nullptr;
-    if (cop0st != nullptr)
-        delete cop0st;
-    cop0st = nullptr;
-    if (regs != nullptr)
-        delete regs;
-    regs = nullptr;
-    if (mem != nullptr)
-        delete mem;
-    mem = nullptr;
-    if (l1_program != nullptr)
-        delete l1_program;
-    l1_program = nullptr;
-    if (l1_data != nullptr)
-        delete l1_data;
-    l1_data = nullptr;
-    if (l2_unified != nullptr)
-        delete l2_unified;
-    l2_unified = nullptr;
-    if (physaddrspace != nullptr)
-        delete physaddrspace;
-    physaddrspace = nullptr;
-    if (mem_program_only != nullptr)
-        delete mem_program_only;
-    mem_program_only = nullptr;
-    if (symtab != nullptr)
-        delete symtab;
-    symtab = nullptr;
+    delete run_t;
+    delete cr;
+    delete cop0st;
+    delete regs;
+    delete mem;
+    delete l1_program;
+    delete l1_data;
+    delete l2_unified;
+    delete physaddrspace;
+    delete mem_program_only;
+    delete symtab;
 }
 
 const MachineConfig &QtMipsMachine::config() const {
@@ -322,8 +302,6 @@ void QtMipsMachine::pause() {
     run_t->stop();
 }
 
-#include <QDebug>
-
 void QtMipsMachine::step_internal(bool skip_break) {
 
     CTL_GUARD;
@@ -335,18 +313,6 @@ void QtMipsMachine::step_internal(bool skip_break) {
         do {
             cr->step(skip_break);
             // Update cycles for cache misses in every step
-            cycle_stats.cpu_cycles = cr->get_cycles();
-            cycle_stats.core_stalls = cr->get_stalls();
-            cycle_stats.l1_program_stalls = l1_program->stalled_cycles();
-            cycle_stats.l1_data_stalls = l1_data->stalled_cycles();
-            cycle_stats.l2_unified_stalls = l2_unified->stalled_cycles();
-//            qDebug() << "l1_program accessed cycles: " << l1_program->get_access_cycles();
-//            qDebug() << "l1_data accessed cycles: " << l1_data->get_access_cycles();
-//            qDebug() << "l2_unified accessed cycles: " << l2_unified->get_access_cycles();
-//            qDebug() << "physaddrspace accessed cycles: " << physaddrspace->get_access_cycles();
-            cycle_stats.total_cycles = cycle_stats.cpu_cycles + cycle_stats.core_stalls +
-                    l1_program->get_access_cycles() + l1_data->get_access_cycles() + l2_unified->get_access_cycles()
-                    + physaddrspace->get_access_cycles();
             emit cycle_stats_update(cycle_stats);
         } while(time_chunk != 0 && stat == ST_BUSY && skip_break == false &&
                 start_time.msecsTo(QTime::currentTime()) < (int)time_chunk);

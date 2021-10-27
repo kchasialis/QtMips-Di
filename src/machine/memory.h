@@ -51,8 +51,9 @@ public:
     MemoryAccess(uint32_t access_read, uint32_t access_write, uint32_t access_burst);
 
     enum class MemoryType {
-        L1_CACHE,
-        L2_CACHE,
+        L1_PROGRAM_CACHE = 0,
+        L1_DATA_CACHE = 1,
+        L2_UNIFIED_CACHE = 2,
         DRAM
     };
 
@@ -73,9 +74,15 @@ public:
     virtual MemoryType type() const;
     virtual std::uint32_t get_change_counter() const = 0;
 
+    void set_update_stats(bool);
+
     uint32_t get_access_cycles() const;
     uint32_t get_reads() const;
     uint32_t get_writes() const;
+    uint32_t get_access_read() const;
+    uint32_t get_access_write() const;
+    uint32_t get_access_burst() const;
+    bool get_update_stats() const;
 signals:
     void external_change_notify(const MemoryAccess *mem_access, uint32_t start_addr,
                                 uint32_t last_addr, bool external) const;
@@ -83,6 +90,8 @@ signals:
 protected:
     uint32_t access_read, access_write, access_burst;
     mutable uint32_t reads, writes;
+    // this allows us to count lower memory accesses/stalls only once and not for each word in the block.
+    bool update_stats;
     virtual bool wword(std::uint32_t offset, std::uint32_t value) = 0;
     virtual std::uint32_t rword(std::uint32_t offset, bool debug_access = false) const = 0;
 
@@ -99,7 +108,6 @@ public:
     bool wword(std::uint32_t offset, std::uint32_t value) override;
     std::uint32_t rword(std::uint32_t offsetbool, bool debug_access = false) const override;
     virtual std::uint32_t get_change_counter() const override;
-    virtual MemoryType type() const override;
     void merge(MemorySection&);
 
     std::uint32_t length() const;
@@ -131,8 +139,7 @@ public:
     MemorySection *get_section(std::uint32_t address, bool create) const; // returns section containing given address
     bool wword(std::uint32_t address, std::uint32_t value) override;
     std::uint32_t rword(std::uint32_t address, bool debug_access = false) const override;
-    virtual std::uint32_t get_change_counter() const override;
-    virtual MemoryType type() const override;
+    std::uint32_t get_change_counter() const override;
 
     bool operator==(const Memory&) const;
     bool operator!=(const Memory&) const;

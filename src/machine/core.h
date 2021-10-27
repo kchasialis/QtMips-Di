@@ -45,6 +45,7 @@
 #include <memory.h>
 #include <instruction.h>
 #include <alu.h>
+#include <cyclestatistics.h>
 
 namespace machine {
 
@@ -52,7 +53,6 @@ class Core;
 class BranchPredictor;
 class OneBitBranchPredictor;
 class TwoBitBranchPredictor;
-
 
 class ExceptionHandler : public QObject {
     Q_OBJECT
@@ -105,7 +105,7 @@ public:
 
     void set_c0_userlocal(std::uint32_t address);
 
-    enum class ForwardFrom {
+    enum ForwardFrom {
         FORWARD_NONE   = 0b00,
         FORWARD_FROM_W = 0b01,
         FORWARD_FROM_M = 0b10,
@@ -296,10 +296,10 @@ protected:
                            std::uint32_t rt_value, std::uint32_t mem_addr);
 
     // Initialize structures to NOPE instruction
-    void dtFetchInit(struct dtFetch &dt);
-    void dtDecodeInit(struct dtDecode &dt);
-    void dtExecuteInit(struct dtExecute &dt);
-    void dtMemoryInit(struct dtMemory &dt);
+    static void dtFetchInit(struct dtFetch &dt);
+    static void dtDecodeInit(struct dtDecode &dt);
+    static void dtExecuteInit(struct dtExecute &dt);
+    static void dtMemoryInit(struct dtMemory &dt);
 
 protected:
     uint32_t stalls;

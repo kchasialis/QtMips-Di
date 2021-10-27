@@ -45,6 +45,7 @@
 #include <memory.h>
 #include <core.h>
 #include <cache.h>
+#include <cyclestatistics.h>
 #include <physaddrspace.h>
 #include <peripheral.h>
 #include <serialport.h>
@@ -53,15 +54,6 @@
 #include <symboltable.h>
 
 namespace machine {
-
-    struct CycleStatistics {
-        uint32_t total_cycles;
-        uint32_t cpu_cycles;
-        uint32_t core_stalls;
-        uint32_t l1_data_stalls;
-        uint32_t l1_program_stalls;
-        uint32_t l2_unified_stalls;
-    };
 
 class QtMipsMachine : public QObject {
     Q_OBJECT
@@ -149,7 +141,6 @@ private:
     LcdDisplay *perip_lcd_display;
     Cache *l1_program, *l1_data;
     Cache *l2_unified;
-    CycleStatistics cycle_stats;
     Cop0State *cop0st;
     Core *cr;
     QTimer *run_t;

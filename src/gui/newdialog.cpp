@@ -244,6 +244,7 @@ void NewDialog::set_preset() {
 
 void NewDialog::pipelined_change(bool val) {
     config->set_pipelined(val);
+    config->set_control_hazard_unit(machine::MachineConfig::CHU_NONE);
 
 	switch2custom();
 }
@@ -508,34 +509,35 @@ void NewDialogCacheHandler::enabled(bool val) {
 
     // We must prohibit the user to enable L2 cache without enabling L1.
     switch (config->type()) {
-    case machine::MemoryAccess::MemoryType::L1_CACHE:
-        if (nd->l1_data_cache_handler()->config->enabled() || nd->l1_program_cache_handler()->config->enabled()) {
-            // L1 program or data cache are enabled, allow user to also enable L2 Cache.
-            nd->l2_cache_dialog()->enabled->setCheckable(true);
-            nd->l2_cache_dialog()->access_time->setEnabled(true);
-        } else {
-            // L1 program and data cache are both disabled, also disable L2 cache.
-            nd->l2_cache_dialog()->enabled->clicked(false);
-            nd->l2_cache_dialog()->enabled->setCheckable(false);
-            nd->l2_cache_dialog()->access_time->setEnabled(false);
-        }
-        break;
-    case machine::MemoryAccess::MemoryType::L2_CACHE:
-        if (val) {
-            // L2 cache is enabled, check if at least one of L1 program or data cache is also enabled.
-            if (!nd->l1_data_cache_handler()->config->enabled() && !nd->l1_program_cache_handler()->config->enabled()) {
+        case machine::MemoryAccess::MemoryType::L1_PROGRAM_CACHE:
+        case machine::MemoryAccess::MemoryType::L1_DATA_CACHE:
+            if (nd->l1_data_cache_handler()->config->enabled() || nd->l1_program_cache_handler()->config->enabled()) {
+                // L1 program or data cache are enabled, allow user to also enable L2 Cache.
+                nd->l2_cache_dialog()->enabled->setCheckable(true);
+                nd->l2_cache_dialog()->access_time->setEnabled(true);
+            } else {
+                // L1 program and data cache are both disabled, also disable L2 cache.
                 nd->l2_cache_dialog()->enabled->clicked(false);
                 nd->l2_cache_dialog()->enabled->setCheckable(false);
                 nd->l2_cache_dialog()->access_time->setEnabled(false);
-
-                QMessageBox messageBox;
-                messageBox.critical(nullptr, "Error", "L2 cache can't be enabled without enabling one of L1 caches");
-                messageBox.setFixedSize(500, 200);
             }
-        }
-        break;
-    default:
-        SANITY_ASSERT(0, "Debug me :)");
+            break;
+        case machine::MemoryAccess::MemoryType::L2_UNIFIED_CACHE:
+            if (val) {
+                // L2 cache is enabled, check if at least one of L1 program or data cache is also enabled.
+                if (!nd->l1_data_cache_handler()->config->enabled() && !nd->l1_program_cache_handler()->config->enabled()) {
+                    nd->l2_cache_dialog()->enabled->clicked(false);
+                    nd->l2_cache_dialog()->enabled->setCheckable(false);
+                    nd->l2_cache_dialog()->access_time->setEnabled(false);
+
+                    QMessageBox messageBox;
+                    messageBox.critical(nullptr, "Error", "L2 cache can't be enabled without enabling one of L1 caches");
+                    messageBox.setFixedSize(500, 200);
+                }
+            }
+            break;
+        default:
+            SANITY_ASSERT(0, "Debug me :)");
     }
 
 	nd->switch2custom();

@@ -41,6 +41,7 @@
 #include <QDebug>
 
 using namespace machine;
+extern CycleStatistics cycle_stats;
 
 Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
            std::uint32_t min_cache_row_size, Cop0State *cop0state) :
@@ -69,12 +70,14 @@ Core::~Core() {
 
 void Core::step(bool skip_break) {
     cycles++;
+    ++cycle_stats.cpu_cycles;
     do_step(skip_break);
 }
 
 void Core::reset() {
     cycles = 0;
     stalls = 0;
+    memset(&cycle_stats, 0, sizeof(cycle_stats));
     do_reset();
 }
 
@@ -274,6 +277,9 @@ struct Core::dtFetch Core::fetch(bool skip_break, bool signal) {
     std::uint32_t inst_addr = regs->read_pc();
     Instruction inst(mem_program->read_word(inst_addr));
 
+    // We read from memory. If we have no caches we should update cycles by memory latency and not by 1.
+    cycle_stats.cpu_cycles += mem_program->type() == MemoryAccess::MemoryType::DRAM ? mem_program->get_access_read() : 0;
+
     if (!skip_break) {
         hwBreak *brk = hw_breaks.value(inst_addr);
         if (brk != nullptr) {
@@ -389,8 +395,8 @@ struct Core::dtDecode Core::decode(const struct dtFetch &dt) {
         .val_rt = val_rt,
         .immediate_val = immediate_val,
         .rwrite = rwrite,
-        .ff_rs = ForwardFrom::FORWARD_NONE,
-        .ff_rt = ForwardFrom::FORWARD_NONE,
+        .ff_rs = FORWARD_NONE,
+        .ff_rt = FORWARD_NONE,
         .inst_addr = dt.inst_addr,
         .excause = excause,
         .in_delay_slot = dt.in_delay_slot,
@@ -490,7 +496,7 @@ struct Core::dtExecute Core::execute(const struct dtDecode &dt) {
     emit execute_rd_num_value(dt.num_rd);
     if (dt.stall)
         emit execute_stall_forward_value(1);
-    else if (dt.ff_rs != ForwardFrom::FORWARD_NONE || dt.ff_rt != ForwardFrom::FORWARD_NONE)
+    else if (dt.ff_rs != FORWARD_NONE || dt.ff_rt != FORWARD_NONE)
         emit execute_stall_forward_value(2);
     else
         emit execute_stall_forward_value(0);
@@ -527,6 +533,13 @@ struct Core::dtMemory Core::memory(const struct dtExecute &dt) {
     bool memwrite = dt.memwrite;
     bool regwrite = dt.regwrite;
 
+    // We read from memory, if we directly hit DRAM we should update cycles accordingly.
+    if (memread) {
+        cycle_stats.cpu_cycles += (mem_data->type() == MemoryAccess::MemoryType::DRAM) ? mem_data->get_access_read() : 0;
+    } else if (memwrite) {
+        cycle_stats.cpu_cycles += (mem_data->type() == MemoryAccess::MemoryType::DRAM) ? mem_data->get_access_write() : 0;
+    }
+
     if (excause == EXCAUSE_NONE) {
         if (dt.memctl > AC_LAST_REGULAR) {
             excause = memory_special(dt.memctl, dt.inst.rt(), memread, memwrite,
@@ -545,7 +558,7 @@ struct Core::dtMemory Core::memory(const struct dtExecute &dt) {
         regwrite = false;
     }
 
-    emit memory_inst_addr_value(dt.is_valid? dt.inst_addr: STAGEADDR_NONE);
+    emit memory_inst_addr_value(dt.is_valid ? dt.inst_addr: STAGEADDR_NONE);
     emit instruction_memory(dt.inst, dt.inst_addr, dt.excause, dt.is_valid);
     emit memory_alu_value(dt.alu_val);
     emit memory_rt_value(dt.val_rt);
@@ -652,19 +665,72 @@ uint32_t Core::branch_target(const Instruction &inst, uint32_t inst_addr) {
 }
 
 void Core::dtFetchInit(struct dtFetch &dt) {
-    memset(&dt, 0, sizeof(dtFetch));
+    dt.inst = Instruction(0x00);
+    dt.inst_addr = 0;
+    dt.excause = EXCAUSE_NONE;
+    dt.in_delay_slot = false;
+    dt.is_valid = false;
 }
 
 void Core::dtDecodeInit(struct dtDecode &dt) {
-    memset(&dt, 0, sizeof(dtDecode));
+    dt.inst = Instruction(0x00);
+    dt.memread = false;
+    dt.memwrite = false;
+    dt.alusrc = false;
+    dt.regd = false;
+    dt.regwrite = false;
+    dt.bjr_req_rs = false; // requires rs for beq, bne, blez, bgtz, jr nad jalr
+    dt.bjr_req_rt = false; // requires rt for beq, bne
+    dt.jump = false;
+    dt.bj_not = false;
+    dt.bgt_blez = false;
+    dt.nb_skip_ds = false;
+    dt.forward_m_d_rs = false;
+    dt.forward_m_d_rt = false;
+    dt.aluop = ALU_OP_SLL;
+    dt.memctl = AC_NONE;
+    dt.num_rs = 0;
+    dt.num_rt = 0;
+    dt.num_rd = 0;
+    dt.val_rs = 0;
+    dt.val_rt = 0;
+    dt.rwrite = 0;
+    dt.immediate_val = 0;
+    dt.ff_rs = FORWARD_NONE;
+    dt.ff_rt = FORWARD_NONE;
+    dt.excause = EXCAUSE_NONE;
+    dt.in_delay_slot = false;
+    dt.stall = false;
+    dt.stop_if = false;
+    dt.is_valid = false;
 }
 
 void Core::dtExecuteInit(struct dtExecute &dt) {
-    memset(&dt, 0, sizeof(dtExecute));
+    dt.inst = Instruction(0x00);
+    dt.memread = false;
+    dt.memwrite = false;
+    dt.regwrite = false;
+    dt.memctl = AC_NONE;
+    dt.val_rt = 0;
+    dt.rwrite = 0;
+    dt.alu_val = 0;
+    dt.excause = EXCAUSE_NONE;
+    dt.in_delay_slot = false;
+    dt.stop_if = false;
+    dt.is_valid = false;
 }
 
 void Core::dtMemoryInit(struct dtMemory &dt) {
-    memset(&dt, 0, sizeof(dtMemory));
+    dt.inst = Instruction(0x00);
+    dt.memtoreg = false;
+    dt.regwrite = false;
+    dt.rwrite = false;
+    dt.towrite_val = 0;
+    dt.mem_addr = 0;
+    dt.excause = EXCAUSE_NONE;
+    dt.in_delay_slot = false;
+    dt.stop_if = false;
+    dt.is_valid = false;
 }
 
 CoreSingle::CoreSingle(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
@@ -780,13 +846,13 @@ void CorePipelined::flush_stages() {
     emit instruction_fetched(dt_f.inst, dt_f.inst_addr,
                              dt_f.excause, dt_f.is_valid);
     emit fetch_inst_addr_value(STAGEADDR_NONE);
-    set_stalls(stalls + 1);
+    ++cycle_stats.control_hazard_stalls;
     if (!branch_res_id) {
         // We evaluate branches on EX stage, flush ID too if the instruction was a branch.
         dtDecodeInit(dt_d);
         emit instruction_decoded(dt_d.inst, dt_d.inst_addr, dt_d.excause, dt_d.is_valid);
         emit decode_inst_addr_value(STAGEADDR_NONE);
-        set_stalls(stalls + 1);
+        ++cycle_stats.control_hazard_stalls;
     }
 }
 
@@ -800,6 +866,8 @@ std::uint32_t CorePipelined::get_correct_address(std::uint32_t pc, bool branch_t
         else
             return branch_taken ? branch_target(dt_e.inst, dt_e.inst_addr) : (pc + 4);
 }
+
+#include <QDebug>
 
 void CorePipelined::do_step(bool skip_break) {
     bool stall = false;
@@ -842,8 +910,8 @@ void CorePipelined::do_step(bool skip_break) {
         return;
     }
 
-    dt_d.ff_rs = ForwardFrom::FORWARD_NONE;
-    dt_d.ff_rt = ForwardFrom::FORWARD_NONE;
+    dt_d.ff_rs = FORWARD_NONE;
+    dt_d.ff_rt = FORWARD_NONE;
 
     if (dhunit != MachineConfig::DHU_NONE) {
         // Note: We make exception wmith $0 as that has no effect when written and is used in nop instruction
@@ -854,18 +922,18 @@ void CorePipelined::do_step(bool skip_break) {
              (dt_d.alu_req_rt && (STAGE).rwrite == dt_d.num_rt)) \
         ) // Note: We make exception with $0 as that has no effect and is used in nop instruction
 
-        // Write back stage combinatoricly propagates written instruction to decode stage so nothing has to be done for that stage
+        // Write back stage combinatorial propagates written instruction to decode stage so nothing has to be done for that stage
         if (HAZARD(dt_m)) {
             // Hazard with instruction in memory stage
             if (dhunit == MachineConfig::DHU_STALL_FORWARD) {
                 // Forward result value
                 if (dt_d.alu_req_rs && dt_m.rwrite == dt_d.num_rs) {
                     dt_d.val_rs = dt_m.towrite_val;
-                    dt_d.ff_rs = ForwardFrom::FORWARD_FROM_W;
+                    dt_d.ff_rs = FORWARD_FROM_W;
                 }
                 if (dt_d.alu_req_rt && dt_m.rwrite == dt_d.num_rt) {
                     dt_d.val_rt = dt_m.towrite_val;
-                    dt_d.ff_rt = ForwardFrom::FORWARD_FROM_W;
+                    dt_d.ff_rt = FORWARD_FROM_W;
                 }
             } else
                 data_hazard = true;
@@ -879,11 +947,11 @@ void CorePipelined::do_step(bool skip_break) {
                     // Forward result value
                     if (dt_d.alu_req_rs && dt_e.rwrite == dt_d.num_rs) {
                         dt_d.val_rs = dt_e.alu_val;
-                        dt_d.ff_rs = ForwardFrom::FORWARD_FROM_M;
+                        dt_d.ff_rs = FORWARD_FROM_M;
                      }
                     if (dt_d.alu_req_rt && dt_e.rwrite == dt_d.num_rt) {
                         dt_d.val_rt = dt_e.alu_val;
-                        dt_d.ff_rt = ForwardFrom::FORWARD_FROM_M;
+                        dt_d.ff_rt = FORWARD_FROM_M;
                     }
                 }
             } else
@@ -893,8 +961,11 @@ void CorePipelined::do_step(bool skip_break) {
         if (dt_e.rwrite != 0 && dt_e.regwrite &&
             ((dt_d.bjr_req_rs && dt_d.num_rs == dt_e.rwrite) ||
              (dt_d.bjr_req_rt && dt_d.num_rt == dt_e.rwrite))) {
-            data_hazard = true;
-            data_branch_hazard = true;
+            if (branch_res_id) {
+                // If branch is executed on EX, there is no data hazard.
+                data_hazard = true;
+                data_branch_hazard = true;
+            }
         } else {
             if (dhunit != MachineConfig::DHU_STALL_FORWARD || dt_m.memtoreg) {
                 if (dt_m.rwrite != 0 && dt_m.regwrite &&
@@ -917,7 +988,7 @@ void CorePipelined::do_step(bool skip_break) {
         emit forward_m_d_rs_value(dt_d.forward_m_d_rs);
         emit forward_m_d_rt_value(dt_d.forward_m_d_rt);
     }
-    emit branch_forward_value((dt_d.forward_m_d_rs || dt_d.forward_m_d_rt)? 2: data_branch_hazard);
+    emit branch_forward_value((dt_d.forward_m_d_rs || dt_d.forward_m_d_rt) ? 2 : data_branch_hazard);
 #if 0
     if (stall)
         printf("STALL\n");
@@ -935,19 +1006,24 @@ void CorePipelined::do_step(bool skip_break) {
     if (dt_e.stop_if || dt_m.stop_if || data_hazard)
         stall = true;
 
+    if (data_hazard) {
+        ++cycle_stats.data_hazard_stalls;
+    }
+
     emit dhu_stall_value(stall);
 
     // Now process program counter (loop connections from decode stage)
     if (!stall && !dt_d.stop_if) {
         dt_d.stall = false;
-        if (!control_hazard)
+        if (!control_hazard) {
             dt_f = fetch(skip_break);
+        }
         else {
             dtFetchInit(dt_f);
             emit instruction_fetched(dt_f.inst, dt_f.inst_addr,
                                      dt_f.excause, dt_f.is_valid);
             emit fetch_inst_addr_value(STAGEADDR_NONE);
-            set_stalls(stalls + 1);
+            ++cycle_stats.control_hazard_stalls;
         }
         switch (chunit) {
             case MachineConfig::CHU_STALL:
@@ -966,6 +1042,14 @@ void CorePipelined::do_step(bool skip_break) {
     } else {
         // Run fetch stage on empty
         fetch(skip_break);
+        if (control_hazard) {
+            // Put nop in visualization.
+            dtFetch tmp = dt_f;
+            dtFetchInit(dt_f);
+            emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
+            emit fetch_inst_addr_value(STAGEADDR_NONE);
+            dt_f = tmp;
+        }
         // clear decode latch (insert nope to execute stage)
         if (!dt_d.stop_if) {
             dtDecodeInit(dt_d);
@@ -973,9 +1057,6 @@ void CorePipelined::do_step(bool skip_break) {
         } else {
             dtFetchInit(dt_f);
         }
-    }
-    if (stall || dt_d.stop_if) {
-        set_stalls(stalls + 1);
     }
 }
 
@@ -1019,6 +1100,8 @@ void CorePipelined::remove_pc(std::uint32_t pc) {
 }
 
 bool CorePipelined::handle_fetch_stall() {
+    handle_pc_wpr(dt_d, dt_e, branch_res_id);
+
     if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
         return true;
     }
@@ -1026,8 +1109,6 @@ bool CorePipelined::handle_fetch_stall() {
         // Branches are resolved in EX, we should add another bubble.
         return true;
     }
-
-    handle_pc_wpr(dt_d, dt_e, branch_res_id);
 
     return false;
 }
@@ -1044,6 +1125,7 @@ void CorePipelined::handle_fetch_dls() {
             dtFetchInit(dt_f);
             emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
             emit fetch_inst_addr_value(STAGEADDR_NONE);
+//            ++cycle_stats.control_hazard_stalls;
         }
     }
 }

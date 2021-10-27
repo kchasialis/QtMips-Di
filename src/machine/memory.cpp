@@ -51,6 +51,7 @@ MemoryAccess::MemoryAccess(uint32_t access_read, uint32_t access_write, uint32_t
     this->access_burst = access_burst;
     this->reads = 0;
     this->writes = 0;
+    this->update_stats = true;
 }
 
 bool MemoryAccess::write_byte(std::uint32_t offset, std::uint8_t value) {
@@ -151,6 +152,26 @@ uint32_t MemoryAccess::get_writes() const {
     return writes;
 }
 
+void MemoryAccess::set_update_stats(bool us) {
+    update_stats = us;
+}
+
+uint32_t MemoryAccess::get_access_read() const {
+    return access_read;
+}
+
+uint32_t MemoryAccess::get_access_write() const {
+    return access_write;
+}
+
+uint32_t MemoryAccess::get_access_burst() const {
+    return access_burst;
+}
+
+bool MemoryAccess::get_update_stats() const {
+    return update_stats;
+}
+
 MemorySection::MemorySection(std::uint32_t length) {
     this->len = length;
     this->dt = new std::uint32_t[length];
@@ -185,10 +206,6 @@ std::uint32_t MemorySection::rword(std::uint32_t offset, bool debug_access) cons
 
 std::uint32_t MemorySection::get_change_counter() const {
     return 0;
-}
-
-MemoryAccess::MemoryType MemorySection::type() const {
-    return MemoryType::DRAM;
 }
 
 std::uint32_t MemorySection::length() const {
@@ -313,10 +330,6 @@ std::uint32_t Memory::rword(std::uint32_t address, bool debug_access) const {
 
 std::uint32_t Memory::get_change_counter() const {
     return change_counter;
-}
-
-MemoryAccess::MemoryType Memory::type() const {
-    return MemoryType::DRAM;
 }
 
 bool Memory::operator==(const Memory&m) const {
