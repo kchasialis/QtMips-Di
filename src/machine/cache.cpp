@@ -33,6 +33,7 @@
  *
  ******************************************************************************/
 
+#include <QDebug>
 #include "cache.h"
 
 using namespace machine;
@@ -47,6 +48,7 @@ Cache::Cache(const MachineConfigCache &cc, MemoryAccess *m, uint32_t acc_read, u
                 cache_type(cc.type()), read_hits(0), read_misses(0), write_hits(0), write_misses(0),
                 mem_lower_reads(0), mem_lower_writes(0), burst_reads(0), burst_writes(0),
                 change_counter(0), dt(nullptr), replc() {
+
     replc.lfu = nullptr;
     replc.lru = nullptr;
 
@@ -136,7 +138,7 @@ bool Cache::wword(std::uint32_t address, std::uint32_t value) {
     writes++;
     changed = access(address, &data, true, value);
 
-    if (cnf.write_policy() != MachineConfigCache::WritePolicy::WP_BACK) {
+    if (cnf.write_alloc() == MachineConfigCache::WritePolicy::WP_THROUGH) {
         mem_lower_writes++;
         emit_mem_lower_signal(false);
         update_statistics();
@@ -237,8 +239,7 @@ double Cache::speed_improvement() const {
         return 100.0;
 
     lookup_time = read_hits + read_misses;
-
-    if (cnf.write_policy() == MachineConfigCache::WritePolicy::WP_BACK)
+    if (cnf.write_alloc() == MachineConfigCache::WritePolicy::WP_BACK)
         lookup_time += write_hits + write_misses;
 
     lower_access_time = mem_lower_reads * access_pen_read +
@@ -301,10 +302,10 @@ enum LocationStatus Cache::location_status(std::uint32_t address) const {
     compute_row_col_tag(row, col, tag, address);
 
     if (cnf.enabled()) {
-        for (std::uint32_t indx = 0; indx < cnf.associativity(); indx++) {
+        for (unsigned indx = 0; indx < cnf.associativity(); indx++) {
             if (dt[indx][row].valid && dt[indx][row].tag == tag) {
                 if (dt[indx][row].dirty &&
-                    cnf.write_policy() == MachineConfigCache::WritePolicy::WP_BACK)
+                    cnf.write_policy() == MachineConfigCache::WP_BACK)
                     return (enum LocationStatus)(LOCSTAT_CACHED | LOCSTAT_DIRTY);
                 else
                     return (enum LocationStatus)LOCSTAT_CACHED;
@@ -351,11 +352,9 @@ std::uint32_t Cache::debug_rword(std::uint32_t address) const {
     return 0;
 }
 
-#include <QDebug>
-
 bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::uint32_t value) const {
     bool changed = false;
-    std::uint32_t row, col, tag, indx;
+    uint32_t row, col, tag, indx;
 
     compute_row_col_tag(row, col, tag, address);
 
@@ -365,9 +364,8 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
         indx++;
     // Need to find new block
     if (indx >= cnf.associativity()) {
-        // if write through we do not need to allocate cache line does not allocate
-        if (write && cnf.write_policy() ==
-                MachineConfigCache::WritePolicy::WP_THROUGH_NOALLOC) {
+        // return early if we do not need to allocate a block on write miss.
+        if (write && !cnf.write_alloc()) {
             update_misses(false);
             emit miss_update(miss());
             update_statistics();
@@ -425,16 +423,19 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
             update_misses(true);
         emit miss_update(miss());
 
-        for (size_t i = 0; i < cnf.blocks(); i++) {
-            mem_lower->set_update_stats(i == 0);
-            cd.data[i] = mem_lower->read_word(base_address(tag, row) + (4*i));
-            change_counter++;
-        }
+        // We allocate a block in cache if its a read miss or a write miss with write-allocate.
+        if (!write || cnf.write_alloc()) {
+            for (size_t i = 0; i < cnf.blocks(); i++) {
+                mem_lower->set_update_stats(i == 0);
+                cd.data[i] = mem_lower->read_word(base_address(tag, row) + (4 * i));
+                change_counter++;
+            }
 
-        mem_lower_reads += cnf.blocks();
-        burst_reads += cnf.blocks() - 1;
-        emit_mem_lower_signal(true);
-        update_statistics();
+            mem_lower_reads += cnf.blocks();
+            burst_reads += cnf.blocks() - 1;
+            emit_mem_lower_signal(true);
+            update_statistics();
+        }
     }
 
     // Update replacement data
@@ -482,15 +483,17 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
 void Cache::kick(std::uint32_t associat_indx, std::uint32_t row) const {
     cache_data &cd = dt[associat_indx][row];
 
-    if (cd.dirty && cnf.write_policy() == MachineConfigCache::WritePolicy::WP_BACK) {
-        for (size_t i = 0; i < cnf.blocks(); i++) {
-            mem_lower->set_update_stats(i == 0);
-            mem_lower->write_word(base_address(cd.tag, row) + (4*i), cd.data[i]);
-        }
+    if (cd.dirty) {
+        if (cnf.write_alloc() == MachineConfigCache::WritePolicy::WP_BACK) {
+            for (size_t i = 0; i < cnf.blocks(); i++) {
+                mem_lower->set_update_stats(i == 0);
+                mem_lower->write_word(base_address(cd.tag, row) + (4*i), cd.data[i]);
+            }
 
-        mem_lower_writes += cnf.blocks();
-        burst_writes += cnf.blocks() - 1;
-        emit_mem_lower_signal(false);
+            mem_lower_writes += cnf.blocks();
+            burst_writes += cnf.blocks() - 1;
+            emit_mem_lower_signal(false);
+        }
     }
 
     cd.valid = false;
@@ -545,6 +548,7 @@ void Cache::update_misses(bool read) const {
             default:
                 SANITY_ASSERT(0, "Wrong type for cache.");
         }
+        cycle_stats.memory_cycles += read ? access_pen_read : access_pen_write;
     }
 }
 

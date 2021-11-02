@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>435</width>
-    <height>335</height>
+    <width>581</width>
+    <height>379</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,8 +18,8 @@
     <rect>
      <x>9</x>
      <y>9</y>
-     <width>421</width>
-     <height>191</height>
+     <width>461</width>
+     <height>231</height>
     </rect>
    </property>
    <property name="minimumSize">
@@ -34,7 +34,7 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
-   <layout class="QFormLayout" name="formLayout">
+   <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
      <widget class="QLabel" name="label_2">
       <property name="text">
@@ -103,30 +103,34 @@
       </item>
      </widget>
     </item>
-    <item row="4" column="0">
-     <widget class="QLabel" name="label_writeback">
-      <property name="text">
-       <string>Writeback policy:</string>
+    <item row="4" column="0" colspan="2">
+     <widget class="QGroupBox" name="write_policy">
+      <property name="title">
+       <string>Write policy</string>
       </property>
-     </widget>
-    </item>
-    <item row="4" column="1">
-     <widget class="QComboBox" name="writeback_policy">
-      <item>
-       <property name="text">
-        <string>Write through - noallocate</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Write through - write allocate</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Write back</string>
-       </property>
-      </item>
+      <layout class="QFormLayout" name="formLayout">
+       <item row="0" column="0">
+        <widget class="QComboBox" name="write_pol">
+         <item>
+          <property name="text">
+           <string>Write Through</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Write Back</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QCheckBox" name="write_alloc">
+         <property name="text">
+          <string>Write Allocate</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </item>
    </layout>
@@ -135,9 +139,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>200</y>
-     <width>411</width>
-     <height>121</height>
+     <y>240</y>
+     <width>461</width>
+     <height>131</height>
     </rect>
    </property>
    <property name="title">

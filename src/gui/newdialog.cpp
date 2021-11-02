@@ -65,8 +65,7 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
 
     ui_l1_p_cache = new Ui::NewDialogCache();
     ui_l1_p_cache->setupUi(ui->tab_l1_program_cache);
-    ui_l1_p_cache->writeback_policy->hide();
-    ui_l1_p_cache->label_writeback->hide();
+    ui_l1_p_cache->write_policy->hide();
     // We assume L1 caches access time = CPU time and cannot be altered.
     ui_l1_p_cache->access_time->hide();
 
@@ -104,12 +103,13 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     // Connections for branch unit are being done on load_settings() function.
 
     // Connections need to be done here. A bug is caused otherwise.
-    connect(ui->stall, SIGNAL(clicked(bool)), this, SLOT(branch_hazard_unit_change()));
-    connect(ui->delay_slot, SIGNAL(clicked(bool)), this, SLOT(branch_hazard_unit_change()));
-    connect(ui->branch_predictor, SIGNAL(clicked(bool)), this, SLOT(branch_hazard_unit_change()));
-    connect(ui->predictor_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_hazard_unit_change()));
-    connect(ui->bht_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_hazard_unit_change()));
-    connect(ui->resolution, SIGNAL(currentIndexChanged(QString)), this, SLOT(branch_hazard_unit_change()));
+    connect(ui->none, SIGNAL(clicked(bool)), this, SLOT(control_hazard_unit_change()));
+    connect(ui->stall, SIGNAL(clicked(bool)), this, SLOT(control_hazard_unit_change()));
+    connect(ui->delay_slot, SIGNAL(clicked(bool)), this, SLOT(control_hazard_unit_change()));
+    connect(ui->branch_predictor, SIGNAL(clicked(bool)), this, SLOT(control_hazard_unit_change()));
+    connect(ui->predictor_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(control_hazard_unit_change()));
+    connect(ui->bht_bits, SIGNAL(currentIndexChanged(QString)), this, SLOT(control_hazard_unit_change()));
+    connect(ui->resolution, SIGNAL(currentIndexChanged(QString)), this, SLOT(control_hazard_unit_change()));
 
     connect(ui->mem_protec_exec, SIGNAL(clicked(bool)), this, SLOT(mem_protec_exec_change(bool)));
     connect(ui->mem_protec_write, SIGNAL(clicked(bool)), this, SLOT(mem_protec_write_change(bool)));
@@ -244,9 +244,10 @@ void NewDialog::set_preset() {
 
 void NewDialog::pipelined_change(bool val) {
     config->set_pipelined(val);
-    config->set_control_hazard_unit(machine::MachineConfig::CHU_NONE);
 
 	switch2custom();
+    // Pipeline changes also affects control hazard unit.
+    control_hazard_unit_change();
 }
 
 void NewDialog::data_hazard_unit_change() {
@@ -258,7 +259,7 @@ void NewDialog::data_hazard_unit_change() {
     switch2custom();
 }
 
-void NewDialog::branch_hazard_unit_change() {
+void NewDialog::control_hazard_unit_change() {
     if (config->pipelined()) {
         uint8_t bht_bits_num = 0;
         if (ui->branch_predictor->isChecked()) {
@@ -269,7 +270,7 @@ void NewDialog::branch_hazard_unit_change() {
                                             machine::MachineConfig::CHU_ONE_BIT_BP :
                                             machine::MachineConfig::CHU_TWO_BIT_BP);
             bht_bits_num = bht_bits.toShort();
-        } else if (ui->delay_slot->isChecked()) {
+        } else if (ui->delay_slot->isChecked() || ui->none->isChecked()) {
             config->set_control_hazard_unit(machine::MachineConfig::CHU_DELAY_SLOT);
         } else {
             config->set_control_hazard_unit(machine::MachineConfig::CHU_STALL);
@@ -277,8 +278,15 @@ void NewDialog::branch_hazard_unit_change() {
         config->set_bht_bits(bht_bits_num);
         config->set_branch_res_id(ui->resolution->currentText() == "ID");
     } else {
-        config->set_control_hazard_unit(machine::MachineConfig::CHU_NONE);
-        config->set_bht_bits(0);
+        if (ui->branch_predictor->isChecked() || ui->stall->isChecked() || ui->none->isChecked()) {
+            // branch predictor / stall-on-branch do not have any value in a non-pipelined mode.
+            config->set_control_hazard_unit(machine::MachineConfig::CHU_NONE);
+            config->set_bht_bits(0);
+        } else {
+            // Delay slot is checked.
+            config->set_control_hazard_unit(machine::MachineConfig::CHU_DELAY_SLOT);
+            config->set_bht_bits(0);
+        }
     }
 
     switch2custom();
@@ -362,19 +370,18 @@ void NewDialog::config_gui() {
     ui->data_hazard_unit->setChecked(config->data_hazard_unit() != machine::MachineConfig::DHU_NONE);
     ui->data_hazard_stall->setChecked(config->data_hazard_unit() == machine::MachineConfig::DHU_STALL);
     ui->data_hazard_stall_forward->setChecked(config->data_hazard_unit() == machine::MachineConfig::DHU_STALL_FORWARD);
-    if (config->control_hazard_unit() != machine::MachineConfig::CHU_NONE) {
-        ui->stall->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_STALL);
-        ui->delay_slot->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_DELAY_SLOT);
-        ui->branch_predictor->setChecked(config->predictor());
-        ui->resolution->setCurrentIndex(config->branch_res_id() ? 0 : 1);
-        if (config->predictor()) {
-            ui->predictor_bits->setCurrentIndex(
-                    config->control_hazard_unit() == machine::MachineConfig::CHU_ONE_BIT_BP ? 0 : 1);
-            ui->bht_bits->setCurrentIndex(config->bht_bits() - MIN_BHT_BITS);
-        } else {
-            ui->predictor_bits->setCurrentIndex(0);
-            ui->bht_bits->setCurrentIndex(0);
-        }
+    ui->none->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_NONE);
+    ui->stall->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_STALL);
+    ui->delay_slot->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_DELAY_SLOT);
+    ui->branch_predictor->setChecked(config->predictor());
+    ui->resolution->setCurrentIndex(config->branch_res_id() ? 0 : 1);
+    if (config->predictor()) {
+        ui->predictor_bits->setCurrentIndex(
+                config->control_hazard_unit() == machine::MachineConfig::CHU_ONE_BIT_BP ? 0 : 1);
+        ui->bht_bits->setCurrentIndex(config->bht_bits() - MIN_BHT_BITS);
+    } else {
+        ui->predictor_bits->setCurrentIndex(0);
+        ui->bht_bits->setCurrentIndex(0);
     }
 
     // Memory
@@ -399,9 +406,8 @@ void NewDialog::config_gui() {
 
     // Disable various sections according to configuration
     ui->data_hazard_unit->setEnabled(config->pipelined());
-    ui->control_hazard_unit->setEnabled(config->pipelined());
     ui->stall->setEnabled(config->pipelined());
-    ui->delay_slot->setEnabled(config->pipelined());
+    ui->none->setEnabled(!config->pipelined());
     ui->branch_predictor->setEnabled(config->pipelined());
     ui->bht_bits_label->setEnabled(config->predictor());
     ui->bht_bits->setEnabled(config->predictor());
@@ -482,7 +488,8 @@ NewDialogCacheHandler::NewDialogCacheHandler(NewDialog *nd, Ui::NewDialogCache *
 	connect(cache_ui->block_size, SIGNAL(editingFinished()), this, SLOT(blocksize()));
 	connect(cache_ui->degree_of_associativity, SIGNAL(editingFinished()), this, SLOT(degreeassociativity()));
 	connect(cache_ui->replacement_policy, SIGNAL(activated(int)), this, SLOT(replacement(int)));
-	connect(cache_ui->writeback_policy, SIGNAL(activated(int)), this, SLOT(writeback(int)));
+    connect(cache_ui->write_pol, SIGNAL(activated(int)), this, SLOT(writepolicy(int)));
+    connect(cache_ui->write_alloc, SIGNAL(stateChanged(int)), this, SLOT(writeallocate(int)));
     connect(cache_ui->access_read, SIGNAL(valueChanged(int)), this, SLOT(access_read(int)));
     connect(cache_ui->access_write, SIGNAL(valueChanged(int)), this, SLOT(access_write(int)));
     connect(cache_ui->access_burst, SIGNAL(valueChanged(int)), this, SLOT(access_burst(int)));
@@ -498,7 +505,8 @@ void NewDialogCacheHandler::config_gui(int time_read, int time_write, int time_b
     cache_ui->block_size->setValue(config->blocks());
     cache_ui->degree_of_associativity->setValue(config->associativity());
     cache_ui->replacement_policy->setCurrentIndex((int)config->replacement_policy());
-    cache_ui->writeback_policy->setCurrentIndex((int)config->write_policy());
+    cache_ui->write_pol->setCurrentIndex((int) config->write_policy());
+    cache_ui->write_alloc->setChecked(config->write_alloc());
     cache_ui->access_read->setValue(time_read);
     cache_ui->access_write->setValue(time_write);
     cache_ui->access_burst->setValue(time_burst);
@@ -513,11 +521,13 @@ void NewDialogCacheHandler::enabled(bool val) {
         case machine::MemoryAccess::MemoryType::L1_DATA_CACHE:
             if (nd->l1_data_cache_handler()->config->enabled() || nd->l1_program_cache_handler()->config->enabled()) {
                 // L1 program or data cache are enabled, allow user to also enable L2 Cache.
+                nd->l2_cache_dialog()->enabled->setEnabled(true);
                 nd->l2_cache_dialog()->enabled->setCheckable(true);
                 nd->l2_cache_dialog()->access_time->setEnabled(true);
             } else {
                 // L1 program and data cache are both disabled, also disable L2 cache.
                 nd->l2_cache_dialog()->enabled->clicked(false);
+                nd->l2_cache_dialog()->enabled->setEnabled(false);
                 nd->l2_cache_dialog()->enabled->setCheckable(false);
                 nd->l2_cache_dialog()->access_time->setEnabled(false);
             }
@@ -563,9 +573,14 @@ void NewDialogCacheHandler::replacement(int val) {
 	nd->switch2custom();
 }
 
-void NewDialogCacheHandler::writeback(int val) {
+void NewDialogCacheHandler::writepolicy(int val) {
 	config->set_write_policy((enum machine::MachineConfigCache::WritePolicy)val);
 	nd->switch2custom();
+}
+
+void NewDialogCacheHandler::writeallocate(int /*val*/) {
+    config->set_write_alloc(cache_ui->write_alloc->isChecked());
+    nd->switch2custom();
 }
 
 void NewDialogCacheHandler::access_read(int val) {

@@ -71,7 +71,7 @@ private slots:
     void set_preset();
     void pipelined_change(bool);
     void data_hazard_unit_change();
-    void branch_hazard_unit_change();
+    void control_hazard_unit_change();
     void mem_protec_exec_change(bool);
     void mem_protec_write_change(bool);
     void mem_time_read_change(int);
@@ -118,7 +118,8 @@ private slots:
 	void blocksize();
 	void degreeassociativity();
 	void replacement(int);
-	void writeback(int);
+	void writepolicy(int);
+	void writeallocate(int);
     void access_read(int);
     void access_write(int);
     void access_burst(int);

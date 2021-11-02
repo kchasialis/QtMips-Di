@@ -276,7 +276,7 @@ protected:
         bool is_valid;
     };
 
-    struct dtFetch fetch(bool skip_break = false, bool signal = true);
+    struct dtFetch fetch(bool skip_break = false, bool signal = true, bool updated_mem_cycles = true);
     struct dtDecode decode(const struct dtFetch&);
     struct dtExecute execute(const struct dtDecode&);
     struct dtMemory memory(const struct dtExecute&);
@@ -296,10 +296,10 @@ protected:
                            std::uint32_t rt_value, std::uint32_t mem_addr);
 
     // Initialize structures to NOPE instruction
-    static void dtFetchInit(struct dtFetch &dt);
-    static void dtDecodeInit(struct dtDecode &dt);
-    static void dtExecuteInit(struct dtExecute &dt);
-    static void dtMemoryInit(struct dtMemory &dt);
+    static void dtFetchInit(struct dtFetch &dt, bool stall = false);
+    static void dtDecodeInit(struct dtDecode &dt, bool stall = false);
+    static void dtExecuteInit(struct dtExecute &dt, bool stall = false);
+    static void dtMemoryInit(struct dtMemory &dt, bool stall = false);
 
 protected:
     uint32_t stalls;
@@ -363,13 +363,13 @@ private:
     struct Core::dtMemory dt_m;
 
     BranchPredictor *bp;
-    bool branch_res_id;
+    bool branch_res_id, control_hazard;
     enum MachineConfig::DataHazardUnit dhunit;
     enum MachineConfig::ControlHazardUnit chunit;
     // Variables used for branch predictor.
     QVector<std::uint32_t> pcs; // Save pc for each prediction we make.
-    std::uint32_t pc_before_jmp;
-
+    uint32_t pc_before_jmp;
+    uint32_t mem_program_bubbles, mem_data_bubbles;
 };
 
 }

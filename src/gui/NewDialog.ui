@@ -45,7 +45,7 @@
           <item>
            <widget class="QRadioButton" name="preset_no_pipeline">
             <property name="text">
-             <string>No pipeline no cache</string>
+             <string>No pipeline no caches</string>
             </property>
             <property name="checkable">
              <bool>true</bool>
@@ -58,21 +58,21 @@
           <item>
            <widget class="QRadioButton" name="preset_no_pipeline_cache">
             <property name="text">
-             <string>No pipeline with cache</string>
+             <string>No pipeline with caches</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QRadioButton" name="preset_pipelined_bare">
             <property name="text">
-             <string>Pipelined without hazard unit and without cache</string>
+             <string>Pipelined without data hazard unit and without caches</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QRadioButton" name="preset_pipelined">
             <property name="text">
-             <string>Pipelined with hazard unit and cache</string>
+             <string>Pipelined with data hazard unit and caches</string>
             </property>
            </widget>
           </item>
@@ -140,15 +140,15 @@
       <attribute name="title">
        <string>Core</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_8">
-       <item>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
         <widget class="QCheckBox" name="pipelined">
          <property name="text">
           <string>Pipelined</string>
          </property>
         </widget>
        </item>
-       <item>
+       <item row="1" column="0">
         <widget class="QGroupBox" name="control_hazard_unit">
          <property name="title">
           <string>Control Hazard Unit</string>
@@ -156,24 +156,31 @@
          <property name="checkable">
           <bool>false</bool>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
+         <layout class="QVBoxLayout" name="verticalLayout_8">
           <item>
-           <layout class="QGridLayout" name="gridLayout">
-            <item row="1" column="0">
-             <widget class="QRadioButton" name="delay_slot">
+           <layout class="QVBoxLayout" name="verticalLayout_2">
+            <item>
+             <widget class="QRadioButton" name="none">
               <property name="text">
-               <string>Delay slot</string>
+               <string>None</string>
               </property>
              </widget>
             </item>
-            <item row="0" column="0">
+            <item>
              <widget class="QRadioButton" name="stall">
               <property name="text">
                <string>Stall</string>
               </property>
              </widget>
             </item>
-            <item row="2" column="0">
+            <item>
+             <widget class="QRadioButton" name="delay_slot">
+              <property name="text">
+               <string>Delay slot</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QRadioButton" name="branch_predictor">
               <property name="text">
                <string>Branch predictor</string>
@@ -257,7 +264,7 @@
          </layout>
         </widget>
        </item>
-       <item>
+       <item row="2" column="0">
         <widget class="QGroupBox" name="data_hazard_unit">
          <property name="enabled">
           <bool>true</bool>
@@ -291,19 +298,6 @@
           </item>
          </layout>
         </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer_5">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </widget>

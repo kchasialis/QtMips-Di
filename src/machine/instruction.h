@@ -110,7 +110,7 @@ typedef QVector<RelocExpression *> RelocExpressionList;
 class Instruction {
 public:
     Instruction();
-    Instruction(std::uint32_t inst);
+    Instruction(std::uint32_t inst, bool stall = false);
     Instruction(std::uint8_t opcode, std::uint8_t rs, std::uint8_t rt, std::uint8_t rd, std::uint8_t shamt, std::uint8_t funct); // Type R
     Instruction(std::uint8_t opcode, std::uint8_t rs, std::uint8_t rt, std::uint16_t immediate); // Type I
     Instruction(std::uint8_t opcode, std::uint32_t address); // Type J
@@ -133,6 +133,7 @@ public:
     std::uint16_t immediate() const;
     std::uint32_t address() const;
     std::uint32_t data() const;
+    bool stall() const;
     enum Type type() const;
     enum InstructionFlags flags() const;
     enum AluOp alu_op() const;
@@ -168,6 +169,7 @@ public:
     static void append_recognized_registers(QStringList &list);
 private:
     std::uint32_t dt;
+    bool stall_;
     static bool symbolic_registers_fl;
 };
 

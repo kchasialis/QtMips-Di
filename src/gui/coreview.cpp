@@ -417,9 +417,9 @@ CoreViewScenePipelined::CoreViewScenePipelined(machine::QtMipsMachine *machine) 
         NEW(LogicBlock, hazard_unit, SC_WIDTH/2, SC_HEIGHT - 15, "Hazard Unit");
         hazard_unit->setSize(SC_WIDTH - 100, 12);
         static QMap<std::uint32_t, QString> stall_map = {{0, "NORMAL"},{1, "STALL"},{2, "FORWARD"}};
-        NEW_MULTI(hu.multi_stall, 480, 447, execute_stall_forward_value, stall_map);
-        NEW_MULTI(hu.multi_stall, 310, 340, branch_forward_value, stall_map);
-        NEW_MULTI(hu.multi_stall, 250, SC_HEIGHT - 15, dhu_stall_value, stall_map);
+//        NEW_MULTI(hu.multi_stall, 480, 447, execute_stall_forward_value, stall_map);
+//        NEW_MULTI(hu.multi_stall, 310, 340, branch_forward_value, stall_map);
+//        NEW_MULTI(hu.multi_stall, 250, SC_HEIGHT - 15, dhu_stall_value, stall_map);
     }
 
     // Fetch stage

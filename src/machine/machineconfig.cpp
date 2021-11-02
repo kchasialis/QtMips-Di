@@ -67,12 +67,13 @@ using namespace machine;
 #define DFC_BLOCKS 1
 #define DFC_ASSOC 1
 #define DFC_REPLAC ReplacementPolicy::RP_RAND
-#define DFC_WRITE WritePolicy::WP_THROUGH_NOALLOC
+#define DFC_WRITE_POL WritePolicy::WP_BACK
+#define DFC_WRITE_ALLOC true
 //////////////////////////////////////////////////////////////////////////////
 
 MachineConfigCache::MachineConfigCache(const MemoryAccess::MemoryType &ct) :
                     en(DFC_EN), n_sets(DFC_SETS), n_blocks(DFC_BLOCKS), d_associativity(DFC_ASSOC),
-                    replac_pol(DFC_REPLAC), write_pol(DFC_WRITE), cache_type(ct) {
+                    replac_pol(DFC_REPLAC), write_pol(DFC_WRITE_POL), write_allocate(DFC_WRITE_ALLOC), cache_type(ct) {
 
     switch (ct) {
         case MemoryAccess::MemoryType::L1_PROGRAM_CACHE:
@@ -99,7 +100,8 @@ MachineConfigCache::MachineConfigCache(const MachineConfigCache &cc) :
                                         en(cc.enabled()), m_time_read(cc.mem_access_read()), m_time_write(cc.mem_access_write()),
                                         m_time_burst(cc.mem_access_burst()), n_sets(cc.sets()), n_blocks(cc.blocks()),
                                         d_associativity(cc.associativity()), replac_pol(cc.replacement_policy()),
-                                        write_pol(cc.write_policy()), cache_type(cc.type()) {}
+                                        write_pol(cc.write_policy()), write_allocate(cc.write_alloc()),
+                                        cache_type(cc.type()) {}
 
 #define N(STR) (prefix + QString(STR))
 
@@ -108,8 +110,9 @@ MachineConfigCache::MachineConfigCache(const MemoryAccess::MemoryType &ct, const
                                        n_sets(sts->value(N("Sets"), DFC_SETS).toUInt()),
                                        n_blocks(sts->value(N("Blocks"), DFC_BLOCKS).toUInt()),
                                        d_associativity(sts->value(N("Associativity"), DFC_ASSOC).toUInt()),
-                                       replac_pol((ReplacementPolicy)sts->value(N("Replacement"), (int32_t) DFC_REPLAC).toUInt()),
-                                       write_pol((WritePolicy)sts->value(N("Write"), (int32_t) DFC_WRITE).toUInt()),
+                                       replac_pol((ReplacementPolicy)sts->value(N("ReplacementPol"), (int32_t) DFC_REPLAC).toUInt()),
+                                       write_pol((WritePolicy)sts->value(N("WritePol"), (int32_t) DFC_WRITE_POL).toUInt()),
+                                       write_allocate(sts->value(N("WriteAlloc"), DFC_WRITE_ALLOC).toBool()),
                                        cache_type(ct) {
 
     switch (cache_type) {
@@ -142,30 +145,26 @@ void MachineConfigCache::store(QSettings *sts, const QString &prefix) {
     sts->setValue(N("Blocks"), blocks());
     sts->setValue(N("Associativity"), associativity());
     sts->setValue(N("Replacement"), (std::uint32_t)replacement_policy());
-    sts->setValue(N("Write"), (std::uint32_t)write_policy());
+    sts->setValue(N("WritePol"), (std::uint32_t)write_policy());
+    sts->setValue(N("WriteAlloc"), write_alloc());
 }
 
 #undef N
 
 void MachineConfigCache::preset(ConfigPresets p) {
-    bool is_level1;
-
     switch (type()) {
         case MemoryAccess::MemoryType::L1_PROGRAM_CACHE:
             // Default settings for L1.
-            is_level1 = true;
             set_mem_access_read(DFC_L1_PROG_ACC_READ);
             set_mem_access_write(DFC_L1_PROG_ACC_WRITE);
             set_mem_access_burst(DFC_L1_PROG_ACC_BURST);
             break;
         case MemoryAccess::MemoryType::L1_DATA_CACHE:
-            is_level1 = true;
             set_mem_access_read(DFC_L1_DATA_ACC_READ);
             set_mem_access_write(DFC_L1_DATA_ACC_WRITE);
             set_mem_access_burst(DFC_L1_DATA_ACC_BURST);
             break;
         case MemoryAccess::MemoryType::L2_UNIFIED_CACHE:
-            is_level1 = false;
             set_mem_access_read(DFC_L2_UNIFIED_ACC_READ);
             set_mem_access_write(DFC_L2_UNIFIED_ACC_WRITE);
             set_mem_access_burst(DFC_L2_UNIFIED_ACC_BURST);
@@ -175,27 +174,23 @@ void MachineConfigCache::preset(ConfigPresets p) {
     }
 
     switch (p) {
-    case ConfigPresets::CP_PIPE:
-    case ConfigPresets::CP_SINGLE_CACHE:
-        if (is_level1) {
-            // Default settings for L1.
+        case ConfigPresets::CP_PIPE:
+        case ConfigPresets::CP_SINGLE_CACHE:
+            // Default settings for caches.
             set_enabled(true);
-            set_sets(4);
+            set_sets(16);
             set_blocks(2);
             set_associativity(2);
             set_replacement_policy(ReplacementPolicy::RP_RAND);
-            set_write_policy(WritePolicy::WP_THROUGH_NOALLOC);
-        } else {
-            // By default L2 is not enabled.
+            set_write_policy(WritePolicy::WP_BACK);
+            set_write_alloc(true);
+            break;
+        case ConfigPresets::CP_SINGLE:
+        case ConfigPresets::CP_PIPE_NO_HAZARD:
             set_enabled(false);
-        }
-        break;
-    case ConfigPresets::CP_SINGLE:
-    case ConfigPresets::CP_PIPE_NO_HAZARD:
-        set_enabled(false);
-        break;
-    default:
-        SANITY_ASSERT(0, "Unhandled config preset.");
+            break;
+        default:
+            SANITY_ASSERT(0, "Unhandled config preset.");
     }
 }
 
@@ -233,6 +228,10 @@ void MachineConfigCache::set_replacement_policy(ReplacementPolicy rp) {
 
 void MachineConfigCache::set_write_policy(WritePolicy wp) {
     write_pol = wp;
+}
+
+void MachineConfigCache::set_write_alloc(bool wa) {
+    write_allocate = wa;
 }
 
 void MachineConfigCache::set_type(MemoryAccess::MemoryType ct) {
@@ -275,6 +274,10 @@ MachineConfigCache::WritePolicy MachineConfigCache::write_policy() const {
     return write_pol;
 }
 
+bool MachineConfigCache::write_alloc() const {
+    return write_allocate;
+}
+
 MemoryAccess::MemoryType MachineConfigCache::type() const {
     return cache_type;
 }
@@ -289,7 +292,8 @@ bool MachineConfigCache::operator==(const MachineConfigCache &c) const {
             CMP(blocks) && \
             CMP(associativity) && \
             CMP(replacement_policy) && \
-            CMP(write_policy);
+            CMP(write_policy) && \
+            CMP(write_alloc);
 #undef CMP
 }
 
@@ -373,18 +377,19 @@ void MachineConfig::preset(enum ConfigPresets p) {
     set_bht_bits(-1);
 
     switch (p) {
-    case ConfigPresets::CP_SINGLE:
-    case ConfigPresets::CP_SINGLE_CACHE:
-        set_pipelined(false);
-        break;
-    case ConfigPresets::CP_PIPE_NO_HAZARD:
-        set_pipelined(true);
-        set_data_hazard_unit(MachineConfig::DHU_NONE);
-        break;
-    case ConfigPresets::CP_PIPE:
-        set_pipelined(true);
-        set_data_hazard_unit(MachineConfig::DHU_STALL_FORWARD);
-        break;
+        case ConfigPresets::CP_SINGLE:
+        case ConfigPresets::CP_SINGLE_CACHE:
+            set_pipelined(false);
+            set_data_hazard_unit(MachineConfig::DHU_NONE);
+            break;
+        case ConfigPresets::CP_PIPE_NO_HAZARD:
+            set_pipelined(true);
+            set_data_hazard_unit(MachineConfig::DHU_NONE);
+            break;
+        case ConfigPresets::CP_PIPE:
+            set_pipelined(true);
+            set_data_hazard_unit(MachineConfig::DHU_STALL_FORWARD);
+            break;
     }
     // Some common configurations
     set_memory_execute_protection(DF_EXEC_PROTEC);

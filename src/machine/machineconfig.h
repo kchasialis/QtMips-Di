@@ -42,7 +42,6 @@
 
 namespace machine {
 
-// TODO: add more options regarding L2.
 enum class ConfigPresets {
     CP_SINGLE, // No pipeline cpu without cache.
     CP_SINGLE_CACHE, // No pipeline cpu with a L1+L2 cache.
@@ -60,17 +59,23 @@ public:
 
     void preset(enum ConfigPresets);
 
-    enum class ReplacementPolicy {
+    enum ReplacementPolicy {
         RP_RAND, // Random
         RP_LRU, // Least recently used
         RP_LFU // Least frequently used
     };
 
-    enum class WritePolicy {
-        WP_THROUGH_NOALLOC, // Write through
-        WP_THROUGH_ALLOC, // Write through
-        WP_BACK // Write back
+    enum WritePolicy {
+        WP_THROUGH,
+        WP_BACK
     };
+
+//    enum class WritePolicy {
+//        WP_THROUGH_NOALLOC, // Write through - no allocate
+//        WP_THROUGH_ALLOC, // Write through - allocate
+//        WP_BACK_NOALLOC, // Write back - no allocate
+//        WP_BACK_ALLOC // Write back - allocate
+//    };
 
     // If cache should be used or not
     void set_enabled(bool e);
@@ -82,6 +87,7 @@ public:
     void set_associativity(std::uint32_t a); // Degree of associativity
     void set_replacement_policy(ReplacementPolicy rp);
     void set_write_policy(WritePolicy wp);
+    void set_write_alloc(bool wa);
     void set_type(MemoryAccess::MemoryType ct);
 
     bool enabled() const;
@@ -93,6 +99,7 @@ public:
     std::uint32_t associativity() const;
     ReplacementPolicy replacement_policy() const;
     WritePolicy write_policy() const;
+    bool write_alloc() const;
     MemoryAccess::MemoryType type() const;
 
     bool operator ==(const MachineConfigCache &c) const;
@@ -104,6 +111,7 @@ private:
     std::uint32_t n_sets, n_blocks, d_associativity;
     ReplacementPolicy replac_pol;
     WritePolicy write_pol;
+    bool write_allocate;
     MemoryAccess::MemoryType cache_type;
 };
 

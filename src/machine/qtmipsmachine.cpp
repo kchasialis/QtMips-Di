@@ -130,7 +130,8 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
                                min_cache_row_size, cop0st);
     }
     else {
-        SANITY_ASSERT(cc.control_hazard_unit() == MachineConfig::CHU_NONE, "Invalid configuration for control branch unit.");
+        SANITY_ASSERT(cc.control_hazard_unit() == MachineConfig::CHU_NONE
+                        || cc.control_hazard_unit() == MachineConfig::CHU_DELAY_SLOT, "Invalid configuration for control branch unit.");
         cr = new CoreSingle(regs, core_mem_program, core_mem_data,
                             cc.control_hazard_unit() == machine::MachineConfig::CHU_DELAY_SLOT,
                             min_cache_row_size, cop0st);
