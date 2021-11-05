@@ -100,9 +100,7 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     connect(ui->data_hazard_unit, SIGNAL(clicked(bool)), this, SLOT(data_hazard_unit_change()));
     connect(ui->data_hazard_stall, SIGNAL(clicked(bool)), this, SLOT(data_hazard_unit_change()));
     connect(ui->data_hazard_stall_forward, SIGNAL(clicked(bool)), this, SLOT(data_hazard_unit_change()));
-    // Connections for branch unit are being done on load_settings() function.
 
-    // Connections need to be done here. A bug is caused otherwise.
     connect(ui->none, SIGNAL(clicked(bool)), this, SLOT(control_hazard_unit_change()));
     connect(ui->stall, SIGNAL(clicked(bool)), this, SLOT(control_hazard_unit_change()));
     connect(ui->delay_slot, SIGNAL(clicked(bool)), this, SLOT(control_hazard_unit_change()));
@@ -303,14 +301,14 @@ void NewDialog::mem_protec_write_change(bool v) {
 }
 
 void NewDialog::mem_time_read_change(int v) {
-    if (config->l2_unified_cache().mem_access_read() != (unsigned)v) {
+    if (config->ram_access_read() != (unsigned)v) {
         config->set_ram_access_read(v);
         switch2custom();
     }
 }
 
 void NewDialog::mem_time_write_change(int v) {
-    if (config->l2_unified_cache().mem_access_write() != (unsigned)v) {
+    if (config->ram_access_write() != (unsigned)v) {
         config->set_ram_access_write(v);
         switch2custom();
     }

@@ -20,7 +20,8 @@ public slots:
 private:
     enum CycleStatIndex {
         TOTAL_CYCLES,
-        CPU_CYCLES,
+        INSTRUCTIONS,
+        CPI,
         DATA_HAZARD_STALLS,
         CONTROL_HAZARD_STALLS,
         L1_DATA_STALLS,
@@ -28,7 +29,7 @@ private:
         L2_UNIFIED_STALLS
     };
 
-   QLabel *cycle_stats_labels[7]{};
+   QLabel *cycle_stats_labels[8]{};
 };
 
 #endif

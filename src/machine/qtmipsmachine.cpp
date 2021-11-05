@@ -40,8 +40,6 @@
 
 using namespace machine;
 
-#include <QDebug>
-
 CycleStatistics cycle_stats;
 
 QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool load_executable) :

@@ -70,7 +70,7 @@ Core::~Core() {
 
 void Core::step(bool skip_break) {
     cycles++;
-    ++cycle_stats.cpu_cycles;
+    ++cycle_stats.total_cycles;
     do_step(skip_break);
 }
 
@@ -765,6 +765,8 @@ void CoreSingle::do_step(bool skip_break) {
     struct dtMemory m = memory(e);
     writeback(m);
 
+    ++cycle_stats.instructions;
+
     // Handle PC before instruction following jump leaves decode stage
 
     if ((m.stop_if || (m.excause != EXCAUSE_NONE)) && dt_f != nullptr) {
@@ -1038,6 +1040,7 @@ void CorePipelined::do_step(bool skip_break) {
 
     if (data_hazard) {
         ++cycle_stats.data_hazard_stalls;
+        qDebug() << "Data Hazard!";
     }
 
     emit dhu_stall_value(stall);
@@ -1046,13 +1049,16 @@ void CorePipelined::do_step(bool skip_break) {
     if (!stall && !dt_d.stop_if) {
         dt_d.stall = false;
         if (mem_program_bubbles) {
-            dt_f = fetch(skip_break, true, false);
             --mem_program_bubbles;
+            if (mem_program_bubbles == 0) {
+                dt_f = fetch(skip_break, true, false);
+            }
         }
         else if (!control_hazard) {
             prev_mem_cycles = cycle_stats.memory_cycles;
             dt_f = fetch(skip_break);
             mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
+            ++cycle_stats.instructions;
             initial_mem_program_bubbles = mem_program_bubbles;
         }
         else {
