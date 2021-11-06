@@ -1070,7 +1070,6 @@ void CorePipelined::do_step(bool skip_break) {
                                      dt_f.excause, dt_f.is_valid);
             emit fetch_inst_addr_value(STAGEADDR_NONE);
             ++cycle_stats.control_hazard_stalls;
-            ++cycle_stats.total_cycles;
         }
 
         if (!mem_program_bubbles && !mem_data_bubbles) {
