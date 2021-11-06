@@ -1152,10 +1152,14 @@ void CorePipelined::remove_pc(std::uint32_t pc) {
 }
 
 bool CorePipelined::handle_fetch_stall() {
-    handle_pc_wpr(dt_d, dt_e, branch_res_id);
+    if (!branch_res_id && dt_d.jump) {
+        // Even if we evaluate branches on EX, jumps are still resolved on ID.
+        handle_pc_wpr(dt_d, dt_e, true);
+    } else {
+        handle_pc_wpr(dt_d, dt_e, branch_res_id);
+    }
 
     if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
-        qDebug() << "control hazard stall!";
         return true;
     }
     if (!branch_res_id && dt_d.branch) {
