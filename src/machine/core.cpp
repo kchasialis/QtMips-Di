@@ -857,9 +857,8 @@ void CorePipelined::flush_stages() {
     emit fetch_inst_addr_value(STAGEADDR_NONE);
     ++cycle_stats.control_hazard_stalls;
     ++cycle_stats.total_cycles;
-    if (!branch_res_id && dt_d.branch) {
+    if (!branch_res_id && dt_e.branch) {
         // We evaluate branches on EX stage, flush ID too if the instruction was a branch.
-        qDebug() << "Flushing here... I shouldn't on jump?";
         dtDecodeInit(dt_d, true);
         emit instruction_decoded(dt_d.inst, dt_d.inst_addr, dt_d.excause, dt_d.is_valid);
         emit decode_inst_addr_value(STAGEADDR_NONE);
