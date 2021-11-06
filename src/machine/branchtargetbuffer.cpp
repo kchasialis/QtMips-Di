@@ -36,12 +36,10 @@ std::uint32_t BranchTargetBuffer::btb_entry_tag(std::uint32_t btb_idx) const {
     return btb[btb_idx].tag;
 }
 
-void BranchTargetBuffer::update(std::uint32_t btb_idx, std::uint32_t inst_addr) {
-//    if (need_update) {
-    btb[btb_idx].tag = mask_bits(inst_addr, btb_bits, 31);
+void BranchTargetBuffer::update(std::uint32_t btb_idx, std::uint32_t pc, std::uint32_t inst_addr) {
+    btb[btb_idx].tag = mask_bits(pc, btb_bits, 31);
     btb[btb_idx].valid = true;
     btb[btb_idx].address = inst_addr;
 
     emit pred_updated_btb(btb_idx);
-//    }
 }

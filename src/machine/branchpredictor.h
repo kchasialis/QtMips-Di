@@ -47,6 +47,7 @@ public:
     };
 
     struct JumpInfo {
+        std::uint32_t pc; // PC of jump instruction.
         std::uint32_t pos_jmp; // Last position of the table that was predicted for a jump instruction.
         bool btb_miss; // Wether or not jump was taken (the only condition is if we had a btb miss).
     };
