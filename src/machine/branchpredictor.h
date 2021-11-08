@@ -19,7 +19,7 @@ public:
         std::uint32_t val;
 
         explicit InstAddr(std::uint32_t v) : val(v) {}
-        explicit InstAddr(const InstAddr &other) : val(other.val) {}
+        InstAddr(const InstAddr &other) : val(other.val) {}
         InstAddr &operator=(std::uint32_t val) {
             this->val = val;
             return *this;
@@ -53,11 +53,12 @@ public:
     };
 
     explicit BranchPredictor(std::uint8_t bht_bits);
-    virtual ~BranchPredictor();
+    ~BranchPredictor() override;
 
     virtual bool get_prediction(std::uint32_t bht_idx) = 0;
     virtual void update_bht(bool branch_taken, std::uint32_t correct_address) = 0;
     virtual void set_bht_entry(std::uint32_t bht_idx, QString val) = 0;
+    virtual void reset() = 0;
 
     // returns an index in the branch history table based on the instruction.
     std::uint32_t bht_idx(std::uint32_t pc, bool ro = false);
@@ -82,6 +83,7 @@ signals:
     void pred_updated_bht(std::int32_t);
     void pred_inst_addr_value(std::uint32_t);
     void pred_instr_value(const machine::Instruction &bj_instr);
+    void pred_reset();
 
 protected:
     std::shared_ptr<BranchTargetBuffer> btb_impl;
@@ -105,9 +107,10 @@ private:
 public:
     explicit OneBitBranchPredictor(std::uint8_t bht_bits);
 
-    bool get_prediction(std::uint32_t bht_idx);
-    void update_bht(bool branch, std::uint32_t correct_address);
-    void set_bht_entry(std::uint32_t bht_idx, QString val);
+    bool get_prediction(std::uint32_t bht_idx) override;
+    void update_bht(bool branch, std::uint32_t correct_address) override;
+    void set_bht_entry(std::uint32_t bht_idx, QString val) override;
+    void reset() override;
 };
 
 
@@ -123,9 +126,10 @@ private:
 public:
     explicit TwoBitBranchPredictor(std::uint8_t bht_bits);
 
-    bool get_prediction(std::uint32_t bht_idx);
-    void update_bht(bool branch, std::uint32_t correct_address);
-    void set_bht_entry(std::uint32_t bht_idx, QString val);
+    bool get_prediction(std::uint32_t bht_idx) override;
+    void update_bht(bool branch, std::uint32_t correct_address) override;
+    void set_bht_entry(std::uint32_t bht_idx, QString val) override;
+    void reset() override;
 };
 
 }

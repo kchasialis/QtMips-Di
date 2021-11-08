@@ -91,7 +91,7 @@ std::uint32_t BranchPredictor::btb_entry_tag(std::uint32_t btb_idx) const {
 }
 
 double BranchPredictor::accuracy() const {
-    return predictions > 0 ? ((double) correct_predictions / (double) predictions * 100.0) : 100.0;
+    return predictions > 0 ? ((double) correct_predictions / (double) predictions) * 100.0 : 100.0;
 }
 
 bool BranchPredictor::prediction() const {
@@ -159,20 +159,21 @@ void OneBitBranchPredictor::update_bht(bool branch, std::uint32_t correct_addres
         } else {
             // Last instruction was a branch and we predicted the wrong result or we had a btb miss.
             switch (bht[b_info.pos_branch]) {
-            case FSMStates::NOT_TAKEN:
-                // It was taken, also update BTB.
-                btb_impl->update(b_info.pos_branch, b_info.inst_addr.val, correct_address);
-                updated_btb = true;
-                bht[b_info.pos_branch] = FSMStates::TAKEN;
-                break;
-            case FSMStates::TAKEN:
-                bht[b_info.pos_branch] = FSMStates::NOT_TAKEN;
-                break;
-            default:
-                SANITY_ASSERT(0, "Debug me :)");
+                case FSMStates::NOT_TAKEN:
+                    // It was taken, also update BTB.
+                    btb_impl->update(b_info.pos_branch, b_info.inst_addr.val, correct_address);
+                    updated_btb = true;
+                    bht[b_info.pos_branch] = FSMStates::TAKEN;
+                    break;
+                case FSMStates::TAKEN:
+                    bht[b_info.pos_branch] = FSMStates::NOT_TAKEN;
+                    break;
+                default:
+                    SANITY_ASSERT(0, "Debug me :)");
             }
-            emit pred_updated_bht(b_info.pos_branch);
         }
+
+        emit pred_updated_bht(b_info.pos_branch);
 
         if (!updated_btb && b_info.btb_miss) {
             btb_impl->update(b_info.pos_branch, b_info.inst_addr.val, correct_address);
@@ -193,6 +194,10 @@ void OneBitBranchPredictor::set_bht_entry(std::uint32_t bht_idx, QString val) {
     else {
         SANITY_ASSERT(0, "Debug me :)");
     }
+}
+
+void OneBitBranchPredictor::reset() {
+    emit pred_reset();
 }
 
 TwoBitBranchPredictor::TwoBitBranchPredictor(uint8_t bht_bits) : BranchPredictor(bht_bits) {}
@@ -232,9 +237,10 @@ void TwoBitBranchPredictor::update_bht(bool branch, std::uint32_t correct_addres
             default:
                 SANITY_ASSERT(0, "Debug me :)");
             }
-            emit pred_updated_bht(b_info.pos_branch);
         }
-        
+
+        emit pred_updated_bht(b_info.pos_branch);
+
         if (!updated_btb && b_info.btb_miss) {
             btb_impl->update(b_info.pos_branch, b_info.inst_addr.val, correct_address);
         }        
@@ -260,4 +266,8 @@ void TwoBitBranchPredictor::set_bht_entry(std::uint32_t bht_idx, QString val) {
     else {
         SANITY_ASSERT(0, "Debug me :)");
     }
+}
+
+void TwoBitBranchPredictor::reset() {
+    emit pred_reset();
 }

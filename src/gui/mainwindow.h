@@ -156,7 +156,7 @@ private:
     LcdDisplayDock *lcd_display;
     Cop0Dock *cop0dock;
     MessagesDock *messages;
-    BranchPredictorDock *predictor;
+    BranchHistoryTableDock *predictor;
     BranchTargetBufferDock *btb;
     CycleStatisticsDock *cycle_stats;
     bool load_default_settings;

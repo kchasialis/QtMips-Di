@@ -272,16 +272,18 @@ ExceptionCause Core::memory_special(AccessControl memctl,
 }
 
 
-struct Core::dtFetch Core::fetch(bool skip_break, bool signal, bool updated_mem_cycles) {
+struct Core::dtFetch Core::fetch(bool skip_break, bool signal, bool mem_access) {
     ExceptionCause excause = EXCAUSE_NONE;
     std::uint32_t inst_addr = regs->read_pc();
-    Instruction inst(mem_program->read_word(inst_addr));
+    static uint32_t cache_instr;
 
-    if (updated_mem_cycles) {
+    if (mem_access) {
         // We read from memory. If we have no caches we should update cycles by memory latency and not by 1.
+        cache_instr = mem_program->read_word(inst_addr);
         uint32_t mem_cycles = mem_program->type() == MemoryAccess::MemoryType::DRAM ? mem_program->get_access_read() - 1 : 0;
         cycle_stats.memory_cycles += mem_cycles;
     }
+    Instruction inst(cache_instr);
 
     if (!skip_break) {
         hwBreak *brk = hw_breaks.value(inst_addr);
@@ -515,8 +517,12 @@ struct Core::dtExecute Core::execute(const struct dtDecode &dt) {
         .jump = dt.jump,
         .bj_not = dt.bj_not,
         .bgt_blez = dt.bgt_blez,
+        .num_rs = dt.num_rs,
+        .num_rt = dt.num_rt,
         .val_rs = dt.val_rs,
         .val_rt = dt.val_rt,
+        .forward_m_d_rs = false,
+        .forward_m_d_rt = false,
         .memctl = dt.memctl,
         .rwrite = dt.rwrite,
         .alu_val = alu_val,
@@ -682,8 +688,11 @@ void Core::dtDecodeInit(struct dtDecode &dt, bool stall) {
     dt.alusrc = false;
     dt.regd = false;
     dt.regwrite = false;
+    dt.alu_req_rs = false;
+    dt.alu_req_rt = false;
     dt.bjr_req_rs = false; // requires rs for beq, bne, blez, bgtz, jr nad jalr
     dt.bjr_req_rt = false; // requires rt for beq, bne
+    dt.branch = false;
     dt.jump = false;
     dt.bj_not = false;
     dt.bgt_blez = false;
@@ -701,6 +710,7 @@ void Core::dtDecodeInit(struct dtDecode &dt, bool stall) {
     dt.immediate_val = 0;
     dt.ff_rs = FORWARD_NONE;
     dt.ff_rt = FORWARD_NONE;
+    dt.inst_addr = 0;
     dt.excause = EXCAUSE_NONE;
     dt.in_delay_slot = false;
     dt.stall = false;
@@ -820,6 +830,7 @@ CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryA
     this->chunit = chunit;
     this->branch_res_id = branch_res_id;
     this->control_hazard = false;
+    this->data_hazard = false;
     switch (this->chunit) {
     case MachineConfig::CHU_STALL:
     case MachineConfig::CHU_DELAY_SLOT:
@@ -881,7 +892,6 @@ std::uint32_t CorePipelined::get_correct_address(std::uint32_t pc, bool branch_t
 void CorePipelined::do_step(bool skip_break) {
     bool stall = false;
     static uint32_t initial_mem_program_bubbles = 0;
-    bool data_hazard = false;
     bool data_branch_hazard = false;
     bool excpt_in_progress = false;
     std::uint32_t jump_branch_pc = dt_m.inst_addr;
@@ -908,6 +918,13 @@ void CorePipelined::do_step(bool skip_break) {
                 break;
         }
     }
+
+    if (data_hazard)
+        ++cycle_stats.data_hazard_stalls;
+    else if (!control_hazard)
+        ++cycle_stats.instructions;
+
+    data_hazard = false;
 
     // Process stages
     writeback(dt_m);
@@ -992,37 +1009,68 @@ void CorePipelined::do_step(bool skip_break) {
                 data_hazard = true;
         }
 #undef HAZARD
-        if (dt_e.rwrite != 0 && dt_e.regwrite &&
-            ((dt_d.bjr_req_rs && dt_d.num_rs == dt_e.rwrite) ||
-             (dt_d.bjr_req_rt && dt_d.num_rt == dt_e.rwrite))) {
-            if (branch_res_id) {
-                // If branch is executed on EX, there is no data hazard.
-                data_hazard = true;
-                data_branch_hazard = true;
-            }
-        } else {
-            if (dhunit != MachineConfig::DHU_STALL_FORWARD || dt_m.memtoreg) {
-                if (dt_m.rwrite != 0 && dt_m.regwrite &&
-                    ((dt_d.bjr_req_rs && dt_d.num_rs == dt_m.rwrite) ||
-                     (dt_d.bjr_req_rt && dt_d.num_rt == dt_m.rwrite)))
-                    data_hazard = true;
-            } else {
-                if (dt_m.rwrite != 0 && dt_m.regwrite &&
-                    dt_d.bjr_req_rs && dt_d.num_rs == dt_m.rwrite) {
-                    dt_d.val_rs = dt_m.towrite_val;
-                    dt_d.forward_m_d_rs = true;
-                }
-                if (dt_m.rwrite != 0 && dt_m.regwrite &&
-                    dt_d.bjr_req_rt && dt_d.num_rt == dt_m.rwrite) {
-                    dt_d.val_rt = dt_m.towrite_val;
-                    dt_d.forward_m_d_rt = true;
+        if (branch_res_id || dt_d.jump) {
+            // Branches / Jumps are resolved on ID, check for data hazards.
+            if (dt_e.rwrite != 0 && dt_e.regwrite &&
+                ((dt_d.bjr_req_rs && dt_d.num_rs == dt_e.rwrite) ||
+                (dt_d.bjr_req_rt && dt_d.num_rt == dt_e.rwrite)))
+                // Forward from MEM to ID.
+                data_hazard = data_branch_hazard = true;
+            else {
+                if (dhunit != MachineConfig::DHU_STALL_FORWARD || dt_m.memtoreg) {
+                    // Forward from WB to ID.
+                    if (dt_m.rwrite != 0 && dt_m.regwrite &&
+                        ((dt_d.bjr_req_rs && dt_d.num_rs == dt_m.rwrite) ||
+                        (dt_d.bjr_req_rt && dt_d.num_rt == dt_m.rwrite)))
+                        data_hazard = data_branch_hazard = true;
+                } else {
+                    if (dt_m.rwrite != 0 && dt_m.regwrite &&
+                        dt_d.bjr_req_rs && dt_d.num_rs == dt_m.rwrite) {
+                        dt_d.val_rs = dt_m.towrite_val;
+                        dt_d.forward_m_d_rs = true;
+                    }
+                    if (dt_m.rwrite != 0 && dt_m.regwrite &&
+                        dt_d.bjr_req_rt && dt_d.num_rt == dt_m.rwrite) {
+                        dt_d.val_rt = dt_m.towrite_val;
+                        dt_d.forward_m_d_rt = true;
+                    }
                 }
             }
         }
-        emit forward_m_d_rs_value(dt_d.forward_m_d_rs);
-        emit forward_m_d_rt_value(dt_d.forward_m_d_rt);
+        if (!branch_res_id) {
+            // Branches are resolved on EX, check for data hazards.
+            if (dhunit != MachineConfig::DHU_STALL_FORWARD) {
+                if (dt_m.rwrite != 0 && dt_m.regwrite &&
+                    ((dt_e.bjr_req_rs && dt_e.num_rs == dt_m.rwrite) ||
+                     (dt_e.bjr_req_rt && dt_e.num_rt == dt_m.rwrite)))
+                    data_hazard = data_branch_hazard = true;
+            }
+            else if (dt_m.memtoreg) {
+                // Forward from WB to ID.
+                if (dt_m.rwrite != 0 && dt_m.regwrite &&
+                    ((dt_d.bjr_req_rs && dt_d.num_rs == dt_m.rwrite) ||
+                     (dt_d.bjr_req_rt && dt_d.num_rt == dt_m.rwrite))) {
+                    data_hazard = data_branch_hazard = true;
+                }
+            }
+            else {
+                if (dt_m.rwrite != 0 && dt_m.regwrite && dt_e.bjr_req_rs && dt_e.num_rs == dt_m.rwrite) {
+                    dt_e.val_rs = dt_m.towrite_val;
+                    dt_e.forward_m_d_rs = true;
+                }
+                if (dt_m.rwrite != 0 && dt_m.regwrite && dt_e.bjr_req_rt && dt_e.num_rt == dt_m.rwrite) {
+                    dt_e.val_rt = dt_m.towrite_val;
+                    dt_e.forward_m_d_rt = true;
+                }
+            }
+        }
+        emit forward_m_d_rs_value((branch_res_id || dt_d.jump) ? dt_d.forward_m_d_rs : dt_e.forward_m_d_rs);
+        emit forward_m_d_rt_value((branch_res_id || dt_d.jump) ? dt_d.forward_m_d_rt : dt_e.forward_m_d_rt);
     }
-    emit branch_forward_value((dt_d.forward_m_d_rs || dt_d.forward_m_d_rt) ? 2 : data_branch_hazard);
+    if (branch_res_id || dt_d.jump)
+        emit branch_forward_value((dt_d.forward_m_d_rs || dt_d.forward_m_d_rt) ? 2 : data_branch_hazard);
+    else
+        emit branch_forward_value((dt_e.forward_m_d_rs || dt_e.forward_m_d_rt) ? 2 : data_branch_hazard);
 #if 0
     if (stall)
         printf("STALL\n");
@@ -1040,11 +1088,6 @@ void CorePipelined::do_step(bool skip_break) {
     if (dt_e.stop_if || dt_m.stop_if || data_hazard)
         stall = true;
 
-    if (data_hazard) {
-        ++cycle_stats.data_hazard_stalls;
-        qDebug() << "Data Hazard!";
-    }
-
     emit dhu_stall_value(stall);
 
     // Now process program counter (loop connections from decode stage)
@@ -1060,15 +1103,7 @@ void CorePipelined::do_step(bool skip_break) {
             prev_mem_cycles = cycle_stats.memory_cycles;
             dt_f = fetch(skip_break);
             mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
-            ++cycle_stats.instructions;
             initial_mem_program_bubbles = mem_program_bubbles;
-        }
-        else {
-            dtFetchInit(dt_f, true);
-            emit instruction_fetched(dt_f.inst, dt_f.inst_addr,
-                                     dt_f.excause, dt_f.is_valid);
-            emit fetch_inst_addr_value(STAGEADDR_NONE);
-            ++cycle_stats.control_hazard_stalls;
         }
 
         if (!mem_program_bubbles && !mem_data_bubbles) {
@@ -1098,6 +1133,7 @@ void CorePipelined::do_step(bool skip_break) {
             emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
             emit fetch_inst_addr_value(STAGEADDR_NONE);
             dt_f = tmp;
+            ++cycle_stats.control_hazard_stalls;
         }
         // clear decode latch (insert nope to execute stage)
         if (!dt_d.stop_if) {
@@ -1118,7 +1154,9 @@ void CorePipelined::do_reset() {
     dt_e.inst_addr = 0;
     dtMemoryInit(dt_m);
     dt_m.inst_addr = 0;
-    control_hazard = false;
+    control_hazard = data_hazard = false;
+    if (bp)
+        bp->reset();
 }
 
 BranchPredictor *CorePipelined::predictor() {

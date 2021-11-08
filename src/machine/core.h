@@ -251,8 +251,12 @@ protected:
         bool jump;       // jump
         bool bj_not;     // negate branch condition
         bool bgt_blez;   // BGTZ/BLEZ instead of BGEZ/BLTZ
+        std::uint8_t num_rs; // Number of the register s
+        std::uint8_t num_rt; // Number of the register t
         std::uint32_t val_rs; // Value from register rs
         std::uint32_t val_rt; // Value from register rt
+        bool forward_m_d_rs; // forwarding required for beq, bne, blez, bgtz, jr nad jalr
+        bool forward_m_d_rt; // forwarding required for beq, bne
         AccessControl memctl;
         std::uint8_t rwrite; // Writeback register (multiplexed between rt and rd according to regd)
         std::uint32_t alu_val; // Result of ALU execution
@@ -276,7 +280,7 @@ protected:
         bool is_valid;
     };
 
-    struct dtFetch fetch(bool skip_break = false, bool signal = true, bool updated_mem_cycles = true);
+    struct dtFetch fetch(bool skip_break = false, bool signal = true, bool mem_access = true);
     struct dtDecode decode(const struct dtFetch&);
     struct dtExecute execute(const struct dtDecode&);
     struct dtMemory memory(const struct dtExecute&);
@@ -325,9 +329,9 @@ public:
     ~CoreSingle();
 
 protected:
-    void do_step(bool skip_break = false);
-    void do_reset();
-    BranchPredictor *predictor();
+    void do_step(bool skip_break = false) override;
+    void do_reset() override;
+    BranchPredictor *predictor() override;
 
 private:
     struct Core::dtFetch *dt_f;
@@ -346,9 +350,9 @@ public:
 protected:
     void flush_stages();
     std::uint32_t get_correct_address(std::uint32_t pc_before_prediction, bool branch_taken, bool btb_miss);
-    void do_step(bool skip_break = false);
-    void do_reset();
-    BranchPredictor *predictor();
+    void do_step(bool skip_break = false) override;
+    void do_reset() override;
+    BranchPredictor *predictor() override;
     void enqueue_pc(std::uint32_t pc);
     std::uint32_t dequeue_pc();
     void remove_pc(std::uint32_t inst_addr);
@@ -363,7 +367,7 @@ private:
     struct Core::dtMemory dt_m;
 
     BranchPredictor *bp;
-    bool branch_res_id, control_hazard;
+    bool branch_res_id, data_hazard, control_hazard;
     enum MachineConfig::DataHazardUnit dhunit;
     enum MachineConfig::ControlHazardUnit chunit;
     // Variables used for branch predictor.

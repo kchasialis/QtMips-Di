@@ -106,7 +106,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     cop0dock->hide();
     messages = new MessagesDock(this, settings);
     messages->hide();
-    predictor = new BranchPredictorDock(this);
+    predictor = new BranchHistoryTableDock(this);
     predictor->hide();
     btb = new BranchTargetBufferDock(this);
     btb->hide();

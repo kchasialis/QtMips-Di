@@ -220,8 +220,7 @@ std::uint32_t Cache::miss() const {
 //}
 
 std::uint32_t Cache::stalled_cycles() const {
-    uint32_t st_cycles = read_misses * access_read + write_misses * access_write +
-                         mem_lower_reads * access_pen_read + mem_lower_writes * access_pen_write;
+    uint32_t st_cycles = mem_lower_reads * access_pen_read + mem_lower_writes * access_pen_write;
 
     if (access_pen_burst != 0)
         st_cycles -= burst_reads * (access_pen_read - access_pen_burst) +
@@ -431,7 +430,7 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
                 change_counter++;
             }
 
-            mem_lower_reads += cnf.blocks();
+            ++mem_lower_reads;
             burst_reads += cnf.blocks() - 1;
             emit_mem_lower_signal(true);
             update_statistics();
@@ -490,7 +489,7 @@ void Cache::kick(std::uint32_t associat_indx, std::uint32_t row) const {
                 mem_lower->write_word(base_address(cd.tag, row) + (4*i), cd.data[i]);
             }
 
-            mem_lower_writes += cnf.blocks();
+            ++mem_lower_writes;
             burst_writes += cnf.blocks() - 1;
             emit_mem_lower_signal(false);
         }
@@ -534,7 +533,7 @@ void Cache::update_statistics() const {
 void Cache::update_misses(bool read) const {
     if (update_stats) {
         read_misses += read ? 1 : 0;
-        write_misses += read ? 0 : 1;
+        write_misses += !read ? 1 : 0;
         switch (cnf.type()) {
             case MemoryType::L1_PROGRAM_CACHE:
                 cycle_stats.l1_program_stall_cycles += read ? access_pen_read : access_pen_write;
@@ -555,19 +554,6 @@ void Cache::update_misses(bool read) const {
 void Cache::update_hits(bool read) const {
     if (update_stats) {
         read_hits += read ? 1 : 0;
-        write_hits += read ? 0 : 1;
-//        switch (cnf.type()) {
-//            case MemoryType::L1_PROGRAM_CACHE:
-//                cycle_stats.l1_program_access_cycles += read ? cnf.mem_access_read() : cnf.mem_access_write();
-//                break;
-//            case MemoryType::L1_DATA_CACHE:
-//                cycle_stats.l1_data_access_cycles += read ? cnf.mem_access_read() : cnf.mem_access_write();
-//                break;
-//            case MemoryType::L2_UNIFIED_CACHE:
-//                cycle_stats.l2_unified_access_cycles += read ? cnf.mem_access_read() : cnf.mem_access_write();
-//                break;
-//            default:
-//                SANITY_ASSERT(0, "Wrong type for cache.");
-//        }
+        write_hits += !read ? 1 : 0;
     }
 }
