@@ -359,6 +359,8 @@ void NewDialog::reset_at_compile_change(bool v) {
     config->set_reset_at_compile(v);
 }
 
+#include <QDebug>
+
 void NewDialog::config_gui() {
     // Basic
     ui->elf_file->setText(config->elf());

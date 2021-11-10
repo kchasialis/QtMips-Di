@@ -43,3 +43,11 @@ void BranchTargetBuffer::update(std::uint32_t btb_idx, std::uint32_t pc, std::ui
 
     emit pred_updated_btb(btb_idx);
 }
+
+void BranchTargetBuffer::reset() {
+    for (size_t i = 0 ; i < btb_size ; i++) {
+        this->btb[i].address = 0;
+        this->btb[i].tag = 0;
+        this->btb[i].valid = false;
+    }
+}

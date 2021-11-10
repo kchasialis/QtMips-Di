@@ -21,8 +21,14 @@ void BranchTargetBufferDock::setup(machine::QtMipsMachine *machine) {
     btb_content->setModel(btb_model);
     layout->update();
 
-    connect(machine->bp()->btb(), SIGNAL(pred_updated_btb(std::int32_t)), btb_model, SLOT(update_pos_btb_update(std::int32_t)));
-    connect(machine->bp()->btb(), SIGNAL(pred_accessed_btb(std::int32_t)), btb_model, SLOT(update_pos_btb_access(std::int32_t)));
-    connect(machine->bp()->btb(), SIGNAL(pred_updated_btb(std::int32_t)), btb_content, SLOT(focus_row(std::int32_t)));
-    connect(machine->bp()->btb(), SIGNAL(pred_accessed_btb(std::int32_t)), btb_content, SLOT(focus_row(std::int32_t)));
+    if (machine) {
+        connect(machine->bp()->btb(), SIGNAL(pred_updated_btb(std::int32_t)), btb_model,
+                SLOT(update_pos_btb_update(std::int32_t)));
+        connect(machine->bp()->btb(), SIGNAL(pred_accessed_btb(std::int32_t)), btb_model,
+                SLOT(update_pos_btb_access(std::int32_t)));
+        connect(machine->bp()->btb(), SIGNAL(pred_updated_btb(std::int32_t)), btb_content,
+                SLOT(focus_row(std::int32_t)));
+        connect(machine->bp()->btb(), SIGNAL(pred_accessed_btb(std::int32_t)), btb_content,
+                SLOT(focus_row(std::int32_t)));
+    }
 }

@@ -327,10 +327,9 @@ void MainWindow::create_core(const machine::MachineConfig &config, bool load_exe
     peripherals->setup(machine->peripheral_spi_led());
     lcd_display->setup(machine->peripheral_lcd_display());
     cop0dock->setup(machine);
-    if (machine->config().predictor()) {
-        predictor->setup(machine);
-        btb->setup(machine);
-    }
+    predictor->setup(machine->config().predictor() ? machine : nullptr);
+    btb->setup(machine->config().predictor() ? machine : nullptr);
+
     cycle_stats->setup(machine);
     machine::CycleStatistics c_stats;
     memset(&c_stats, 0, sizeof(c_stats));

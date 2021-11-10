@@ -20,7 +20,7 @@ void BranchPredictorTableView::adjustColumnCount() {
     int cwidth_dh;
     int totwidth;
 
-    BranchPredictorModel *m = dynamic_cast<BranchPredictorModel*>(model());
+    BranchHistoryTableModel *m = dynamic_cast<BranchHistoryTableModel*>(model());
 
     if (m == nullptr)
         return;
@@ -61,12 +61,12 @@ void BranchPredictorTableView::resizeEvent(QResizeEvent *event) {
 
 void BranchPredictorTableView::setModel(QAbstractItemModel *model) {
     // This function assumes that we already have a machine.
-    BranchPredictorModel *pmodel = dynamic_cast<BranchPredictorModel*>(model);
+    BranchHistoryTableModel *pmodel = dynamic_cast<BranchHistoryTableModel*>(model);
     QVector<QString> items;
 
     Super::setModel(model);
 
-    if (pmodel) {
+    if (pmodel && pmodel->getMachine()) {
         switch (pmodel->getMachine()->config().control_hazard_unit()) {
         case machine::MachineConfig::CHU_ONE_BIT_BP:
             items.append("NT");
@@ -88,7 +88,7 @@ void BranchPredictorTableView::setModel(QAbstractItemModel *model) {
 }
 
 void BranchPredictorTableView::focus_row(std::int32_t row) {
-    BranchPredictorModel *pmodel = dynamic_cast<BranchPredictorModel*>(model());
+    BranchHistoryTableModel *pmodel = dynamic_cast<BranchHistoryTableModel*>(model());
 
     scrollTo(pmodel->index(row, 0), QAbstractItemView::PositionAtCenter);
     update();

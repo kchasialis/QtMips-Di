@@ -69,10 +69,8 @@ static void set_qline_val(QLineEdit *qline_obj, const QString &text) {
     qline_obj->setReadOnly(true);
 }
 
-#include <QDebug>
-
 void BranchHistoryTableDock::setup(machine::QtMipsMachine *machine) {
-    auto *pmodel = new BranchPredictorModel(this);
+    auto *pmodel = new BranchHistoryTableModel(this);
     QString text;
 
     this->machine = machine;
@@ -80,31 +78,40 @@ void BranchHistoryTableDock::setup(machine::QtMipsMachine *machine) {
     predictor_content->setModel(pmodel);
     vlayout->update();
 
-    qDebug() << machine->bp();
+    if (machine) {
+        connect(machine->bp(), SIGNAL(pred_inst_addr_value(std::uint32_t)), this, SLOT(update_pc_val(std::uint32_t)));
+        connect(machine->bp(), SIGNAL(pred_inst_addr_value(std::uint32_t)), this,
+                SLOT(update_bht_index_val(std::uint32_t)));
+        connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), this, SLOT(update_accuracy_val(std::int32_t)));
+        connect(machine->bp(), SIGNAL(pred_reset()), this, SLOT(reset()));
+        connect(machine->bp(), SIGNAL(pred_instr_value(const machine::Instruction&)), this,
+                SLOT(update_instr_val(const machine::Instruction&)));
+        connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), pmodel,
+                SLOT(update_pos_bht_update(std::int32_t)));
+        connect(machine->bp(), SIGNAL(pred_accessed_bht(std::int32_t)), pmodel,
+                SLOT(update_pos_bht_access(std::int32_t)));
+        connect(machine->bp(), SIGNAL(pred_accessed_bht(std::int32_t)), predictor_content,
+                SLOT(focus_row(std::int32_t)));
+        connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), predictor_content,
+                SLOT(focus_row(std::int32_t)));
 
-    connect(machine->bp(), SIGNAL(pred_inst_addr_value(std::uint32_t)), this, SLOT(update_pc_val(std::uint32_t)));
-    connect(machine->bp(), SIGNAL(pred_inst_addr_value(std::uint32_t)), this, SLOT(update_bht_index_val(std::uint32_t)));
-    connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), this, SLOT(update_accuracy_val(std::int32_t)));
-    connect(machine->bp(), SIGNAL(pred_reset()), this, SLOT(reset()));
-    connect(machine->bp(), SIGNAL(pred_instr_value(const machine::Instruction&)), this, SLOT(update_instr_val(const machine::Instruction&)));
-    connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), pmodel, SLOT(update_pos_bht_update(std::int32_t)));
-    connect(machine->bp(), SIGNAL(pred_accessed_bht(std::int32_t)), pmodel, SLOT(update_pos_bht_access(std::int32_t)));
-    connect(machine->bp(), SIGNAL(pred_accessed_bht(std::int32_t)), predictor_content, SLOT(focus_row(std::int32_t)));
-    connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), predictor_content, SLOT(focus_row(std::int32_t)));
+        switch (this->machine->config().control_hazard_unit()) {
+            case machine::MachineConfig::CHU_ONE_BIT_BP:
+                text = "One Bit";
+                break;
+            case machine::MachineConfig::CHU_TWO_BIT_BP:
+                text = "Two Bit";
+                break;
+            default:
+                SANITY_ASSERT(0, "Debug me.");
+        }
 
-    switch (this->machine->config().control_hazard_unit()) {
-        case machine::MachineConfig::CHU_ONE_BIT_BP:
-            text = "One Bit";
-            break;
-        case machine::MachineConfig::CHU_TWO_BIT_BP:
-            text = "Two Bit";
-            break;
-        default:
-            SANITY_ASSERT(0, "Debug me.");
+        set_qline_val(history_bits_val, text);
+        set_qline_val(bht_entries_val, QString::number(pow(2, this->machine->config().bht_bits())));
+    } else {
+        set_qline_val(bht_entries_val, "Not Set");
+        set_qline_val(history_bits_val, "Not Set");
     }
-
-    set_qline_val(history_bits_val, text);
-    set_qline_val(bht_entries_val, QString::number(pow(2, this->machine->config().bht_bits())));
 }
 
 void BranchHistoryTableDock::update_pc_val(std::uint32_t inst_addr) {
@@ -128,15 +135,20 @@ void BranchHistoryTableDock::update_instr_val(const machine::Instruction &instr)
 }
 
 void BranchHistoryTableDock::update_bht_index_val(std::uint32_t inst_addr) {
-    set_qline_val(bht_index_val, QString::number(machine->bp()->bht_idx(inst_addr, true)));
+    if (machine)
+        set_qline_val(bht_index_val, QString::number(machine->bp()->bht_idx(inst_addr, true)));
+    else
+        set_qline_val(bht_index_val, "Not Set");
 }
 
 void BranchHistoryTableDock::update_accuracy_val(std::int32_t) {
-    set_qline_val(accuracy_val, QString::number(machine->bp()->accuracy()) + "%");
+    if (machine)
+        set_qline_val(accuracy_val, QString::number(machine->bp()->accuracy()) + "%");
+    else
+        set_qline_val(accuracy_val, "Not Set");
 }
 
 void BranchHistoryTableDock::reset() {
-    qDebug() << "HI BITCH!";
     set_qline_val(instr_val, "");
     set_qline_val(bht_index_val, "");
     set_qline_val(accuracy_val, "100.0%");

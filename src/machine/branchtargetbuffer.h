@@ -28,7 +28,7 @@ private:
         std::uint32_t tag;
         std::uint32_t address;
 
-        BTBEntry() : valid(0), tag(0), address(0) {}
+        BTBEntry() : valid(false), tag(0), address(0) {}
     };
 
     std::uint8_t btb_bits;
@@ -49,6 +49,7 @@ public:
     std::uint32_t btb_entry_address(std::uint32_t btb_idx) const;
     std::uint32_t btb_entry_tag(std::uint32_t btb_idx) const;
     void update(std::uint32_t btb_idx, std::uint32_t pc, std::uint32_t inst_addr);
+    void reset();
 };
 
 }

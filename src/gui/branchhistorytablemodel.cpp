@@ -3,19 +3,20 @@
 #include <cmath>
 #include <QBrush>
 
-BranchPredictorModel::BranchPredictorModel(QObject *parent) : Super(parent), data_font("Monospace"), machine(nullptr), pos_bht_access(-1), pos_bht_update(-1) {
+BranchHistoryTableModel::BranchHistoryTableModel(QObject *parent) : Super(parent), data_font("Monospace"), machine(nullptr), pos_bht_access(-1), pos_bht_update(-1) {
     data_font.setStyleHint(QFont::TypeWriter);
 }
 
-int BranchPredictorModel::rowCount(const QModelIndex &index) const {
-    return index.column() != 3 ? (machine == nullptr ? 750 : pow(2, machine->config().bht_bits())) : 1;
+#include <QDebug>
+int BranchHistoryTableModel::rowCount(const QModelIndex &index) const {
+    return index.column() != 3 ? (machine == nullptr ? 750 : (int) pow(2, machine->config().bht_bits())) : 1;
 }
 
-int BranchPredictorModel::columnCount(const QModelIndex & /* parent */) const {
+int BranchHistoryTableModel::columnCount(const QModelIndex & /* parent */) const {
     return 3;
 }
 
-QVariant BranchPredictorModel::headerData(int section, Qt::Orientation orientation, int role) const {
+QVariant BranchHistoryTableModel::headerData(int section, Qt::Orientation orientation, int role) const {
     if (orientation == Qt::Horizontal) {
         if (role == Qt::DisplayRole) {
             switch (section) {
@@ -33,7 +34,7 @@ QVariant BranchPredictorModel::headerData(int section, Qt::Orientation orientati
     return Super::headerData(section, orientation, role);
 }
 
-QVariant BranchPredictorModel::data(const QModelIndex &index, int role) const {
+QVariant BranchHistoryTableModel::data(const QModelIndex &index, int role) const {
     // This function works only if we already have a machine.
     // The code for case 1 and 2 is nearly identical, except in the 2-bit branch predictor.
     bool case1 = false;
@@ -46,33 +47,37 @@ QVariant BranchPredictorModel::data(const QModelIndex &index, int role) const {
             case1 = true;
         case 2:
         {
-            int one_bit_pred = machine->config().control_hazard_unit() == machine::MachineConfig::CHU_ONE_BIT_BP;
-            int8_t bht_entry = machine->bp()->bht_entry(index.row());
+            if (machine) {
+                int one_bit_pred = machine->config().control_hazard_unit() == machine::MachineConfig::CHU_ONE_BIT_BP;
+                int8_t bht_entry = machine->bp()->bht_entry(index.row());
 
-            if (one_bit_pred) {
-                switch (bht_entry) {
-                case 0x0:
-                    return "NT";
-                case 0x1:
-                    return "T";
-                default:
-                    SANITY_ASSERT(0, "Debug me :)");
-                    return QVariant();
+                if (one_bit_pred) {
+                    switch (bht_entry) {
+                        case 0x0:
+                            return "NT";
+                        case 0x1:
+                            return "T";
+                        default:
+                            SANITY_ASSERT(0, "Debug me :)");
+                            return QVariant();
+                    }
+                } else {
+                    switch (bht_entry) {
+                        case 0x00:
+                            return case1 ? "STRONGLY_NT" : "NT";
+                        case 0x01:
+                            return case1 ? "WEAKLY_NT" : "NT";
+                        case 0x10:
+                            return case1 ? "WEAKLY_T" : "T";
+                        case 0x11:
+                            return case1 ? "STRONGLY_T" : "T";
+                        default:
+                            SANITY_ASSERT(0, "Debug me :)");
+                            return QVariant();
+                    }
                 }
             } else {
-                switch (bht_entry) {
-                case 0x00:
-                    return case1 ? "STRONGLY_NT" : "NT";
-                case 0x01:
-                    return case1 ? "WEAKLY_NT" : "NT";
-                case 0x10:
-                    return case1 ? "WEAKLY_T" : "T";
-                case 0x11:
-                    return case1 ? "STRONGLY_T" : "T";
-                default:
-                    SANITY_ASSERT(0, "Debug me :)");
-                    return QVariant();
-                }
+                return "Not Set";
             }
         }
         default:
@@ -103,20 +108,24 @@ QVariant BranchPredictorModel::data(const QModelIndex &index, int role) const {
     }
 }
 
-Qt::ItemFlags BranchPredictorModel::flags(const QModelIndex &index) const {
+Qt::ItemFlags BranchHistoryTableModel::flags(const QModelIndex &index) const {
     return index.column() == 1 ? (QAbstractTableModel::flags(index) | Qt::ItemIsEditable) :
                                  QAbstractTableModel::flags(index);   
 }
 
-bool BranchPredictorModel::setData(const QModelIndex &idx, const QVariant &value, int role) {
+bool BranchHistoryTableModel::setData(const QModelIndex &idx, const QVariant &value, int role) {
     if (role == Qt::EditRole) {
         switch (idx.column()) {
         case 1:
         {
-            /* History column is editable. */
-            machine->bp()->set_bht_entry(idx.row(), value.toString());
-            emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1));
-            return true;
+            if (machine) {
+                /* History column is editable. */
+                machine->bp()->set_bht_entry(idx.row(), value.toString());
+                emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1));
+                return true;
+            } else {
+                return false;
+            }
         }
         case 0:
             /* Index column is not editable.  */
@@ -135,24 +144,24 @@ bool BranchPredictorModel::setData(const QModelIndex &idx, const QVariant &value
     }
 }
 
-const QFont &BranchPredictorModel::getFont() const {
+const QFont &BranchHistoryTableModel::getFont() const {
     return data_font;
 }
 
-const machine::QtMipsMachine *BranchPredictorModel::getMachine() const {
+const machine::QtMipsMachine *BranchHistoryTableModel::getMachine() const {
     return machine;
 }
 
-void BranchPredictorModel::setup(machine::QtMipsMachine *machine) {
+void BranchHistoryTableModel::setup(machine::QtMipsMachine *machine) {
     this->machine = machine;
 }
 
-void BranchPredictorModel::update_pos_bht_update(std::int32_t pbu) {
+void BranchHistoryTableModel::update_pos_bht_update(std::int32_t pbu) {
     this->pos_bht_update = pbu;
     emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1));
 }
 
-void BranchPredictorModel::update_pos_bht_access(std::int32_t pba) {
+void BranchHistoryTableModel::update_pos_bht_access(std::int32_t pba) {
     this->pos_bht_access = pba;
     emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1));
 }

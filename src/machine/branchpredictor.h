@@ -56,9 +56,8 @@ public:
     ~BranchPredictor() override;
 
     virtual bool get_prediction(std::uint32_t bht_idx) = 0;
-    virtual void update_bht(bool branch_taken, std::uint32_t correct_address) = 0;
+    virtual void update_bht(bool branch_taken, bool is_branch, uint32_t correct_address) = 0;
     virtual void set_bht_entry(std::uint32_t bht_idx, QString val) = 0;
-    virtual void reset() = 0;
 
     // returns an index in the branch history table based on the instruction.
     std::uint32_t bht_idx(std::uint32_t pc, bool ro = false);
@@ -69,14 +68,15 @@ public:
     std::uint32_t btb_entry_address(std::uint32_t btb_idx) const;
     std::uint32_t btb_entry_tag(std::uint32_t btb_idx) const;
     double accuracy() const;
-    bool prediction() const;
-    std::uint32_t pos_predicted() const;
+    bool prediction(bool is_branch) const;
+//    std::uint32_t pos_predicted() const;
     const BranchTargetBuffer *btb() const;
     void handle_update_jump(std::uint32_t correct_address);
     void enqueue(const BranchInfo &b_info);
     BranchPredictor::BranchInfo dequeue();
     void remove(std::uint32_t idx);
     void remove(const InstAddr &bj_instr);
+    void reset();
 
 signals:
     void pred_accessed_bht(std::int32_t);
@@ -94,7 +94,6 @@ protected:
     std::uint32_t predictions; // # of all predictions.
     JumpInfo j_info;
     QVector<BranchInfo> b_infos;
-    bool l_jmp; // If our last instruction was a jump we do not update the bht.
 };
 
 class OneBitBranchPredictor : public BranchPredictor {
@@ -108,9 +107,8 @@ public:
     explicit OneBitBranchPredictor(std::uint8_t bht_bits);
 
     bool get_prediction(std::uint32_t bht_idx) override;
-    void update_bht(bool branch, std::uint32_t correct_address) override;
+    void update_bht(bool branch, bool is_branch, uint32_t correct_address) override;
     void set_bht_entry(std::uint32_t bht_idx, QString val) override;
-    void reset() override;
 };
 
 
@@ -127,9 +125,8 @@ public:
     explicit TwoBitBranchPredictor(std::uint8_t bht_bits);
 
     bool get_prediction(std::uint32_t bht_idx) override;
-    void update_bht(bool branch, std::uint32_t correct_address) override;
+    void update_bht(bool branch, bool is_branch, uint32_t correct_address) override;
     void set_bht_entry(std::uint32_t bht_idx, QString val) override;
-    void reset() override;
 };
 
 }

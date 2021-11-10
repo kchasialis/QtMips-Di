@@ -348,7 +348,7 @@ public:
                   Cop0State *cop0state = nullptr);
 
 protected:
-    void flush_stages();
+    void flush_stages(bool is_branch);
     std::uint32_t get_correct_address(std::uint32_t pc_before_prediction, bool branch_taken, bool btb_miss);
     void do_step(bool skip_break = false) override;
     void do_reset() override;
@@ -356,7 +356,7 @@ protected:
     void enqueue_pc(std::uint32_t pc);
     std::uint32_t dequeue_pc();
     void remove_pc(std::uint32_t inst_addr);
-    bool handle_fetch_stall();
+    void handle_fetch_stall();
     void handle_fetch_dls();
     void handle_fetch_bp();
 
@@ -367,7 +367,8 @@ private:
     struct Core::dtMemory dt_m;
 
     BranchPredictor *bp;
-    bool branch_res_id, data_hazard, control_hazard;
+    bool branch_res_id, data_hazard;
+    uint32_t stalls_on_branch;
     enum MachineConfig::DataHazardUnit dhunit;
     enum MachineConfig::ControlHazardUnit chunit;
     // Variables used for branch predictor.

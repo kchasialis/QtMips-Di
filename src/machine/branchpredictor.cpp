@@ -24,12 +24,8 @@ std::uint32_t BranchPredictor::bht_idx(std::uint32_t pc, bool ro) {
     pos = mask_bits(pc, 0, bht_bits - 1);
 
     // ro means we only want to get the bht index and not to update anything on the object.
-    if (!ro) {
-        if (!l_jmp) {
-            emit pred_accessed_bht(pos);
-        }
+    if (!ro)
         predictions++;
-    }
 
     return pos;
 }
@@ -42,10 +38,10 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
     emit pred_inst_addr_value(pc);
     emit pred_instr_value(bj_instr);
 
-    l_jmp = bj_instr.flags() & IMF_JUMP;
+    bool jmp = bj_instr.flags() & IMF_JUMP;
     idx = bht_idx(pc);
 
-    if (l_jmp) {
+    if (jmp) {
         j_info.btb_miss = !btb_impl->pc_address(idx, pc, &address);
         j_info.pos_jmp = idx;
         j_info.pc = pc;
@@ -56,6 +52,7 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
 
         b_info.inst_addr = pc;
         b_info.branch = get_prediction(idx);
+        emit pred_accessed_bht(idx);
         b_info.btb_miss = false;
         if (b_info.branch) {
             b_info.btb_miss = !btb_impl->pc_address(idx, pc, &address);
@@ -94,13 +91,13 @@ double BranchPredictor::accuracy() const {
     return predictions > 0 ? ((double) correct_predictions / (double) predictions) * 100.0 : 100.0;
 }
 
-bool BranchPredictor::prediction() const {
-    return l_jmp ? !j_info.btb_miss : b_infos[0].branch;
+bool BranchPredictor::prediction(bool is_branch) const {
+    return is_branch ? b_infos[0].branch : !j_info.btb_miss;
 }
 
-std::uint32_t BranchPredictor::pos_predicted() const {
-    return l_jmp ? !j_info.pos_jmp : b_infos[0].pos_branch;
-}
+//std::uint32_t BranchPredictor::pos_predicted() const {
+//    return l_jmp ? !j_info.pos_jmp : b_infos[0].pos_branch;
+//}
 
 const BranchTargetBuffer *BranchPredictor::btb() const {
     return btb_impl.get();
@@ -143,14 +140,22 @@ void BranchPredictor::remove(const InstAddr &inst_addr) {
     remove(idx);
 }
 
+void BranchPredictor::reset() {
+    for (size_t i = 0 ; i < this->bht_size ; i++) {
+        this->bht[i] = 0;
+    }
+    this->predictions = 0;
+    this->correct_predictions = 0;
+}
+
 OneBitBranchPredictor::OneBitBranchPredictor(uint8_t bht_bits) : BranchPredictor(bht_bits) {}
 
 bool OneBitBranchPredictor::get_prediction(std::uint32_t bht_idx) {
     return bht[bht_idx] == FSMStates::TAKEN;
 }
 
-void OneBitBranchPredictor::update_bht(bool branch, std::uint32_t correct_address) {
-    if (!l_jmp) {
+void OneBitBranchPredictor::update_bht(bool branch, bool is_branch, uint32_t correct_address) {
+    if (is_branch) {
         const BranchInfo &b_info = dequeue();
         bool updated_btb = false;
 
@@ -196,19 +201,14 @@ void OneBitBranchPredictor::set_bht_entry(std::uint32_t bht_idx, QString val) {
     }
 }
 
-void OneBitBranchPredictor::reset() {
-    emit pred_reset();
-}
-
 TwoBitBranchPredictor::TwoBitBranchPredictor(uint8_t bht_bits) : BranchPredictor(bht_bits) {}
 
 bool TwoBitBranchPredictor::get_prediction(std::uint32_t bht_idx) {
     return bht[bht_idx] == FSMStates::WEAKLY_T || bht[bht_idx] == FSMStates::STRONGLY_T;
 }
 
-void TwoBitBranchPredictor::update_bht(bool branch, std::uint32_t correct_address) {
-
-    if (!l_jmp) {
+void TwoBitBranchPredictor::update_bht(bool branch, bool is_branch, uint32_t correct_address) {
+    if (is_branch) {
         const BranchInfo &b_info = dequeue();
         bool updated_btb = false;
 
@@ -266,8 +266,4 @@ void TwoBitBranchPredictor::set_bht_entry(std::uint32_t bht_idx, QString val) {
     else {
         SANITY_ASSERT(0, "Debug me :)");
     }
-}
-
-void TwoBitBranchPredictor::reset() {
-    emit pred_reset();
 }

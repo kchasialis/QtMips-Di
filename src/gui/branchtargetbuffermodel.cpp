@@ -9,7 +9,7 @@ BranchTargetBufferModel::BranchTargetBufferModel(QObject *parent) : Super(parent
 }
 
 int BranchTargetBufferModel::rowCount(const QModelIndex & /*index*/) const {
-    return pow(2, machine->config().bht_bits());
+    return pow(2, (machine ? machine->config().bht_bits() : 0));
 }
 
 int BranchTargetBufferModel::columnCount(const QModelIndex & /* parent */) const {
@@ -43,24 +43,36 @@ QVariant BranchTargetBufferModel::data(const QModelIndex &index, int role) const
             return index.row();
         case 1:
         {
-            QString valid = QString::number(machine->bp()->btb_entry_valid(index.row()), 16);
-            return valid;
+            if (machine) {
+                QString valid = QString::number(machine->bp()->btb_entry_valid(index.row()), 16);
+                return valid;
+            } else {
+                return QString::number(0, 16);
+            }
         }
         case 2:
         {
-            QString address = QString::number(machine->bp()->btb_entry_address(index.row()), 16);
-            QString zeroes;
+            if (machine) {
+                QString address = QString::number(machine->bp()->btb_entry_address(index.row()), 16);
+                QString zeroes;
 
-            zeroes.fill('0', 8 - address.count());
-            return "0x" + zeroes + address.toUpper();
+                zeroes.fill('0', 8 - address.count());
+                return "0x" + zeroes + address.toUpper();
+            } else {
+                return "0x00000000";
+            }
         }
         case 3:
         {
-            QString tag = QString::number(machine->bp()->btb_entry_tag(index.row()), 16);
-            QString zeroes;
+            if (machine) {
+                QString tag = QString::number(machine->bp()->btb_entry_tag(index.row()), 16);
+                QString zeroes;
 
-            zeroes.fill('0', 8 - tag.count());
-            return "0x" + zeroes + tag.toUpper();
+                zeroes.fill('0', 8 - tag.count());
+                return "0x" + zeroes + tag.toUpper();
+            } else {
+                return "0x00000000";
+            }
         }
         default:
             SANITY_ASSERT(0, "Debug me :)");
