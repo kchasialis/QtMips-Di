@@ -309,7 +309,7 @@ struct Core::dtFetch Core::fetch(bool skip_break, bool signal, bool mem_access) 
         .inst_addr = inst_addr,
         .excause = excause,
         .in_delay_slot = false,
-        .is_valid = true,
+        .is_valid = true
     };
 }
 
@@ -831,8 +831,8 @@ CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryA
     this->dhunit = dhunit;
     this->chunit = chunit;
     this->branch_res_id = branch_res_id;
-    this->stalls_on_branch = 0;
-    this->data_hazard = false;
+//    this->stalls_on_branch = 0;
+//    this->data_hazard = false;
     switch (this->chunit) {
     case MachineConfig::CHU_STALL:
     case MachineConfig::CHU_DELAY_SLOT:
@@ -849,9 +849,6 @@ CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryA
         SANITY_ASSERT(0, "Branch unit has an unknown value in a pipelined mode");
         break;
     }
-
-    this->mem_program_bubbles = 0;
-    this->mem_data_bubbles = 0;
 
     reset();
 }
@@ -892,41 +889,49 @@ std::uint32_t CorePipelined::get_correct_address(std::uint32_t pc, bool branch_t
 
 void CorePipelined::do_step(bool skip_break) {
     static uint32_t initial_mem_program_bubbles = 0;
+    static bool check_branch_stall = true;
     static bool data_branch_hazard_ex = false;
-    bool stall = false;
     bool data_branch_hazard_id = false;
+    bool stall = false;
+    bool data_hazard = false;
     bool excpt_in_progress = false;
     std::uint32_t jump_branch_pc = dt_m.inst_addr;
     uint32_t prev_mem_cycles;
 
-    if (data_hazard)
-        ++cycle_stats.data_hazard_stalls;
-    else if (!stalls_on_branch && !mem_program_bubbles && !mem_data_bubbles)
-        ++cycle_stats.instructions;
-
-    data_hazard = false;
+//    if (data_hazard)
+//        ++cycle_stats.data_hazard_stalls;
+//    else if (!stalls_on_branch && !mem_program_bubbles && !mem_data_bubbles)
+//        ++cycle_stats.instructions;
+//
+//    data_hazard = false;
 
     // Check for data bubbles first because MEM stage has priority over fetch.
-    if (mem_data_bubbles) {
-        --mem_data_bubbles;
-        dtMemoryInit(dt_m, true);
-    }
-    if (mem_program_bubbles) {
-        switch (initial_mem_program_bubbles - mem_program_bubbles) {
-            case 0:
-                dtFetchInit(dt_f, true);
-                break;
-            case 1:
-                dtDecodeInit(dt_d, true);
-                break;
-            case 2:
-                dtExecuteInit(dt_e, true);
-                break;
-            case 3:
-                dtMemoryInit(dt_m, true);
-            default:
-                break;
-        }
+//    if (mem_data_bubbles) {
+//        --mem_data_bubbles;
+//        dtMemoryInit(dt_m, true);
+//    }
+//    if (mem_program_bubbles) {
+//        switch (initial_mem_program_bubbles - mem_program_bubbles) {
+//            case 0:
+//                dtFetchInit(dt_f, true);
+//                break;
+//            case 1:
+//                dtDecodeInit(dt_d, true);
+//                break;
+//            case 2:
+//                dtExecuteInit(dt_e, true);
+//                break;
+//            case 3:
+//                dtMemoryInit(dt_m, true);
+//            default:
+//                break;
+//        }
+//    }
+
+    if (inc_data_hazards) {
+        ++cycle_stats.data_hazard_stalls;
+    } else if (!control_hazard) {
+        ++cycle_stats.instructions;
     }
 
     if (data_branch_hazard_ex) {
@@ -1052,7 +1057,7 @@ void CorePipelined::do_step(bool skip_break) {
                 }
             } else {
                 if (dt_e.branch) {
-                    data_hazard = data_branch_hazard_ex = true;
+                    data_branch_hazard_ex = true;
                 } else {
                     // Branch is on ID, forward the value.
                     if (dt_m.rwrite != 0 && dt_m.regwrite && dt_d.bjr_req_rs && dt_d.num_rs == dt_m.rwrite) {
@@ -1115,40 +1120,49 @@ void CorePipelined::do_step(bool skip_break) {
 #if 0
     printf("PC 0x%08lx\n", (unsigned long)dt_f.inst_addr);
 #endif
+    if (data_branch_hazard_id && chunit == machine::MachineConfig::CHU_STALL) {
+        check_branch_stall = false;
+    }
+
+    inc_data_hazards = data_hazard || data_branch_hazard_ex;
+
     if (dt_e.stop_if || dt_m.stop_if || data_hazard)
         stall = true;
 
     emit dhu_stall_value(stall);
 
-    // Now process program counter (loop connections from decode stage)
-    if (!stall && !dt_d.stop_if) {
+    if (!data_hazard && !dt_d.stop_if && !data_branch_hazard_ex) {
         dt_d.stall = false;
         if (mem_program_bubbles) {
             --mem_program_bubbles;
             if (mem_program_bubbles == 0) {
-                qDebug() << "mem_program_bubbles : 0";
                 dt_f = fetch(skip_break, true, false);
             }
         }
-        else if (stalls_on_branch == 0) {
-            prev_mem_cycles = cycle_stats.memory_cycles;
-            dt_f = fetch(skip_break);
-            mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
-            initial_mem_program_bubbles = mem_program_bubbles;
-        }
-        else {
-            --stalls_on_branch;
+        else if (!control_hazard) {
+            if (check_branch_stall) {
+                //            prev_mem_cycles = cycle_stats.memory_cycles;
+                dt_f = fetch(skip_break);
+                //            mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
+                //            initial_mem_program_bubbles = mem_program_bubbles;
+            } else {
+                dtFetchInit(dt_f, true);
+            }
+        } else {
+            control_hazard = false;
+            // If we only have control hazards.
             dtFetchInit(dt_f, true);
             emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
             emit fetch_inst_addr_value(STAGEADDR_NONE);
             ++cycle_stats.control_hazard_stalls;
         }
 
-        if (!stalls_on_branch && !mem_program_bubbles && !mem_data_bubbles) {
+        if (!mem_program_bubbles && !mem_data_bubbles) {
             // Memory bubbles should be added, do not increment PC.
             switch (chunit) {
                 case MachineConfig::CHU_STALL:
-                    handle_fetch_stall();
+                    handle_fetch_stall(check_branch_stall);
+                    check_branch_stall = true;
                     break;
                 case MachineConfig::CHU_DELAY_SLOT:
                     handle_fetch_dls();
@@ -1161,39 +1175,37 @@ void CorePipelined::do_step(bool skip_break) {
                     SANITY_ASSERT(0, "Undefined control hazard unit!");
             }
         }
-    } else {
-        if (!data_branch_hazard_ex) {
-            assert (mem_program_bubbles == 0);
-            prev_mem_cycles = cycle_stats.memory_cycles;
-            // Run fetch stage on empty
-            if (!stalls_on_branch) {
-                fetch(skip_break);
-            } else {
-                fetch(skip_break, true, false);
-            }
-            mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
-            initial_mem_program_bubbles = mem_program_bubbles;
-
-            if (stalls_on_branch) {
-                // This is temporary. I need to fix this.
-                // We should put NOP in visualization stage in case we have a branch and data stall.
-                dtFetch cache_dt_f(dt_f);
-                dtFetchInit(dt_f);
-                dtFetchInit(dt_f, true);
-                emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
-                emit fetch_inst_addr_value(STAGEADDR_NONE);
-                dt_f = cache_dt_f;
-            }
-            // clear decode latch (insert nope to execute stage)
-            if (!dt_d.stop_if) {
-                dtDecodeInit(dt_d, true);
-                dt_d.stall = true;
-            } else {
-                dtFetchInit(dt_f, true);
-            }
-        } else {
+    } else if (data_hazard) {
+        if (control_hazard) {
+            // If we also have control hazards.
+            control_hazard = false;
+            dtFetch cache_dt_f(dt_f);
+            dtFetchInit(dt_f, true);
+            emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
+            emit fetch_inst_addr_value(STAGEADDR_NONE);
+            // Stay as you are because we also have data hazards.
+            dt_f = cache_dt_f;
+            ++cycle_stats.control_hazard_stalls;
+        }
+        if (!(chunit == MachineConfig::CHU_STALL && data_branch_hazard_id)) {
             fetch(skip_break);
         }
+        dtDecodeInit(dt_d, true);
+        dt_d.stall = true;
+    } else if (data_branch_hazard_ex) {
+        fetch(skip_break);
+        if (control_hazard) {
+            dtFetchInit(dt_f, true);
+            emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
+            emit fetch_inst_addr_value(STAGEADDR_NONE);
+            ++cycle_stats.control_hazard_stalls;
+        }
+    }
+    else {
+        assert(dt_d.stop_if);
+        // Run fetch stage on empty
+        fetch(skip_break, true, false);
+        dtFetchInit(dt_f, true);
     }
 }
 
@@ -1206,8 +1218,11 @@ void CorePipelined::do_reset() {
     dt_e.inst_addr = 0;
     dtMemoryInit(dt_m);
     dt_m.inst_addr = 0;
-    stalls_on_branch = 0;
-    data_hazard = false;
+    this->mem_program_bubbles = 0;
+    this->mem_data_bubbles = 0;
+//    this->data_hazards = 0;
+    this->control_hazard = false;
+//    this->branch_stall_flag = true;
     if (bp)
         bp->reset();
 }
@@ -1240,16 +1255,18 @@ void CorePipelined::remove_pc(std::uint32_t pc) {
     pcs.remove(idx);
 }
 
-void CorePipelined::handle_fetch_stall() {
-    if (dt_f.inst.flags() & IMF_BRANCH) {
-        stalls_on_branch = branch_res_id ? 1 : 2;
-    } else if (dt_f.inst.flags() & IMF_JUMP) {
-        stalls_on_branch = 1;
-    } else {
-        stalls_on_branch = 0;
+void CorePipelined::handle_fetch_stall(bool check) {
+    control_hazard = false;
+    if (check) {
+        if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
+            control_hazard = true;
+        }
+    }
+    if (!branch_res_id && dt_d.branch) {
+        control_hazard = true;
     }
 
-    if (stalls_on_branch == 0) {
+    if (!control_hazard) {
         if (!branch_res_id && dt_d.jump) {
             // Even if we evaluate branches on EX, jumps are still resolved on ID.
             handle_pc_wpr(dt_d, dt_e, true);
@@ -1285,6 +1302,7 @@ void CorePipelined::handle_fetch_bp() {
         bool branch = branch_result_wrp(dt_d, dt_e, branch_res_id);
 
         if (branch != bp->prediction(true)) {
+            qDebug() << "prediction was wrong!";
             // Prediction was wrong.
             // Flush appropriate stages & move pc accordingly.
             correct_address = get_correct_address(pc_before_prediction, branch, false);
