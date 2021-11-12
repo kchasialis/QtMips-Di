@@ -45,8 +45,9 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
         j_info.btb_miss = !btb_impl->pc_address(idx, pc, &address);
         j_info.pos_jmp = idx;
         j_info.pc = pc;
+        j_info.pred_addr = j_info.btb_miss ? (pc + 4) : address;
 
-        return j_info.btb_miss ? (pc + 4) : address;
+        return j_info.pred_addr;
     } else if (bj_instr.flags() & IMF_BRANCH) {
         BranchInfo b_info;
 
@@ -59,10 +60,11 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
             b_info.branch = !b_info.btb_miss;
         }
         b_info.pos_branch = idx;
+        b_info.pred_addr = b_info.branch ? address : (pc + 4);
 
         enqueue(b_info);
 
-        return b_info.branch ? address : (pc + 4);
+        return b_info.pred_addr;
     } else {
         SANITY_ASSERT(0, "Debug me :)");
         return -1;
@@ -91,20 +93,16 @@ double BranchPredictor::accuracy() const {
     return predictions > 0 ? ((double) correct_predictions / (double) predictions) * 100.0 : 100.0;
 }
 
-bool BranchPredictor::prediction(bool is_branch) const {
-    return is_branch ? b_infos[0].branch : !j_info.btb_miss;
+uint32_t BranchPredictor::prediction(bool is_branch) const {
+    return is_branch ? b_infos[0].pred_addr : j_info.pred_addr;
 }
-
-//std::uint32_t BranchPredictor::pos_predicted() const {
-//    return l_jmp ? !j_info.pos_jmp : b_infos[0].pos_branch;
-//}
 
 const BranchTargetBuffer *BranchPredictor::btb() const {
     return btb_impl.get();
 }
 
 void BranchPredictor::handle_update_jump(std::uint32_t correct_address) {
-    if (j_info.btb_miss) {
+    if (j_info.btb_miss || j_info.pred_addr != correct_address) {
         // Last instruction was a jump and we had a btb miss, update the btb.
         btb_impl->update(j_info.pos_jmp, j_info.pc, correct_address);
     } else {

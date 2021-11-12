@@ -39,17 +39,19 @@ public:
     struct BranchInfo {
         // Valuable information about a prediction that was made.
         InstAddr inst_addr;
-        std::uint32_t pos_branch; // Last position of the table that was predicted for a branch instruction.
+        uint32_t pred_addr;
+        uint32_t pos_branch; // Last position of the table that was predicted for a branch instruction.
         bool btb_miss; // Wether or not we had a btb miss.
         bool branch; // Last prediction that was made (taken or not taken).
 
-        BranchInfo() : inst_addr(0), pos_branch(0), btb_miss(false), branch(false) {}
+        BranchInfo() : inst_addr(0), pred_addr(0), pos_branch(0), btb_miss(false), branch(false) {}
     };
 
     struct JumpInfo {
-        std::uint32_t pc; // PC of jump instruction.
-        std::uint32_t pos_jmp; // Last position of the table that was predicted for a jump instruction.
-        bool btb_miss; // Wether or not jump was taken (the only condition is if we had a btb miss).
+        uint32_t pc; // PC of jump instruction.
+        uint32_t pred_addr; // The predicted address.
+        uint32_t pos_jmp; // Last position of the table that was predicted for a jump instruction.
+        bool btb_miss; // Whether or not jump was taken (the only condition is if we had a btb miss).
     };
 
     explicit BranchPredictor(std::uint8_t bht_bits);
@@ -68,7 +70,7 @@ public:
     std::uint32_t btb_entry_address(std::uint32_t btb_idx) const;
     std::uint32_t btb_entry_tag(std::uint32_t btb_idx) const;
     double accuracy() const;
-    bool prediction(bool is_branch) const;
+    uint32_t prediction(bool is_branch) const;
 //    std::uint32_t pos_predicted() const;
     const BranchTargetBuffer *btb() const;
     void handle_update_jump(std::uint32_t correct_address);

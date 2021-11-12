@@ -38,6 +38,7 @@
 #include "programloader.h"
 #include "utils.h"
 
+#include <assert.h>
 #include <QDebug>
 
 using namespace machine;
@@ -313,7 +314,7 @@ struct Core::dtFetch Core::fetch(bool skip_break, bool signal, bool mem_access) 
     };
 }
 
-struct Core::dtDecode Core::decode(const struct dtFetch &dt) {
+struct Core::dtDecode Core::decode(const struct dtFetch &dt, bool inc_8) {
     uint8_t rwrite;
     InstructionFlags flags;
     AluOp alu_op;
@@ -335,10 +336,10 @@ struct Core::dtDecode Core::decode(const struct dtFetch &dt) {
     bool regd = flags & IMF_REGD;
     bool regd31 = flags & IMF_PC_TO_R31;
 
-    // requires rs for beq, bne, blez, bgtz, jr nad jalr
+    // requires rs for beq, bne, blez, bgtz, jr and jalr
     bool bjr_req_rs = flags & IMF_BJR_REQ_RS;
     if (flags & IMF_PC8_TO_RT)
-        val_rt = dt.inst_addr + 8;
+        val_rt = dt.inst_addr + (inc_8 ? 8 : 4);
     // requires rt for beq, bne
     bool bjr_req_rt = flags & IMF_BJR_REQ_RT;
 
@@ -369,7 +370,7 @@ struct Core::dtDecode Core::decode(const struct dtFetch &dt) {
     emit decode_regd31_value(regd31);
 
     if (regd31) {
-        val_rt = dt.inst_addr + 8;
+        val_rt = dt.inst_addr + (inc_8 ? 8 : 4);
     }
 
     rwrite = regd31 ? 31: regd ? num_rd : num_rt;
@@ -876,19 +877,18 @@ void CorePipelined::flush_stages(bool is_branch) {
     }
 }
 
-std::uint32_t CorePipelined::get_correct_address(std::uint32_t pc, bool branch_taken, bool btb_miss) {
-    if (btb_miss)
-        // We had a BTB miss in a jump instruction, jump instructions are always evaluated at ID.
+uint32_t CorePipelined::get_correct_address(uint32_t pc, bool taken, bool jmp) {
+    if (jmp)
+        // Jump instructions are always evaluated at ID.
         return !dt_d.bjr_req_rs ? ((pc & 0xF0000000) | ((dt_d.inst.address() << 2) & 0x0FFFFFFF)) : dt_d.val_rs;
     else
         if (branch_res_id)
-            return branch_taken ? branch_target(dt_d.inst, dt_d.inst_addr) : (pc + 4);
+            return taken ? branch_target(dt_d.inst, dt_d.inst_addr) : (pc + 4);
         else
-            return branch_taken ? branch_target(dt_e.inst, dt_e.inst_addr) : (pc + 4);
+            return taken ? branch_target(dt_e.inst, dt_e.inst_addr) : (pc + 4);
 }
 
 void CorePipelined::do_step(bool skip_break) {
-    static uint32_t initial_mem_program_bubbles = 0;
     static bool check_branch_stall = true;
     static bool data_branch_hazard_ex = false;
     bool data_branch_hazard_id = false;
@@ -909,23 +909,6 @@ void CorePipelined::do_step(bool skip_break) {
 //    if (mem_data_bubbles) {
 //        --mem_data_bubbles;
 //        dtMemoryInit(dt_m, true);
-//    }
-//    if (mem_program_bubbles) {
-//        switch (initial_mem_program_bubbles - mem_program_bubbles) {
-//            case 0:
-//                dtFetchInit(dt_f, true);
-//                break;
-//            case 1:
-//                dtDecodeInit(dt_d, true);
-//                break;
-//            case 2:
-//                dtExecuteInit(dt_e, true);
-//                break;
-//            case 3:
-//                dtMemoryInit(dt_m, true);
-//            default:
-//                break;
-//        }
 //    }
 
     if (inc_data_hazards) {
@@ -1220,9 +1203,7 @@ void CorePipelined::do_reset() {
     dt_m.inst_addr = 0;
     this->mem_program_bubbles = 0;
     this->mem_data_bubbles = 0;
-//    this->data_hazards = 0;
     this->control_hazard = false;
-//    this->branch_stall_flag = true;
     if (bp)
         bp->reset();
 }
@@ -1293,31 +1274,33 @@ void CorePipelined::handle_fetch_dls() {
 }
 
 void CorePipelined::handle_fetch_bp() {
-    std::uint32_t correct_address = 0;
+    uint32_t correct_address = 0;
+    uint32_t pred_addr;
     bool jump_value = false, jump_reg_value = false, branch_value = false;
 
     if (branch_res_id ? dt_d.branch : dt_e.branch) {
         // Branch is now on ID/EX and can be evaluated.
-        std::uint32_t pc_before_prediction = dequeue_pc();
-        bool branch = branch_result_wrp(dt_d, dt_e, branch_res_id);
+        uint32_t pc_before_prediction = dequeue_pc();
+        bool taken = branch_result_wrp(dt_d, dt_e, branch_res_id);
+        correct_address = get_correct_address(pc_before_prediction, taken, false);
+        pred_addr = bp->prediction(true);
 
-        if (branch != bp->prediction(true)) {
-            qDebug() << "prediction was wrong!";
+        if (pred_addr != correct_address) {
             // Prediction was wrong.
             // Flush appropriate stages & move pc accordingly.
-            correct_address = get_correct_address(pc_before_prediction, branch, false);
             flush_stages(true);
             regs->pc_abs_jmp(correct_address - 4);
         }
-        bp->update_bht(branch, true, correct_address);
+        bp->update_bht(taken, true, correct_address);
 
-        branch_value = branch;
+        branch_value = taken;
     }
     if (dt_d.jump) {
         // Jump is on ID and we can evaluate its address.
-        if (!bp->prediction(false)) {
-            // The second parameter does not matter here.
-            correct_address = get_correct_address(pc_before_jmp, false, true);
+        // The second parameter does not matter here.
+        correct_address = get_correct_address(pc_before_jmp, false, true);
+        pred_addr = bp->prediction(false);
+        if (correct_address != pred_addr) {
             // We had a BTB miss, flush appropriate stages and update BTB.
             flush_stages(false);
             regs->pc_abs_jmp(correct_address - 4);

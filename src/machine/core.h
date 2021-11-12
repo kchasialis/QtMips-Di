@@ -282,7 +282,7 @@ protected:
     };
 
     struct dtFetch fetch(bool skip_break = false, bool signal = true, bool mem_access = true);
-    struct dtDecode decode(const struct dtFetch&);
+    struct dtDecode decode(const struct dtFetch&, bool inc_8 = true);
     struct dtExecute execute(const struct dtDecode&);
     struct dtMemory memory(const struct dtExecute&);
     void writeback(const struct dtMemory&);
@@ -350,7 +350,7 @@ public:
 
 protected:
     void flush_stages(bool is_branch);
-    std::uint32_t get_correct_address(std::uint32_t pc_before_prediction, bool branch_taken, bool btb_miss);
+    uint32_t get_correct_address(std::uint32_t pc_before_prediction, bool taken, bool jmp);
     void do_step(bool skip_break = false) override;
     void do_reset() override;
     BranchPredictor *predictor() override;
