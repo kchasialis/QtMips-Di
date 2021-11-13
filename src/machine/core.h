@@ -77,7 +77,8 @@ class Core : public QObject {
     Q_OBJECT
 public:
     Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
-         std::uint32_t min_cache_row_size = 1, Cop0State *cop0state = nullptr);
+         MemoryAccess *mem_program1, uint32_t min_cache_row_size = 1,
+         Cop0State *cop0state = nullptr);
     ~Core();
 
     void step(bool skip_break = false); // Do single step
@@ -194,6 +195,7 @@ protected:
     Registers *regs;
     Cop0State *cop0state;
     MemoryAccess *mem_data, *mem_program;
+    MemoryAccess *mem_program1; // This is used in CorePipelined mode. For counting memory stalls & hits correctly.
     QMap<ExceptionCause, ExceptionHandler *> ex_handlers;
     ExceptionHandler *ex_default_handler;
 
@@ -342,6 +344,7 @@ private:
 class CorePipelined : public Core {
 public:
     CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
+                  MemoryAccess *mem_program1,
                   MachineConfig::DataHazardUnit hazard_unit = MachineConfig::DHU_STALL_FORWARD,
                   MachineConfig::ControlHazardUnit branch_unit = MachineConfig::CHU_DELAY_SLOT,
                   int8_t bp_bits = -1, bool branch_res_id = true,
@@ -350,7 +353,7 @@ public:
 
 protected:
     void flush_stages(bool is_branch);
-    uint32_t get_correct_address(std::uint32_t pc_before_prediction, bool taken, bool jmp);
+    uint32_t get_correct_address(uint32_t pc_before_prediction, bool taken, bool jmp);
     void do_step(bool skip_break = false) override;
     void do_reset() override;
     BranchPredictor *predictor() override;
@@ -371,12 +374,13 @@ private:
     bool inc_data_hazards;
     bool control_hazard;
     bool branch_res_id;
+    Instruction fetched_instr; // I can't bother explaining why.
     enum MachineConfig::DataHazardUnit dhunit;
     enum MachineConfig::ControlHazardUnit chunit;
     // Variables used for branch predictor.
     QVector<std::uint32_t> pcs; // Save pc for each prediction we make.
-    uint32_t pc_before_jmp;
-    uint32_t mem_program_bubbles, mem_data_bubbles;
+    uint32_t pc_before_jmp{};
+    uint32_t mem_program_bubbles{}, mem_data_bubbles{};
 };
 
 }

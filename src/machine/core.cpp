@@ -38,14 +38,14 @@
 #include "programloader.h"
 #include "utils.h"
 
-#include <assert.h>
+#include <cassert>
 #include <QDebug>
 
 using namespace machine;
 extern CycleStatistics cycle_stats;
 
 Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
-           std::uint32_t min_cache_row_size, Cop0State *cop0state) :
+           MemoryAccess *mem_program1, uint32_t min_cache_row_size, Cop0State *cop0state) :
         ex_handlers(), hw_breaks() {
     this->cycles = 0;
     this->stalls = 0;
@@ -53,6 +53,7 @@ Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
     this->cop0state = cop0state;
     this->mem_program = mem_program;
     this->mem_data = mem_data;
+    this->mem_program1 = mem_program1;
     this->ex_default_handler = new StopExceptionHandler();
     this->min_cache_row_size = min_cache_row_size;
     this->hwr_userlocal = 0xe0000000;
@@ -751,7 +752,7 @@ void Core::dtMemoryInit(struct dtMemory &dt, bool stall) {
 
 CoreSingle::CoreSingle(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
                        bool jmp_delay_slot, unsigned int min_cache_row_size, Cop0State *cop0state) :
-        Core(regs, mem_program, mem_data, min_cache_row_size, cop0state) {
+        Core(regs, mem_program, mem_data, nullptr, min_cache_row_size, cop0state) {
     if (jmp_delay_slot)
         dt_f = new struct Core::dtFetch();
     else
@@ -822,18 +823,17 @@ BranchPredictor *CoreSingle::predictor() {
 }
 
 CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
+                             MemoryAccess *mem_program1,
                              MachineConfig::DataHazardUnit dhunit,
                              MachineConfig::ControlHazardUnit chunit,
                              int8_t bp_bits, bool branch_res_id,
                              unsigned int min_cache_row_size,
                              Cop0State *cop0state) :
-        Core(regs, mem_program, mem_data, min_cache_row_size, cop0state) {
+        Core(regs, mem_program, mem_data, mem_program1, min_cache_row_size, cop0state) {
 
     this->dhunit = dhunit;
     this->chunit = chunit;
     this->branch_res_id = branch_res_id;
-//    this->stalls_on_branch = 0;
-//    this->data_hazard = false;
     switch (this->chunit) {
         case MachineConfig::CHU_STALL:
         case MachineConfig::CHU_DELAY_SLOT:
@@ -867,6 +867,7 @@ void CorePipelined::flush_stages(bool is_branch) {
     emit fetch_inst_addr_value(STAGEADDR_NONE);
     ++cycle_stats.control_hazard_stalls;
     ++cycle_stats.total_cycles;
+    mem_program_bubbles = 0;
     if (!branch_res_id && is_branch) {
         // We evaluate branches on EX stage, flush ID too if the instruction was a branch.
         dtDecodeInit(dt_d, true);
@@ -895,26 +896,23 @@ void CorePipelined::do_step(bool skip_break) {
     bool stall = false;
     bool data_hazard = false;
     bool excpt_in_progress = false;
-    std::uint32_t jump_branch_pc = dt_m.inst_addr;
+    bool last_mem_prog_bubble = false;
+    uint32_t jump_branch_pc = dt_m.inst_addr;
     uint32_t prev_mem_cycles;
-
-//    if (data_hazard)
-//        ++cycle_stats.data_hazard_stalls;
-//    else if (!stalls_on_branch && !mem_program_bubbles && !mem_data_bubbles)
-//        ++cycle_stats.instructions;
-//
-//    data_hazard = false;
-
-    // Check for data bubbles first because MEM stage has priority over fetch.
-//    if (mem_data_bubbles) {
-//        --mem_data_bubbles;
-//        dtMemoryInit(dt_m, true);
-//    }
 
     if (inc_data_hazards) {
         ++cycle_stats.data_hazard_stalls;
-    } else if (!control_hazard) {
+    } else if (!control_hazard && !mem_program_bubbles) {
         ++cycle_stats.instructions;
+    }
+
+    if (mem_program_bubbles && !inc_data_hazards && !control_hazard) {
+        // Handle other hazards first, then program memory.
+        dtFetchInit(dt_f, true);
+        --mem_program_bubbles;
+        if (mem_program_bubbles == 0) {
+            last_mem_prog_bubble = true;
+        }
     }
 
     if (data_branch_hazard_ex) {
@@ -936,10 +934,10 @@ void CorePipelined::do_step(bool skip_break) {
     } else {
         // Process stages
         writeback(dt_m);
-        prev_mem_cycles = cycle_stats.memory_cycles;
-        // TODO: add guards in order to avoid hitting cache.
+//        prev_mem_cycles = cycle_stats.memory_cycles;
+//         TODO: add guards in order to avoid hitting cache.
         dt_m = memory(dt_e);
-        mem_data_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
+//        mem_data_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
         dt_e = execute(dt_d);
         dt_d = decode(dt_f, chunit == MachineConfig::CHU_DELAY_SLOT);
     }
@@ -1025,18 +1023,22 @@ void CorePipelined::do_step(bool skip_break) {
                 if (dt_m.rwrite != 0 && dt_m.regwrite && dt_e.bjr_req_rs && dt_e.num_rs == dt_m.rwrite) {
                     dt_e.val_rs = dt_m.towrite_val;
                     dt_e.forward_m_d_rs = true;
+                    qDebug() << "Forwarding to branch...";
                 }
                 if (dt_m.rwrite != 0 && dt_m.regwrite && dt_e.bjr_req_rt && dt_e.num_rt == dt_m.rwrite) {
                     dt_e.val_rt = dt_m.towrite_val;
                     dt_e.forward_m_d_rt = true;
+                    qDebug() << "Forwarding to branch...";
                 }
                 if (dt_m.rwrite != 0 && dt_m.regwrite && dt_d.bjr_req_rs && dt_d.num_rs == dt_m.rwrite) {
                     dt_d.val_rs = dt_m.towrite_val;
                     dt_d.forward_m_d_rs = true;
+                    qDebug() << "Forwarding to branch...";
                 }
                 if (dt_m.rwrite != 0 && dt_m.regwrite && dt_d.bjr_req_rt && dt_d.num_rt == dt_m.rwrite) {
                     dt_d.val_rt = dt_m.towrite_val;
                     dt_d.forward_m_d_rt = true;
+                    qDebug() << "Forwarding to branch...";
                 }
             } else {
                 if (dt_e.branch) {
@@ -1116,28 +1118,33 @@ void CorePipelined::do_step(bool skip_break) {
 
     if (!data_hazard && !dt_d.stop_if && !data_branch_hazard_ex) {
         dt_d.stall = false;
-        if (mem_program_bubbles) {
-            --mem_program_bubbles;
-            if (mem_program_bubbles == 0) {
+        if (!mem_program_bubbles) {
+            if (last_mem_prog_bubble) {
                 dt_f = fetch(skip_break, true, false);
-            }
-        }
-        else if (!control_hazard) {
-            if (check_branch_stall) {
-                //            prev_mem_cycles = cycle_stats.memory_cycles;
-                dt_f = fetch(skip_break);
-                //            mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
-                //            initial_mem_program_bubbles = mem_program_bubbles;
+            } else if (!control_hazard) {
+                if (check_branch_stall) {
+                    Instruction tmp = mem_program1->read_word(regs->read_pc());
+                    if (tmp != fetched_instr) {
+                        // Its a new instruction, run fetch normally.
+                        prev_mem_cycles = cycle_stats.memory_cycles;
+                        dt_f = fetch(skip_break);
+                        mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
+                        qDebug() << "mem_program_bubbles: (1)" << mem_program_bubbles;
+                        fetched_instr = tmp;
+                    } else {
+                        dt_f = fetch(skip_break, true, false);
+                    }
+                } else {
+                    dtFetchInit(dt_f, true);
+                }
             } else {
+                control_hazard = false;
+                // If we only have control hazards.
                 dtFetchInit(dt_f, true);
+                emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
+                emit fetch_inst_addr_value(STAGEADDR_NONE);
+                ++cycle_stats.control_hazard_stalls;
             }
-        } else {
-            control_hazard = false;
-            // If we only have control hazards.
-            dtFetchInit(dt_f, true);
-            emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
-            emit fetch_inst_addr_value(STAGEADDR_NONE);
-            ++cycle_stats.control_hazard_stalls;
         }
 
         if (!mem_program_bubbles && !mem_data_bubbles) {
@@ -1157,6 +1164,11 @@ void CorePipelined::do_step(bool skip_break) {
                 default:
                     SANITY_ASSERT(0, "Undefined control hazard unit!");
             }
+        } else if (((branch_res_id ? dt_d.branch : dt_e.branch) || dt_d.jump) &&
+                    (chunit == MachineConfig::CHU_ONE_BIT_BP || chunit == MachineConfig::CHU_TWO_BIT_BP)) {
+            // if its a branch instruction on resolution stage, it should be resolved!
+            qDebug() << "WILL RESOLVE BRANCH BEFORE BUBBLES!";
+            handle_fetch_bp();
         }
     } else if (data_hazard) {
         if (control_hazard) {
@@ -1171,12 +1183,33 @@ void CorePipelined::do_step(bool skip_break) {
             ++cycle_stats.control_hazard_stalls;
         }
         if (!(chunit == MachineConfig::CHU_STALL && data_branch_hazard_id)) {
-            fetch(skip_break);
+            Instruction tmp = mem_program1->read_word(regs->read_pc());
+            if (tmp != fetched_instr) {
+                // Its a new instruction, run fetch normally.
+                assert(mem_program_bubbles == 0);
+                prev_mem_cycles = cycle_stats.memory_cycles;
+                fetch(skip_break);
+                mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
+                qDebug() << "mem_program_bubbles: " << mem_program_bubbles;
+                fetched_instr = tmp;
+            } else {
+                fetch(skip_break, true, false);
+            }
         }
         dtDecodeInit(dt_d, true);
         dt_d.stall = true;
     } else if (data_branch_hazard_ex) {
-        fetch(skip_break);
+        Instruction tmp = mem_program1->read_word(regs->read_pc());
+        if (tmp != fetched_instr) {
+            // Its a new instruction, run fetch normally.
+            assert(mem_program_bubbles == 0);
+            prev_mem_cycles = cycle_stats.memory_cycles;
+            fetch(skip_break);
+            mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
+            fetched_instr = tmp;
+        } else {
+            fetch(skip_break, true, false);
+        }
         if (control_hazard) {
             dtFetchInit(dt_f, true);
             emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
@@ -1204,6 +1237,9 @@ void CorePipelined::do_reset() {
     this->mem_program_bubbles = 0;
     this->mem_data_bubbles = 0;
     this->control_hazard = false;
+    this->inc_data_hazards = false;
+    this->pc_before_jmp = 0;
+    this->fetched_instr = 0;
     if (bp)
         bp->reset();
 }

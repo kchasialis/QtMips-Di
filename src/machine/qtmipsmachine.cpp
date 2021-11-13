@@ -123,7 +123,7 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
     if (cc.pipelined()) {
         // Control hazard unit cannot be none if we are in pipeline mode.
         SANITY_ASSERT(cc.control_hazard_unit() != MachineConfig::CHU_NONE, "Invalid configuration for control branch unit.");
-        cr = new CorePipelined(regs, core_mem_program, core_mem_data, cc.data_hazard_unit(),
+        cr = new CorePipelined(regs, core_mem_program, core_mem_data, cpu_mem, cc.data_hazard_unit(),
                                cc.control_hazard_unit(), cc.bht_bits(), cc.branch_res_id(),
                                min_cache_row_size, cop0st);
     }
