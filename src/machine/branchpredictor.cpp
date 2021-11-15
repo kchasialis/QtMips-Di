@@ -16,12 +16,12 @@ BranchPredictor::~BranchPredictor() {
     delete[] this->bht;
 }
 
-std::uint32_t BranchPredictor::bht_idx(std::uint32_t pc, bool ro) {
+uint32_t BranchPredictor::bht_idx(std::uint32_t pc, bool ro) {
     // MIPS instructions always contain 2 bits for byte offset.
-    std::uint32_t pos;
+    uint32_t pos;
 
     pc = pc >> 2;
-    pos = mask_bits(pc, 0, bht_bits - 1);
+    pos = pc % bht_size;
 
     // ro means we only want to get the bht index and not to update anything on the object.
     if (!ro)
@@ -42,9 +42,8 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
     idx = bht_idx(pc);
 
     if (jmp) {
-        j_info.btb_miss = !btb_impl->pc_address(idx, pc, &address);
-        j_info.pos_jmp = idx;
-        j_info.pc = pc;
+        j_info.btb_miss = !btb_impl->pc_address(pc, &address);
+        j_info.addr = pc;
         j_info.pred_addr = j_info.btb_miss ? (pc + 4) : address;
 
         return j_info.pred_addr;
@@ -56,7 +55,7 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
         emit pred_accessed_bht(idx);
         b_info.btb_miss = false;
         if (b_info.branch) {
-            b_info.btb_miss = !btb_impl->pc_address(idx, pc, &address);
+            b_info.btb_miss = !btb_impl->pc_address(pc, &address);
             b_info.branch = !b_info.btb_miss;
         }
         b_info.pos_branch = idx;
@@ -104,7 +103,7 @@ const BranchTargetBuffer *BranchPredictor::btb() const {
 void BranchPredictor::handle_update_jump(std::uint32_t correct_address) {
     if (j_info.btb_miss || j_info.pred_addr != correct_address) {
         // Last instruction was a jump and we had a btb miss, update the btb.
-        btb_impl->update(j_info.pos_jmp, j_info.pc, correct_address);
+        btb_impl->update(j_info.addr, correct_address);
     } else {
         correct_predictions++;
     }
@@ -164,7 +163,7 @@ void OneBitBranchPredictor::update_bht(bool branch, bool is_branch, uint32_t cor
             switch (bht[b_info.pos_branch]) {
                 case FSMStates::NOT_TAKEN:
                     // It was taken, also update BTB.
-                    btb_impl->update(b_info.pos_branch, b_info.inst_addr.val, correct_address);
+                    btb_impl->update(b_info.inst_addr.val, correct_address);
                     updated_btb = true;
                     bht[b_info.pos_branch] = FSMStates::TAKEN;
                     break;
@@ -179,7 +178,7 @@ void OneBitBranchPredictor::update_bht(bool branch, bool is_branch, uint32_t cor
         emit pred_updated_bht(b_info.pos_branch);
 
         if (!updated_btb && b_info.btb_miss) {
-            btb_impl->update(b_info.pos_branch, b_info.inst_addr.val, correct_address);
+            btb_impl->update(b_info.inst_addr.val, correct_address);
         }
     } else {
         BranchPredictor::handle_update_jump(correct_address);
@@ -217,12 +216,12 @@ void TwoBitBranchPredictor::update_bht(bool branch, bool is_branch, uint32_t cor
             switch (bht[b_info.pos_branch]) {
             case FSMStates::STRONGLY_NT:
                 // On taken branches we also update BTB.
-                btb_impl->update(b_info.pos_branch, b_info.inst_addr.val, correct_address);
+                btb_impl->update(b_info.inst_addr.val, correct_address);
                 updated_btb = true;
                 bht[b_info.pos_branch] = !branch ? FSMStates::STRONGLY_NT : FSMStates::WEAKLY_NT;
                 break;
             case FSMStates::WEAKLY_NT:
-                btb_impl->update(b_info.pos_branch, b_info.inst_addr.val, correct_address);
+                btb_impl->update(b_info.inst_addr.val, correct_address);
                 updated_btb = true;
                 bht[b_info.pos_branch] = !branch ? FSMStates::STRONGLY_NT : FSMStates::WEAKLY_T;
                 break;
@@ -240,7 +239,7 @@ void TwoBitBranchPredictor::update_bht(bool branch, bool is_branch, uint32_t cor
         emit pred_updated_bht(b_info.pos_branch);
 
         if (!updated_btb && b_info.btb_miss) {
-            btb_impl->update(b_info.pos_branch, b_info.inst_addr.val, correct_address);
+            btb_impl->update(b_info.inst_addr.val, correct_address);
         }        
     } else {
         BranchPredictor::handle_update_jump(correct_address);

@@ -113,9 +113,7 @@ private:
     void kick(std::uint32_t associat_indx, std::uint32_t row) const;
     std::uint32_t base_address(std::uint32_t tag, std::uint32_t row) const;
     void update_statistics() const;
-    inline void compute_row_col_tag(std::uint32_t &row, std::uint32_t &col,
-                               std::uint32_t &tag, std::uint32_t address) const {
-        std::uint32_t ssize, index;
+    inline void compute_row_col_tag(uint32_t &row, uint32_t &col, uint32_t &tag, uint32_t address) const {uint32_t ssize, index;
 
         address = address >> 2;
         ssize = cnf.blocks() * cnf.sets();

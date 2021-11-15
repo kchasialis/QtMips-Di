@@ -48,9 +48,8 @@ public:
     };
 
     struct JumpInfo {
-        uint32_t pc; // PC of jump instruction.
+        uint32_t addr; // Address of jump instruction.
         uint32_t pred_addr; // The predicted address.
-        uint32_t pos_jmp; // Last position of the table that was predicted for a jump instruction.
         bool btb_miss; // Whether or not jump was taken (the only condition is if we had a btb miss).
     };
 

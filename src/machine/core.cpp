@@ -1023,22 +1023,18 @@ void CorePipelined::do_step(bool skip_break) {
                 if (dt_m.rwrite != 0 && dt_m.regwrite && dt_e.bjr_req_rs && dt_e.num_rs == dt_m.rwrite) {
                     dt_e.val_rs = dt_m.towrite_val;
                     dt_e.forward_m_d_rs = true;
-                    qDebug() << "Forwarding to branch...";
                 }
                 if (dt_m.rwrite != 0 && dt_m.regwrite && dt_e.bjr_req_rt && dt_e.num_rt == dt_m.rwrite) {
                     dt_e.val_rt = dt_m.towrite_val;
                     dt_e.forward_m_d_rt = true;
-                    qDebug() << "Forwarding to branch...";
                 }
                 if (dt_m.rwrite != 0 && dt_m.regwrite && dt_d.bjr_req_rs && dt_d.num_rs == dt_m.rwrite) {
                     dt_d.val_rs = dt_m.towrite_val;
                     dt_d.forward_m_d_rs = true;
-                    qDebug() << "Forwarding to branch...";
                 }
                 if (dt_m.rwrite != 0 && dt_m.regwrite && dt_d.bjr_req_rt && dt_d.num_rt == dt_m.rwrite) {
                     dt_d.val_rt = dt_m.towrite_val;
                     dt_d.forward_m_d_rt = true;
-                    qDebug() << "Forwarding to branch...";
                 }
             } else {
                 if (dt_e.branch) {
@@ -1129,7 +1125,6 @@ void CorePipelined::do_step(bool skip_break) {
                         prev_mem_cycles = cycle_stats.memory_cycles;
                         dt_f = fetch(skip_break);
                         mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
-                        qDebug() << "mem_program_bubbles: (1)" << mem_program_bubbles;
                         fetched_instr = tmp;
                     } else {
                         dt_f = fetch(skip_break, true, false);
@@ -1167,7 +1162,6 @@ void CorePipelined::do_step(bool skip_break) {
         } else if (((branch_res_id ? dt_d.branch : dt_e.branch) || dt_d.jump) &&
                     (chunit == MachineConfig::CHU_ONE_BIT_BP || chunit == MachineConfig::CHU_TWO_BIT_BP)) {
             // if its a branch instruction on resolution stage, it should be resolved!
-            qDebug() << "WILL RESOLVE BRANCH BEFORE BUBBLES!";
             handle_fetch_bp();
         }
     } else if (data_hazard) {
@@ -1190,7 +1184,6 @@ void CorePipelined::do_step(bool skip_break) {
                 prev_mem_cycles = cycle_stats.memory_cycles;
                 fetch(skip_break);
                 mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
-                qDebug() << "mem_program_bubbles: " << mem_program_bubbles;
                 fetched_instr = tmp;
             } else {
                 fetch(skip_break, true, false);

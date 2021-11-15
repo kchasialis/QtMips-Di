@@ -1,5 +1,4 @@
 #include "branchtargetbuffer.h"
-#include "instruction.h"
 
 using namespace machine;
 
@@ -13,31 +12,38 @@ BranchTargetBuffer::~BranchTargetBuffer() {
     delete[] this->btb;
 }
 
-bool BranchTargetBuffer::pc_address(std::uint32_t btb_idx, std::uint32_t pc, std::uint32_t *address) {
-    std::uint32_t tag = mask_bits(pc, btb_bits, 31);
+bool BranchTargetBuffer::pc_address(uint32_t pc, uint32_t *address) {
+    uint32_t tag, btb_idx;
+    pc = pc >> 2;
+    btb_idx = pc % btb_size;
+    tag = pc / btb_size;
 
     *address = btb[btb_idx].address;
-//    need_update = !(btb[btb_idx].valid && btb[btb_idx].tag == tag);
 
     emit pred_accessed_btb(btb_idx);
 
     return btb[btb_idx].valid && btb[btb_idx].tag == tag;
 }
 
-bool BranchTargetBuffer::btb_entry_valid(std::uint32_t btb_idx) const {
+bool BranchTargetBuffer::btb_entry_valid(uint32_t btb_idx) const {
     return btb[btb_idx].valid;
 }
 
-std::uint32_t BranchTargetBuffer::btb_entry_address(std::uint32_t btb_idx) const {
+std::uint32_t BranchTargetBuffer::btb_entry_address(uint32_t btb_idx) const {
     return btb[btb_idx].address;
 }
 
-std::uint32_t BranchTargetBuffer::btb_entry_tag(std::uint32_t btb_idx) const {
+std::uint32_t BranchTargetBuffer::btb_entry_tag(uint32_t btb_idx) const {
     return btb[btb_idx].tag;
 }
 
-void BranchTargetBuffer::update(std::uint32_t btb_idx, std::uint32_t pc, std::uint32_t inst_addr) {
-    btb[btb_idx].tag = mask_bits(pc, btb_bits, 31);
+void BranchTargetBuffer::update(uint32_t pc, uint32_t inst_addr) {
+    uint32_t btb_idx;
+
+    pc = pc >> 2;
+    btb_idx = pc % btb_size;
+
+    btb[btb_idx].tag = pc / btb_size;
     btb[btb_idx].valid = true;
     btb[btb_idx].address = inst_addr;
 

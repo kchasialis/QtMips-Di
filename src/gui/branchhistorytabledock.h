@@ -30,7 +30,7 @@ private:
     QVBoxLayout *vlayout;
     QLineEdit *bht_entries_val;
     QLineEdit *history_bits_val;
-    QLineEdit *pc_val;
+    QLineEdit *addr_val;
     QLineEdit *instr_val;
     QLineEdit *bht_index_val;
     QLineEdit *accuracy_val;

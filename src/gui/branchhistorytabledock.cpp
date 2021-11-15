@@ -24,8 +24,8 @@ BranchHistoryTableDock::BranchHistoryTableDock(QWidget *parent) : Super(parent) 
 
     QLabel *instr = new QLabel("Instruction");
     instr_val = new QLineEdit();
-    QLabel *pc = new QLabel("PC");
-    pc_val = new QLineEdit();
+    QLabel *addr = new QLabel("Address");
+    addr_val = new QLineEdit();
     QLabel *bht_index = new QLabel("BHT Index");
     bht_index_val = new QLineEdit();
     QLabel *accuracy = new QLabel("Accuracy");
@@ -36,7 +36,7 @@ BranchHistoryTableDock::BranchHistoryTableDock(QWidget *parent) : Super(parent) 
     bht_entries_val->setReadOnly(true);
     history_bits_val->setReadOnly(true);
     instr_val->setReadOnly(true);
-    pc_val->setReadOnly(true);
+    addr_val->setReadOnly(true);
     bht_index_val->setReadOnly(true);
     accuracy_val->setReadOnly(true);
 
@@ -47,8 +47,8 @@ BranchHistoryTableDock::BranchHistoryTableDock(QWidget *parent) : Super(parent) 
 
     vlayout_mid->addWidget(instr);
     vlayout_mid->addWidget(instr_val);
-    vlayout_mid->addWidget(pc);
-    vlayout_mid->addWidget(pc_val);
+    vlayout_mid->addWidget(addr);
+    vlayout_mid->addWidget(addr_val);
     vlayout_mid->addWidget(bht_index);
     vlayout_mid->addWidget(bht_index_val);
     vlayout_mid->addWidget(accuracy);
@@ -121,7 +121,7 @@ void BranchHistoryTableDock::update_pc_val(std::uint32_t inst_addr) {
     s.fill('0', 8 - t.count());
     text = "0x" + s + t.toUpper();
 
-    set_qline_val(pc_val, text);
+    set_qline_val(addr_val, text);
 }
 
 void BranchHistoryTableDock::update_instr_val(const machine::Instruction &instr) {
