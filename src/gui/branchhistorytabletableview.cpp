@@ -61,25 +61,25 @@ void BranchPredictorTableView::resizeEvent(QResizeEvent *event) {
 
 void BranchPredictorTableView::setModel(QAbstractItemModel *model) {
     // This function assumes that we already have a machine.
-    BranchHistoryTableModel *pmodel = dynamic_cast<BranchHistoryTableModel*>(model);
+    auto *pmodel = dynamic_cast<BranchHistoryTableModel*>(model);
     QVector<QString> items;
 
     Super::setModel(model);
 
     if (pmodel && pmodel->getMachine()) {
         switch (pmodel->getMachine()->config().control_hazard_unit()) {
-        case machine::MachineConfig::CHU_ONE_BIT_BP:
-            items.append("NT");
-            items.append("T");
-            break;
-        case machine::MachineConfig::CHU_TWO_BIT_BP:
-            items.append("STRONGLY_NT");
-            items.append("WEAKLY_NT");
-            items.append("WEAKLY_T");
-            items.append("STRONGLY_T");
-            break;
-        default:
-            SANITY_ASSERT(0, "Debug me :)");
+            case machine::MachineConfig::CHU_ONE_BIT_BP:
+                items.append("NT");
+                items.append("T");
+                break;
+            case machine::MachineConfig::CHU_TWO_BIT_BP:
+                items.append("STRONGLY_NT");
+                items.append("WEAKLY_NT");
+                items.append("WEAKLY_T");
+                items.append("STRONGLY_T");
+                break;
+            default:
+                SANITY_ASSERT(0, "Debug me :)");
         }
 
         ComboBoxItemDelegate *cb = new ComboBoxItemDelegate(this, items);
@@ -87,7 +87,7 @@ void BranchPredictorTableView::setModel(QAbstractItemModel *model) {
     }
 }
 
-void BranchPredictorTableView::focus_row(std::int32_t row) {
+void BranchPredictorTableView::focus_row(int32_t row) {
     BranchHistoryTableModel *pmodel = dynamic_cast<BranchHistoryTableModel*>(model());
 
     scrollTo(pmodel->index(row, 0), QAbstractItemView::PositionAtCenter);

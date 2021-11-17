@@ -23,8 +23,8 @@ public:
 
 public slots:
     void setup(machine::QtMipsMachine *machine);
-    void update_pos_bht_update(std::int32_t pbu);
-    void update_pos_bht_access(std::int32_t pba);
+    void update_pos_bht_update(int32_t pbu);
+    void update_pos_bht_access(int32_t pba);
 
 private:
     QFont data_font;

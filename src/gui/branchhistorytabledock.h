@@ -19,11 +19,10 @@ public:
     void setup(machine::QtMipsMachine *machine);
 
 public slots:
-    void update_pc_val(std::uint32_t inst_addr);
+    void update_pc_val(uint32_t inst_addr);
     void update_instr_val(const machine::Instruction &instr);
-    void update_bht_index_val(std::uint32_t inst_addr);
-    void update_accuracy_val(std::int32_t);
-    void reset();
+    void update_bht_index_val(uint32_t inst_addr);
+    void update_accuracy_val();
 
 private:
     QTableView *predictor_content;

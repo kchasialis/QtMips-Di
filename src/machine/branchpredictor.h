@@ -51,6 +51,7 @@ public:
         uint32_t addr; // Address of jump instruction.
         uint32_t pred_addr; // The predicted address.
         bool btb_miss; // Whether or not jump was taken (the only condition is if we had a btb miss).
+        uint32_t pos_jmp;
     };
 
     explicit BranchPredictor(std::uint8_t bht_bits);
@@ -80,11 +81,11 @@ public:
     void reset();
 
 signals:
-    void pred_accessed_bht(std::int32_t);
-    void pred_updated_bht(std::int32_t);
-    void pred_inst_addr_value(std::uint32_t);
+    void pred_accessed_bht(int32_t);
+    void pred_updated_bht(int32_t);
+    void pred_inst_addr_value(uint32_t);
     void pred_instr_value(const machine::Instruction &bj_instr);
-    void pred_reset();
+    void pred_updated_accuracy();
 
 protected:
     std::shared_ptr<BranchTargetBuffer> btb_impl;

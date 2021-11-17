@@ -279,11 +279,9 @@ void NewDialog::control_hazard_unit_change() {
         if (ui->branch_predictor->isChecked() || ui->stall->isChecked() || ui->none->isChecked()) {
             // branch predictor / stall-on-branch do not have any value in a non-pipelined mode.
             config->set_control_hazard_unit(machine::MachineConfig::CHU_NONE);
-            config->set_bht_bits(0);
         } else {
             // Delay slot is checked.
             config->set_control_hazard_unit(machine::MachineConfig::CHU_DELAY_SLOT);
-            config->set_bht_bits(0);
         }
     }
 
@@ -359,8 +357,6 @@ void NewDialog::reset_at_compile_change(bool v) {
     config->set_reset_at_compile(v);
 }
 
-#include <QDebug>
-
 void NewDialog::config_gui() {
     // Basic
     ui->elf_file->setText(config->elf());
@@ -370,19 +366,20 @@ void NewDialog::config_gui() {
     ui->data_hazard_unit->setChecked(config->data_hazard_unit() != machine::MachineConfig::DHU_NONE);
     ui->data_hazard_stall->setChecked(config->data_hazard_unit() == machine::MachineConfig::DHU_STALL);
     ui->data_hazard_stall_forward->setChecked(config->data_hazard_unit() == machine::MachineConfig::DHU_STALL_FORWARD);
-    ui->none->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_NONE);
-    ui->stall->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_STALL);
-    ui->delay_slot->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_DELAY_SLOT);
-    ui->branch_predictor->setChecked(config->predictor());
-    ui->resolution->setCurrentIndex(config->branch_res_id() ? 0 : 1);
     if (config->predictor()) {
-        ui->predictor_bits->setCurrentIndex(
-                config->control_hazard_unit() == machine::MachineConfig::CHU_ONE_BIT_BP ? 0 : 1);
+        ui->branch_predictor->setChecked(true);
+        bool old_state = ui->predictor_bits->blockSignals(true);
+        ui->predictor_bits->setCurrentIndex(config->control_hazard_unit() == machine::MachineConfig::CHU_ONE_BIT_BP ? 0 : 1);
+        ui->predictor_bits->blockSignals(old_state);
+        old_state = ui->bht_bits->blockSignals(true);
         ui->bht_bits->setCurrentIndex(config->bht_bits() - MIN_BHT_BITS);
+        ui->bht_bits->blockSignals(old_state);
     } else {
-        ui->predictor_bits->setCurrentIndex(0);
-        ui->bht_bits->setCurrentIndex(0);
+        ui->none->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_NONE);
+        ui->stall->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_STALL);
+        ui->delay_slot->setChecked(config->control_hazard_unit() == machine::MachineConfig::CHU_DELAY_SLOT);
     }
+    ui->resolution->setCurrentIndex(config->branch_res_id() ? 0 : 1);
 
     // Memory
     ui->mem_protec_exec->setChecked(config->memory_execute_protection());

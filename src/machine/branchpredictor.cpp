@@ -40,10 +40,12 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
 
     bool jmp = bj_instr.flags() & IMF_JUMP;
     idx = bht_idx(pc);
+    emit pred_accessed_bht(idx);
 
     if (jmp) {
         j_info.btb_miss = !btb_impl->pc_address(pc, &address);
         j_info.addr = pc;
+        j_info.pos_jmp = idx;
         j_info.pred_addr = j_info.btb_miss ? (pc + 4) : address;
 
         return j_info.pred_addr;
@@ -52,7 +54,6 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
 
         b_info.inst_addr = pc;
         b_info.branch = get_prediction(idx);
-        emit pred_accessed_bht(idx);
         b_info.btb_miss = false;
         if (b_info.branch) {
             b_info.btb_miss = !btb_impl->pc_address(pc, &address);
@@ -100,7 +101,7 @@ const BranchTargetBuffer *BranchPredictor::btb() const {
     return btb_impl.get();
 }
 
-void BranchPredictor::handle_update_jump(std::uint32_t correct_address) {
+void BranchPredictor::handle_update_jump(uint32_t correct_address) {
     if (j_info.btb_miss || j_info.pred_addr != correct_address) {
         // Last instruction was a jump and we had a btb miss, update the btb.
         btb_impl->update(j_info.addr, correct_address);
@@ -173,16 +174,20 @@ void OneBitBranchPredictor::update_bht(bool branch, bool is_branch, uint32_t cor
                 default:
                     SANITY_ASSERT(0, "Debug me :)");
             }
+            emit pred_updated_bht(b_info.pos_branch);
         }
-
-        emit pred_updated_bht(b_info.pos_branch);
 
         if (!updated_btb && b_info.btb_miss) {
             btb_impl->update(b_info.inst_addr.val, correct_address);
         }
     } else {
+        if (bht[j_info.pos_jmp] != FSMStates::TAKEN) {
+            bht[j_info.pos_jmp] = FSMStates::TAKEN;
+            emit pred_updated_bht(j_info.pos_jmp);
+        }
         BranchPredictor::handle_update_jump(correct_address);
     }
+    emit pred_updated_accuracy();
 }
 
 void OneBitBranchPredictor::set_bht_entry(std::uint32_t bht_idx, QString val) {
@@ -211,39 +216,53 @@ void TwoBitBranchPredictor::update_bht(bool branch, bool is_branch, uint32_t cor
 
         if (branch == b_info.branch) {
             correct_predictions++;
-        } else {
-            // Last instruction was a branch and we predicted the wrong result or we had a btb miss.
-            switch (bht[b_info.pos_branch]) {
+        }
+        switch (bht[b_info.pos_branch]) {
             case FSMStates::STRONGLY_NT:
-                // On taken branches we also update BTB.
-                btb_impl->update(b_info.inst_addr.val, correct_address);
-                updated_btb = true;
-                bht[b_info.pos_branch] = !branch ? FSMStates::STRONGLY_NT : FSMStates::WEAKLY_NT;
+                if (branch) {
+                    // Branch was taken but our prediction was STRONGLY_NT, we need to update btb
+                    btb_impl->update(b_info.inst_addr.val, correct_address);
+                    updated_btb = true;
+                    bht[b_info.pos_branch] = FSMStates::WEAKLY_NT;
+                    emit pred_updated_bht(b_info.pos_branch);
+                }
                 break;
             case FSMStates::WEAKLY_NT:
-                btb_impl->update(b_info.inst_addr.val, correct_address);
-                updated_btb = true;
-                bht[b_info.pos_branch] = !branch ? FSMStates::STRONGLY_NT : FSMStates::WEAKLY_T;
+                if (branch) {
+                    btb_impl->update(b_info.inst_addr.val, correct_address);
+                    updated_btb = true;
+                    bht[b_info.pos_branch] = FSMStates::WEAKLY_T;
+                    emit pred_updated_bht(b_info.pos_branch);
+                } else {
+                    bht[b_info.pos_branch] = FSMStates::STRONGLY_NT;
+                    emit pred_updated_bht(b_info.pos_branch);
+                }
                 break;
             case FSMStates::WEAKLY_T:
                 bht[b_info.pos_branch] = branch ? FSMStates::STRONGLY_T : FSMStates::WEAKLY_NT;
+                emit pred_updated_bht(b_info.pos_branch);
                 break;
             case FSMStates::STRONGLY_T:
-                bht[b_info.pos_branch] = branch ? FSMStates::STRONGLY_T : FSMStates::WEAKLY_T;
+                if (!branch) {
+                    bht[b_info.pos_branch] = FSMStates::WEAKLY_T;
+                    emit pred_updated_bht(b_info.pos_branch);
+                }
                 break;
             default:
                 SANITY_ASSERT(0, "Debug me :)");
-            }
         }
-
-        emit pred_updated_bht(b_info.pos_branch);
 
         if (!updated_btb && b_info.btb_miss) {
             btb_impl->update(b_info.inst_addr.val, correct_address);
         }        
     } else {
+        if (bht[j_info.pos_jmp] != FSMStates::STRONGLY_T) {
+            bht[j_info.pos_jmp] = FSMStates::STRONGLY_T;
+            emit pred_updated_bht(j_info.pos_jmp);
+        }
         BranchPredictor::handle_update_jump(correct_address);
     }
+    emit pred_updated_accuracy();
 }
 
 void TwoBitBranchPredictor::set_bht_entry(std::uint32_t bht_idx, QString val) {

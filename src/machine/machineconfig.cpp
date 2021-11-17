@@ -323,6 +323,8 @@ MachineConfig::MachineConfig(const MachineConfig& cc) noexcept :
 
 #define N(STR) (prefix + QString(STR))
 
+#include <QDebug>
+
 MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) :
                                 l1_program(MemoryAccess::MemoryType::L1_PROGRAM_CACHE, sts, N("L1ProgramCache_")),
                                 l1_data(MemoryAccess::MemoryType::L1_DATA_CACHE, sts, N("L1DataCache_")),

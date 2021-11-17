@@ -79,21 +79,14 @@ void BranchHistoryTableDock::setup(machine::QtMipsMachine *machine) {
     vlayout->update();
 
     if (machine) {
-        connect(machine->bp(), SIGNAL(pred_inst_addr_value(std::uint32_t)), this, SLOT(update_pc_val(std::uint32_t)));
-        connect(machine->bp(), SIGNAL(pred_inst_addr_value(std::uint32_t)), this,
-                SLOT(update_bht_index_val(std::uint32_t)));
-        connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), this, SLOT(update_accuracy_val(std::int32_t)));
-        connect(machine->bp(), SIGNAL(pred_reset()), this, SLOT(reset()));
-        connect(machine->bp(), SIGNAL(pred_instr_value(const machine::Instruction&)), this,
-                SLOT(update_instr_val(const machine::Instruction&)));
-        connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), pmodel,
-                SLOT(update_pos_bht_update(std::int32_t)));
-        connect(machine->bp(), SIGNAL(pred_accessed_bht(std::int32_t)), pmodel,
-                SLOT(update_pos_bht_access(std::int32_t)));
-        connect(machine->bp(), SIGNAL(pred_accessed_bht(std::int32_t)), predictor_content,
-                SLOT(focus_row(std::int32_t)));
-        connect(machine->bp(), SIGNAL(pred_updated_bht(std::int32_t)), predictor_content,
-                SLOT(focus_row(std::int32_t)));
+        connect(machine->bp(), SIGNAL(pred_inst_addr_value(uint32_t)), this, SLOT(update_pc_val(uint32_t)));
+        connect(machine->bp(), SIGNAL(pred_inst_addr_value(uint32_t)), this, SLOT(update_bht_index_val(uint32_t)));
+        connect(machine->bp(), SIGNAL(pred_updated_accuracy()), this, SLOT(update_accuracy_val()));
+        connect(machine->bp(), SIGNAL(pred_instr_value(const machine::Instruction&)), this, SLOT(update_instr_val(const machine::Instruction&)));
+        connect(machine->bp(), SIGNAL(pred_updated_bht(int32_t)), pmodel, SLOT(update_pos_bht_update(int32_t)));
+        connect(machine->bp(), SIGNAL(pred_accessed_bht(int32_t)), pmodel, SLOT(update_pos_bht_access(int32_t)));
+        connect(machine->bp(), SIGNAL(pred_accessed_bht(int32_t)), predictor_content, SLOT(focus_row(int32_t)));
+        connect(machine->bp(), SIGNAL(pred_updated_bht(int32_t)), predictor_content, SLOT(focus_row(int32_t)));
 
         switch (this->machine->config().control_hazard_unit()) {
             case machine::MachineConfig::CHU_ONE_BIT_BP:
@@ -141,15 +134,9 @@ void BranchHistoryTableDock::update_bht_index_val(std::uint32_t inst_addr) {
         set_qline_val(bht_index_val, "Not Set");
 }
 
-void BranchHistoryTableDock::update_accuracy_val(std::int32_t) {
+void BranchHistoryTableDock::update_accuracy_val() {
     if (machine)
         set_qline_val(accuracy_val, QString::number(machine->bp()->accuracy()) + "%");
     else
         set_qline_val(accuracy_val, "Not Set");
-}
-
-void BranchHistoryTableDock::reset() {
-    set_qline_val(instr_val, "");
-    set_qline_val(bht_index_val, "");
-    set_qline_val(accuracy_val, "100.0%");
 }

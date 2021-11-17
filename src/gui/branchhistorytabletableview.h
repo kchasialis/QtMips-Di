@@ -2,6 +2,7 @@
 #define BRANCHPREDICTORTABLEVIEW_H
 
 #include <QTableView>
+#include <cstdint>
 
 class BranchPredictorTableView : public QTableView {
     Q_OBJECT
@@ -15,7 +16,7 @@ public:
     void setModel(QAbstractItemModel *model) override;
 
 public slots:
-    void focus_row(std::int32_t row);
+    void focus_row(int32_t row);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;

@@ -892,6 +892,7 @@ uint32_t CorePipelined::get_correct_address(uint32_t pc, bool taken, bool jmp) {
 void CorePipelined::do_step(bool skip_break) {
     static bool check_branch_stall = true;
     static bool data_branch_hazard_ex = false;
+    static dtMemory cache_mem_instr;
     bool data_branch_hazard_id = false;
     bool stall = false;
     bool data_hazard = false;
@@ -902,8 +903,18 @@ void CorePipelined::do_step(bool skip_break) {
 
     if (inc_data_hazards) {
         ++cycle_stats.data_hazard_stalls;
-    } else if (!control_hazard && !mem_program_bubbles) {
+    } else if (!control_hazard && !mem_program_bubbles && !mem_data_bubbles) {
         ++cycle_stats.instructions;
+    }
+
+    if (mem_data_bubbles) {
+        dtMemoryInit(dt_m, true);
+        writeback(dt_m);
+        --mem_data_bubbles;
+        if (!mem_data_bubbles) {
+            dt_m = cache_mem_instr;
+        }
+        return;
     }
 
     if (mem_program_bubbles && !inc_data_hazards && !control_hazard) {
@@ -934,10 +945,12 @@ void CorePipelined::do_step(bool skip_break) {
     } else {
         // Process stages
         writeback(dt_m);
-//        prev_mem_cycles = cycle_stats.memory_cycles;
-//         TODO: add guards in order to avoid hitting cache.
+        prev_mem_cycles = cycle_stats.memory_cycles;
         dt_m = memory(dt_e);
-//        mem_data_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
+        mem_data_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
+        if (mem_data_bubbles) {
+            cache_mem_instr = dt_m;
+        }
         dt_e = execute(dt_d);
         dt_d = decode(dt_f, chunit == MachineConfig::CHU_DELAY_SLOT);
     }
@@ -1142,7 +1155,7 @@ void CorePipelined::do_step(bool skip_break) {
             }
         }
 
-        if (!mem_program_bubbles && !mem_data_bubbles) {
+        if (!mem_program_bubbles) {
             // Memory bubbles should be added, do not increment PC.
             switch (chunit) {
                 case MachineConfig::CHU_STALL:
