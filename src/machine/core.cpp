@@ -862,12 +862,13 @@ void CorePipelined::flush_stages(bool is_branch) {
         remove_pc(dt_d.inst_addr);
     }
 
-    dtFetchInit(dt_f, true);
+    if (!mem_program_bubbles)
+        dtFetchInit(dt_f, true);
     bp_stalls++;
-    mem_program_bubbles = 0;
     if (!branch_res_id && is_branch) {
         // We evaluate branches on EX stage, flush ID too if the instruction was a branch.
-        dtDecodeInit(dt_d, true);
+        if (!mem_program_bubbles)
+            dtDecodeInit(dt_d, true);
         bp_stalls++;
     }
 }
@@ -886,6 +887,7 @@ uint32_t CorePipelined::get_correct_address(uint32_t pc, bool taken, bool jmp) {
 void CorePipelined::do_step(bool skip_break) {
     static bool check_branch_stall = true;
     static bool data_branch_hazard_ex = false;
+    static bool resolved_branch_mem_prog_bubbles = false;
     static dtMemory cache_mem_instr;
     bool data_branch_hazard_id = false;
     bool stall = false;
@@ -895,7 +897,7 @@ void CorePipelined::do_step(bool skip_break) {
     uint32_t jump_branch_pc = dt_m.inst_addr;
     uint32_t prev_mem_cycles;
 
-    if (inc_data_hazards) {
+    if (inc_data_hazards && !mem_data_bubbles) {
         ++cycle_stats.data_hazard_stalls;
     } else if (!control_hazard && !mem_program_bubbles && !mem_data_bubbles) {
         ++cycle_stats.instructions;
@@ -1129,7 +1131,12 @@ void CorePipelined::do_step(bool skip_break) {
         dt_d.stall = false;
         if (!mem_program_bubbles) {
             if (last_mem_prog_bubble) {
-                dt_f = fetch(skip_break, true, false);
+                if (!resolved_branch_mem_prog_bubbles) {
+                    dt_f = fetch(skip_break, true, false);
+                } else {
+                    dt_f = fetch(skip_break);
+                    resolved_branch_mem_prog_bubbles = false;
+                }
             } else if (!control_hazard) {
                 if (check_branch_stall) {
                     Instruction tmp = mem_program1->read_word(regs->read_pc());
@@ -1176,6 +1183,7 @@ void CorePipelined::do_step(bool skip_break) {
                     (chunit == MachineConfig::CHU_ONE_BIT_BP || chunit == MachineConfig::CHU_TWO_BIT_BP)) {
             // if its a branch instruction on resolution stage, it should be resolved!
             handle_fetch_bp();
+            resolved_branch_mem_prog_bubbles = true;
         }
     } else if (data_hazard) {
         if (control_hazard) {
