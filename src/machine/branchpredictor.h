@@ -85,7 +85,7 @@ signals:
     void pred_updated_bht(int32_t);
     void pred_inst_addr_value(uint32_t);
     void pred_instr_value(const machine::Instruction &bj_instr);
-    void pred_updated_accuracy();
+    void pred_updated_accuracy(double acc);
 
 protected:
     std::shared_ptr<BranchTargetBuffer> btb_impl;

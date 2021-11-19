@@ -374,6 +374,7 @@ private:
     bool inc_data_hazards;
     bool control_hazard;
     bool branch_res_id;
+    uint32_t bp_stalls;
     Instruction fetched_instr; // I can't bother explaining why.
     enum MachineConfig::DataHazardUnit dhunit;
     enum MachineConfig::ControlHazardUnit chunit;

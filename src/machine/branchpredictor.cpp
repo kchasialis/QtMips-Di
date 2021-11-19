@@ -144,6 +144,8 @@ void BranchPredictor::reset() {
     }
     this->predictions = 0;
     this->correct_predictions = 0;
+
+    emit pred_updated_accuracy(accuracy());
 }
 
 OneBitBranchPredictor::OneBitBranchPredictor(uint8_t bht_bits) : BranchPredictor(bht_bits) {}
@@ -187,7 +189,7 @@ void OneBitBranchPredictor::update_bht(bool branch, bool is_branch, uint32_t cor
         }
         BranchPredictor::handle_update_jump(correct_address);
     }
-    emit pred_updated_accuracy();
+    emit pred_updated_accuracy(accuracy());
 }
 
 void OneBitBranchPredictor::set_bht_entry(std::uint32_t bht_idx, QString val) {
@@ -262,7 +264,7 @@ void TwoBitBranchPredictor::update_bht(bool branch, bool is_branch, uint32_t cor
         }
         BranchPredictor::handle_update_jump(correct_address);
     }
-    emit pred_updated_accuracy();
+    emit pred_updated_accuracy(accuracy());
 }
 
 void TwoBitBranchPredictor::set_bht_entry(std::uint32_t bht_idx, QString val) {

@@ -863,18 +863,12 @@ void CorePipelined::flush_stages(bool is_branch) {
     }
 
     dtFetchInit(dt_f, true);
-    emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);
-    emit fetch_inst_addr_value(STAGEADDR_NONE);
-    ++cycle_stats.control_hazard_stalls;
-    ++cycle_stats.total_cycles;
+    bp_stalls++;
     mem_program_bubbles = 0;
     if (!branch_res_id && is_branch) {
         // We evaluate branches on EX stage, flush ID too if the instruction was a branch.
         dtDecodeInit(dt_d, true);
-        emit instruction_decoded(dt_d.inst, dt_d.inst_addr, dt_d.excause, dt_d.is_valid);
-        emit decode_inst_addr_value(STAGEADDR_NONE);
-        ++cycle_stats.control_hazard_stalls;
-        ++cycle_stats.total_cycles;
+        bp_stalls++;
     }
 }
 
@@ -905,6 +899,12 @@ void CorePipelined::do_step(bool skip_break) {
         ++cycle_stats.data_hazard_stalls;
     } else if (!control_hazard && !mem_program_bubbles && !mem_data_bubbles) {
         ++cycle_stats.instructions;
+    }
+
+    if (bp_stalls) {
+        cycle_stats.instructions -= bp_stalls;
+        cycle_stats.control_hazard_stalls += bp_stalls;
+        bp_stalls = 0;
     }
 
     if (mem_data_bubbles) {
@@ -1244,6 +1244,7 @@ void CorePipelined::do_reset() {
     this->mem_data_bubbles = 0;
     this->control_hazard = false;
     this->inc_data_hazards = false;
+    this->bp_stalls = 0;
     this->pc_before_jmp = 0;
     this->fetched_instr = 0;
     if (bp)

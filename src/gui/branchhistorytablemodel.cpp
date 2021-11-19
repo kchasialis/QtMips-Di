@@ -23,7 +23,7 @@ QVariant BranchHistoryTableModel::headerData(int section, Qt::Orientation orient
             case 0:
                 return tr("Index");
             case 1:
-                return tr("History");
+                return tr("State");
             case 2:
                 return tr("Prediction");
             default:
@@ -33,6 +33,8 @@ QVariant BranchHistoryTableModel::headerData(int section, Qt::Orientation orient
     }
     return Super::headerData(section, orientation, role);
 }
+
+#include <QDebug>
 
 QVariant BranchHistoryTableModel::data(const QModelIndex &index, int role) const {
     // This function works only if we already have a machine.
@@ -64,13 +66,13 @@ QVariant BranchHistoryTableModel::data(const QModelIndex &index, int role) const
                 } else {
                     switch (bht_entry) {
                         case 0x00:
-                            return case1 ? "STRONGLY_NT" : "NT";
+                            return case1 ? "STRONG-NT" : "NT";
                         case 0x01:
-                            return case1 ? "WEAKLY_NT" : "NT";
+                            return case1 ? "WEAK-NT" : "NT";
                         case 0x10:
-                            return case1 ? "WEAKLY_T" : "T";
+                            return case1 ? "WEAK-T" : "T";
                         case 0x11:
-                            return case1 ? "STRONGLY_T" : "T";
+                            return case1 ? "STRONG-T" : "T";
                         default:
                             SANITY_ASSERT(0, "Debug me :)");
                             return QVariant();

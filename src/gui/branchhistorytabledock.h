@@ -22,7 +22,7 @@ public slots:
     void update_pc_val(uint32_t inst_addr);
     void update_instr_val(const machine::Instruction &instr);
     void update_bht_index_val(uint32_t inst_addr);
-    void update_accuracy_val();
+    void update_accuracy_val(double acc);
 
 private:
     QTableView *predictor_content;
