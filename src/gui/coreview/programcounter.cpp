@@ -46,7 +46,8 @@ using namespace coreview;
 #define PENW 1
 //////////////////////
 
-ProgramCounter::ProgramCounter(machine::QtMipsMachine *machine) : QGraphicsObject(nullptr), name("PC", this), value(this) {
+ProgramCounter::ProgramCounter(const char *n, bool next, machine::QtMipsMachine *machine) : QGraphicsObject(nullptr),
+                                                                                            name(n, this), value(this) {
     registers = machine->registers();
 
     QFont font;
@@ -59,7 +60,11 @@ ProgramCounter::ProgramCounter(machine::QtMipsMachine *machine) : QGraphicsObjec
     value.setPos(1, HEIGHT - value.boundingRect().height());
     value.setFont(font);
 
-    connect(machine->registers(), SIGNAL(pc_update(std::uint32_t)), this, SLOT(pc_update(std::uint32_t)));
+    if (next) {
+        connect(machine->registers(), SIGNAL(pc_update(std::uint32_t)), this, SLOT(pc_update(std::uint32_t)));
+    } else {
+        connect(machine->registers(), SIGNAL(prev_pc_update(std::uint32_t)), this, SLOT(pc_update(std::uint32_t)));
+    }
 
     con_in = new Connector(Connector::AX_Y);
     con_out = new Connector(Connector::AX_Y);

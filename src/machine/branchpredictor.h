@@ -64,7 +64,7 @@ public:
     // returns an index in the branch history table based on the instruction.
     std::uint32_t bht_idx(std::uint32_t pc, bool ro = false);
     // returns then new pc.
-    std::uint32_t predict(const machine::Instruction &bj_instr, std::uint32_t pc);
+    std::uint32_t predict(const machine::Instruction &bj_instr, std::uint32_t pc, bool &accessed_btb);
     uint8_t bht_entry(std::uint32_t bht_idx) const;
     bool btb_entry_valid(std::uint32_t btb_idx) const;
     std::uint32_t btb_entry_address(std::uint32_t btb_idx) const;

@@ -3,8 +3,8 @@
 #include "fontsize.h"
 
 //////////////////////
-#define WIDTH 40
-#define HEIGHT 20
+#define WIDTH 45
+#define HEIGHT 25
 #define PENW 1
 //////////////////////
 
@@ -49,8 +49,8 @@ const Connector *BranchTargetBuffer::connector_out() const {
 
 void BranchTargetBuffer::setPos(qreal x, qreal y) {
     QGraphicsObject::setPos(x, y);
-    con_in->setPos(x, y + HEIGHT / 2);
-    con_out->setPos(x + WIDTH / 2, y + HEIGHT);
+    con_in->setPos(x, y + (double) HEIGHT / 2);
+    con_out->setPos(x + (double) WIDTH / 2, y);
 }
 
 void BranchTargetBuffer::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) {

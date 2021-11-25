@@ -32,7 +32,7 @@ uint32_t BranchPredictor::bht_idx(std::uint32_t pc, bool ro) {
 
 #include <QDebug>
 
-std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std::uint32_t pc) {
+std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std::uint32_t pc, bool &accessed_btb) {
     std::uint32_t address, idx;
 
     emit pred_inst_addr_value(pc);
@@ -48,6 +48,9 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
         j_info.pos_jmp = idx;
         j_info.pred_addr = j_info.btb_miss ? (pc + 4) : address;
 
+        accessed_btb = true;
+        qDebug() << "accessing btb...";
+
         return j_info.pred_addr;
     } else if (bj_instr.flags() & IMF_BRANCH) {
         BranchInfo b_info;
@@ -55,8 +58,10 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
         b_info.inst_addr = pc;
         b_info.branch = get_prediction(idx);
         b_info.btb_miss = false;
+        accessed_btb = false;
         if (b_info.branch) {
             b_info.btb_miss = !btb_impl->pc_address(pc, &address);
+            accessed_btb = true;
             b_info.branch = !b_info.btb_miss;
         }
         b_info.pos_branch = idx;

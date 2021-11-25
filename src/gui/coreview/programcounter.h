@@ -46,7 +46,7 @@ namespace coreview {
 class ProgramCounter : public QGraphicsObject {
         Q_OBJECT
 public:
-    ProgramCounter(machine::QtMipsMachine *machine);
+    ProgramCounter(const char *name, bool next, machine::QtMipsMachine *machine);
     ~ProgramCounter();
 
     QRectF boundingRect() const override;
@@ -72,7 +72,6 @@ private:
 
     QGraphicsSimpleTextItem name;
     QGraphicsSimpleTextItem value;
-
     Connector *con_in, *con_out;
 };
 

@@ -87,12 +87,12 @@ protected:
     coreview::LogicBlock *terminal;
     struct {
         coreview::ProgramCounter *pc;
+        coreview::ProgramCounter *pc_next;
         coreview::Predictor *pred;
         coreview::BranchTargetBuffer *btb;
-        coreview::Latch *latch;
         coreview::Adder *adder;
         coreview::Constant *adder_4;
-        coreview::Junction *junc_pc, *junc_pc_4;
+        coreview::Junction *junc_pc, *junc_pc_4, *junc_btb;
         coreview::Multiplexer *multiplex;
     } ft;
     struct {
@@ -108,6 +108,7 @@ protected:
         coreview::Junction *j_mux;
         coreview::Junction *j_rs_num;
         coreview::Multiplexer *mux_imm, *mux_regdest;
+        coreview::And *and_branch;
     } ex;
     struct {
         coreview::Junction *j_addr;

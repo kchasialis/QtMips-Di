@@ -49,7 +49,7 @@ void CycleStatisticsDock::cycle_stats_update(const machine::CycleStatistics &cyc
     cycle_stats_labels[CPI]->setText(QString::number(cpi));
     cycle_stats_labels[DATA_HAZARD_STALLS]->setText(QString::number(cycle_stats.data_hazard_stalls));
     cycle_stats_labels[CONTROL_HAZARD_STALLS]->setText(QString::number(cycle_stats.control_hazard_stalls));
-    cycle_stats_labels[L1_DATA_STALLS]->setText(QString::number(cycle_stats.l1_data_stall_cycles));
-    cycle_stats_labels[L1_PROGRAM_STALLS]->setText(QString::number(cycle_stats.l1_program_stall_cycles));
-    cycle_stats_labels[L2_UNIFIED_STALLS]->setText(QString::number(cycle_stats.l2_unified_stall_cycles));
+    cycle_stats_labels[L1_DATA_STALLS]->setText(QString::number(cycle_stats.l1_data_stall_cycles_total));
+    cycle_stats_labels[L1_PROGRAM_STALLS]->setText(QString::number(cycle_stats.l1_program_stall_cycles_total));
+    cycle_stats_labels[L2_UNIFIED_STALLS]->setText(QString::number(cycle_stats.l2_unified_stall_cycles_total));
 }

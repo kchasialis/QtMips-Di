@@ -916,6 +916,10 @@ void CorePipelined::do_step(bool skip_break) {
         if (!mem_data_bubbles) {
             dt_m = cache_mem_instr;
         }
+        if (cycle_stats.l1_data_stall_cycles) {
+            ++cycle_stats.l1_data_stall_cycles_total;
+            --cycle_stats.l1_data_stall_cycles;
+        }
         return;
     }
 
@@ -925,6 +929,13 @@ void CorePipelined::do_step(bool skip_break) {
         --mem_program_bubbles;
         if (mem_program_bubbles == 0) {
             last_mem_prog_bubble = true;
+        }
+        if (cycle_stats.l1_program_stall_cycles) {
+            ++cycle_stats.l1_program_stall_cycles_total;
+            --cycle_stats.l1_program_stall_cycles;
+        } else if (cycle_stats.l2_unified_stall_cycles) {
+            ++cycle_stats.l2_unified_stall_cycles_total;
+            --cycle_stats.l2_unified_stall_cycles;
         }
     }
 
@@ -1381,9 +1392,12 @@ void CorePipelined::handle_fetch_bp() {
             // Instruction is a branch, store pc in a queue because we need to cover resolutions both in ID and EX.
             enqueue_pc(regs->read_pc());
         }
-        regs->pc_abs_jmp(bp->predict(dt_f.inst, regs->read_pc()));
+        bool accessed_btb;
+        regs->pc_abs_jmp(bp->predict(dt_f.inst, regs->read_pc(), accessed_btb));
+        emit fetch_predictor_value(accessed_btb ? 1 : 0);
     } else {
         regs->pc_inc();
+        emit fetch_predictor_value(0);
     }
 }
 

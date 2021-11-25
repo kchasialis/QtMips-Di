@@ -48,19 +48,10 @@
 #include <QDebug>
 
 NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
-    QMessageBox m_box;
-    QAbstractButton *prev;
-
     setWindowTitle("New machine");
 
     this->settings = settings;
     config = nullptr;
-
-    m_box.setText("Load previous or default settings?");
-    prev = m_box.addButton(tr("Previous"), QMessageBox::YesRole);
-    m_box.addButton(tr("Default"), QMessageBox::NoRole);
-    m_box.exec();
-    set_default_settings(m_box.clickedButton() != prev);
 
     ui = new Ui::NewDialog();
     ui->setupUi(this);
@@ -148,10 +139,6 @@ NewDialog::~NewDialog() {
 void NewDialog::switch2custom() {
 	ui->preset_custom->setChecked(true);
 	config_gui();
-}
-
-void NewDialog::set_default_settings(bool ds) {
-    default_settings = ds;
 }
 
 void NewDialog::closeEvent(QCloseEvent *) {
@@ -436,7 +423,7 @@ void NewDialog::load_settings() {
         delete config;
 
     // Load config
-    config = default_settings ? new machine::MachineConfig() : new machine::MachineConfig(settings);
+    config = new machine::MachineConfig(settings);
     l1_d_cache_handler->set_config(config->access_l1_data_cache());
     l1_p_cache_handler->set_config(config->access_l1_program_cache());
     l2_u_cache_handler->set_config(config->access_l2_unified_cache());

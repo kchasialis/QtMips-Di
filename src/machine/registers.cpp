@@ -50,7 +50,7 @@ Registers::Registers() : QObject() {
 }
 
 Registers::Registers(const Registers &orig) : QObject() {
-    this->pc = orig.read_pc();
+    this->prev_pc = this->pc = orig.read_pc();
     for (std::uint8_t i = 0; i < 31; i++)
         this->gp[i] = orig.read_gp(i + 1);
     this->lo = orig.read_hi_lo(false);
@@ -62,7 +62,9 @@ std::uint32_t Registers::read_pc() const {
 }
 
 std::uint32_t Registers::pc_inc() {
+    this->prev_pc = pc;
     this->pc += 4;
+    emit prev_pc_update(this->prev_pc);
     emit pc_update(this->pc);
     return this->pc;
 }
@@ -70,7 +72,9 @@ std::uint32_t Registers::pc_inc() {
 std::uint32_t Registers::pc_jmp(std::int32_t offset) {
     if (offset % 4)
         throw QTMIPS_EXCEPTION(UnalignedJump, "Trying to jump by unaligned offset", QString::number(offset, 16));
+    this->prev_pc = pc;
     this->pc += offset;
+    emit prev_pc_update(this->prev_pc);
     emit pc_update(this->pc);
     return this->pc;
 }
@@ -78,7 +82,9 @@ std::uint32_t Registers::pc_jmp(std::int32_t offset) {
 void Registers::pc_abs_jmp(std::uint32_t address) {
     if (address % 4)
         throw QTMIPS_EXCEPTION(UnalignedJump, "Trying to jump to unaligned address", QString::number(address, 16));
+    this->prev_pc = pc;
     this->pc = address;
+    emit prev_pc_update(this->prev_pc);
     emit pc_update(this->pc);
 }
 

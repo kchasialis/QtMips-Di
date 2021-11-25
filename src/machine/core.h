@@ -125,6 +125,7 @@ signals:
     void fetch_jump_reg_value(std::uint32_t);
     void fetch_jump_value(std::uint32_t);
     void fetch_branch_value(std::uint32_t);
+    void fetch_predictor_value(std::uint32_t);
     void decode_inst_addr_value(std::uint32_t);
     void decode_instruction_value(std::uint32_t);
     void decode_reg1_value(std::uint32_t);

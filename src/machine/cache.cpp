@@ -536,13 +536,13 @@ void Cache::update_misses(bool read) const {
         write_misses += !read ? 1 : 0;
         switch (cnf.type()) {
             case MemoryType::L1_PROGRAM_CACHE:
-                cycle_stats.l1_program_stall_cycles += read ? access_pen_read : access_pen_write;
+                cycle_stats.l1_program_stall_cycles = read ? access_pen_read : access_pen_write;
                 break;
             case MemoryType::L1_DATA_CACHE:
-                cycle_stats.l1_data_stall_cycles += read ? access_pen_read : access_pen_write;
+                cycle_stats.l1_data_stall_cycles = read ? access_pen_read : access_pen_write;
                 break;
             case MemoryType::L2_UNIFIED_CACHE:
-                cycle_stats.l2_unified_stall_cycles += read ? access_pen_read : access_pen_write;
+                cycle_stats.l2_unified_stall_cycles = read ? access_pen_read : access_pen_write;
                 break;
             default:
                 SANITY_ASSERT(0, "Wrong type for cache.");
