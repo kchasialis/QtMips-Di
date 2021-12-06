@@ -339,6 +339,7 @@ protected:
 
 private:
     struct Core::dtFetch *dt_f;
+    bool delay_slot;
     std::uint32_t prev_inst_addr;
 };
 

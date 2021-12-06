@@ -666,7 +666,24 @@ bool Core::branch_result_wrp(const Core::dtDecode &dtd, const Core::dtExecute &d
 }
 
 bool Core::handle_pc_wpr(const Core::dtDecode &dtd, const Core::dtExecute &dte, bool branch_eval_id) {
-    return branch_eval_id ? handle_pc<dtDecode>(dtd) : handle_pc<dtExecute>(dte);
+    if (dtd.jump) {
+        // If decode has jump, do not check if we resolve on EX.
+        return handle_pc<dtDecode>(dtd);
+    } else {
+        if (branch_eval_id) {
+            return handle_pc<dtDecode>(dtd);
+        } else {
+            if (!dte.jump) {
+                return handle_pc<dtExecute>(dte);
+            } else {
+                emit fetch_jump_value(false);
+                emit fetch_jump_reg_value(false);
+                emit fetch_branch_value(false);
+                regs->pc_inc();
+                return false;
+            }
+        }
+    }
 }
 
 uint32_t Core::branch_target(const Instruction &inst, uint32_t inst_addr) {
@@ -752,7 +769,7 @@ void Core::dtMemoryInit(struct dtMemory &dt, bool stall) {
 
 CoreSingle::CoreSingle(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
                        bool jmp_delay_slot, unsigned int min_cache_row_size, Cop0State *cop0state) :
-        Core(regs, mem_program, mem_data, nullptr, min_cache_row_size, cop0state) {
+        Core(regs, mem_program, mem_data, nullptr, min_cache_row_size, cop0state), delay_slot(jmp_delay_slot) {
     if (jmp_delay_slot)
         dt_f = new struct Core::dtFetch();
     else
@@ -774,7 +791,7 @@ void CoreSingle::do_step(bool skip_break) {
         *dt_f = f;
         f = f_swap;
     }
-    struct dtDecode d = decode(f);
+    struct dtDecode d = decode(f, delay_slot);
     struct dtExecute e = execute(d);
     struct dtMemory m = memory(e);
     writeback(m);
@@ -1110,9 +1127,9 @@ void CorePipelined::do_step(bool skip_break) {
         emit forward_m_d_rt_value((branch_res_id || dt_d.jump) ? dt_d.forward_m_d_rt : dt_e.forward_m_d_rt);
     }
     if (branch_res_id || dt_d.jump)
-            emit branch_forward_value((dt_d.forward_m_d_rs || dt_d.forward_m_d_rt) ? 2 : data_branch_hazard_id);
+        emit branch_forward_value((dt_d.forward_m_d_rs || dt_d.forward_m_d_rt) ? 2 : data_branch_hazard_id);
     else
-            emit branch_forward_value((dt_e.forward_m_d_rs || dt_e.forward_m_d_rt) ? 2 : data_branch_hazard_ex);
+        emit branch_forward_value((dt_e.forward_m_d_rs || dt_e.forward_m_d_rt) ? 2 : data_branch_hazard_ex);
 #if 0
     if (stall)
         printf("STALL\n");
@@ -1303,6 +1320,8 @@ void CorePipelined::handle_fetch_stall(bool check) {
     if (check) {
         if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
             control_hazard = true;
+            emit regs->prev_pc_update(regs->read_pc());
+            emit regs->pc_update(regs->read_pc() + 4);
         }
     }
     if (!branch_res_id && dt_d.branch) {
@@ -1310,12 +1329,7 @@ void CorePipelined::handle_fetch_stall(bool check) {
     }
 
     if (!control_hazard) {
-        if (!branch_res_id && dt_d.jump) {
-            // Even if we evaluate branches on EX, jumps are still resolved on ID.
-            handle_pc_wpr(dt_d, dt_e, true);
-        } else {
-            handle_pc_wpr(dt_d, dt_e, branch_res_id);
-        }
+        handle_pc_wpr(dt_d, dt_e, branch_res_id);
     }
 }
 
@@ -1323,7 +1337,7 @@ void CorePipelined::handle_fetch_dls() {
     // We have delay slot enabled.
     if (handle_pc_wpr(dt_d, dt_e, branch_res_id)) {
         dt_f.in_delay_slot = true;
-        if (!branch_res_id)
+        if (!branch_res_id && !dt_d.jump)
             // if we evaluate at EX, dt_d will also be in delay slot.
             dt_d.in_delay_slot = true;
     } else {
@@ -1336,9 +1350,10 @@ void CorePipelined::handle_fetch_dls() {
 }
 
 void CorePipelined::handle_fetch_bp() {
-    uint32_t correct_address = 0;
+    uint32_t correct_address;
     uint32_t pred_addr;
     bool jump_value = false, jump_reg_value = false, branch_value = false;
+    bool mispredict = false;
 
     if (branch_res_id ? dt_d.branch : dt_e.branch) {
         // Branch is now on ID/EX and can be evaluated.
@@ -1351,7 +1366,8 @@ void CorePipelined::handle_fetch_bp() {
             // Prediction was wrong.
             // Flush appropriate stages & move pc accordingly.
             flush_stages(true);
-            regs->pc_abs_jmp(correct_address - 4);
+            regs->pc_abs_jmp(correct_address);
+            mispredict = true;
         }
         bp->update_bht(taken, true, correct_address);
 
@@ -1365,7 +1381,8 @@ void CorePipelined::handle_fetch_bp() {
         if (correct_address != pred_addr) {
             // We had a BTB miss, flush appropriate stages and update BTB.
             flush_stages(false);
-            regs->pc_abs_jmp(correct_address - 4);
+            regs->pc_abs_jmp(correct_address);
+            mispredict = true;
         }
         bp->update_bht(true, false, correct_address);
 
@@ -1396,8 +1413,10 @@ void CorePipelined::handle_fetch_bp() {
         regs->pc_abs_jmp(bp->predict(dt_f.inst, regs->read_pc(), accessed_btb));
         emit fetch_predictor_value(accessed_btb ? 1 : 0);
     } else {
-        regs->pc_inc();
-        emit fetch_predictor_value(0);
+        if (!mispredict) {
+            regs->pc_inc();
+            emit fetch_predictor_value(0);
+        }
     }
 }
 

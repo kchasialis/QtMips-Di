@@ -49,7 +49,6 @@ std::uint32_t BranchPredictor::predict(const machine::Instruction &bj_instr, std
         j_info.pred_addr = j_info.btb_miss ? (pc + 4) : address;
 
         accessed_btb = true;
-        qDebug() << "accessing btb...";
 
         return j_info.pred_addr;
     } else if (bj_instr.flags() & IMF_BRANCH) {
