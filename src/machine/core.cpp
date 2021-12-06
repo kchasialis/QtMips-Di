@@ -1080,7 +1080,7 @@ void CorePipelined::do_step(bool skip_break) {
                     dt_d.forward_m_d_rt = true;
                 }
             } else {
-                if (dt_e.branch) {
+                if (dt_e.branch && ((dt_e.bjr_req_rt && dt_e.num_rt == dt_m.rwrite) || (dt_e.bjr_req_rs && dt_e.num_rs == dt_m.rwrite))) {
                     data_branch_hazard_ex = true;
                 } else {
                     // Branch is on ID, forward the value.
