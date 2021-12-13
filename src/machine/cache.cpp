@@ -211,14 +211,6 @@ std::uint32_t Cache::miss() const {
     return read_misses + write_misses;
 }
 
-//std::uint32_t Cache::ml_reads() const {
-//    return mem_lower_reads;
-//}
-//
-//std::uint32_t Cache::ml_writes() const {
-//    return mem_lower_writes;
-//}
-
 std::uint32_t Cache::stalled_cycles() const {
     uint32_t st_cycles = mem_lower_reads * access_pen_read + mem_lower_writes * access_pen_write;
 
@@ -350,6 +342,8 @@ std::uint32_t Cache::debug_rword(std::uint32_t address) const {
 
     return 0;
 }
+
+#include <QDebug>
 
 bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::uint32_t value) const {
     bool changed = false;

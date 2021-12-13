@@ -66,7 +66,7 @@ using namespace machine;
 #define DFC_SETS 1
 #define DFC_BLOCKS 1
 #define DFC_ASSOC 1
-#define DFC_REPLAC ReplacementPolicy::RP_RAND
+#define DFC_REPLAC ReplacementPolicy::RP_LRU
 #define DFC_WRITE_POL WritePolicy::WP_BACK
 #define DFC_WRITE_ALLOC true
 //////////////////////////////////////////////////////////////////////////////
