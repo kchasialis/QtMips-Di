@@ -206,6 +206,7 @@ protected:
         ExceptionCause excause;
         bool in_delay_slot;
         bool is_valid;
+        bool predicted;
     };
     struct dtDecode {
         Instruction inst;

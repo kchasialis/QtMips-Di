@@ -45,8 +45,6 @@
 #define MIN_BHT_BITS 5
 #define MAX_BHT_BITS 14
 
-#include <QDebug>
-
 NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     setWindowTitle("New machine");
 

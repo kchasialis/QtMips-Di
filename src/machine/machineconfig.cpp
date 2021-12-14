@@ -114,7 +114,6 @@ MachineConfigCache::MachineConfigCache(const MemoryAccess::MemoryType &ct, const
                                        write_pol((WritePolicy)sts->value(N("WritePol"), (int32_t) DFC_WRITE_POL).toUInt()),
                                        write_allocate(sts->value(N("WriteAlloc"), DFC_WRITE_ALLOC).toBool()),
                                        cache_type(ct) {
-
     switch (cache_type) {
         case MemoryAccess::MemoryType::L1_PROGRAM_CACHE:
             m_time_read = sts->value(N("AccessTimeRead"), DFC_L1_PROG_ACC_READ).toUInt();
@@ -138,14 +137,14 @@ MachineConfigCache::MachineConfigCache(const MemoryAccess::MemoryType &ct, const
 
 void MachineConfigCache::store(QSettings *sts, const QString &prefix) {
     sts->setValue(N("Enabled"), enabled());
-    sts->setValue(N("AccessTimeRead"), mem_access_read());
-    sts->setValue(N("AccessTimeWrite"), mem_access_write());
-    sts->setValue(N("AccessTimeBurst"), mem_access_burst());
     sts->setValue(N("Sets"), sets());
     sts->setValue(N("Blocks"), blocks());
     sts->setValue(N("Associativity"), associativity());
-    sts->setValue(N("Replacement"), (std::uint32_t)replacement_policy());
-    sts->setValue(N("WritePol"), (std::uint32_t)write_policy());
+    sts->setValue(N("AccessTimeRead"), mem_access_read());
+    sts->setValue(N("AccessTimeWrite"), mem_access_write());
+    sts->setValue(N("AccessTimeBurst"), mem_access_burst());
+    sts->setValue(N("ReplacementPol"), (int32_t)replacement_policy());
+    sts->setValue(N("WritePol"), (int32_t)write_policy());
     sts->setValue(N("WriteAlloc"), write_alloc());
 }
 
@@ -322,8 +321,6 @@ MachineConfig::MachineConfig(const MachineConfig& cc) noexcept :
                                             l1_data(cc.l1_data_cache()), l2_unified(cc.l2_unified_cache()) {}
 
 #define N(STR) (prefix + QString(STR))
-
-#include <QDebug>
 
 MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) :
                                 l1_program(MemoryAccess::MemoryType::L1_PROGRAM_CACHE, sts, N("L1ProgramCache_")),

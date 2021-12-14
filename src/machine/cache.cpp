@@ -33,7 +33,6 @@
  *
  ******************************************************************************/
 
-#include <QDebug>
 #include "cache.h"
 
 using namespace machine;
@@ -343,8 +342,6 @@ std::uint32_t Cache::debug_rword(std::uint32_t address) const {
     return 0;
 }
 
-#include <QDebug>
-
 bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::uint32_t value) const {
     bool changed = false;
     uint32_t row, col, tag, indx;
@@ -366,14 +363,24 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
         }
         // We have to kick something
         switch (cnf.replacement_policy()) {
-        case MachineConfigCache::ReplacementPolicy::RP_RAND:
-            indx = rand() % cnf.associativity();
-            break;
-        case MachineConfigCache::ReplacementPolicy::RP_LRU:
-            indx = replc.lru[row][0];
-            break;
-        case MachineConfigCache::ReplacementPolicy::RP_LFU:
-            {
+            case MachineConfigCache::ReplacementPolicy::RP_RAND:
+                {
+                    bool found_empty = false;
+                    for (size_t i = 0 ; i < cnf.associativity() ; i++) {
+                        if (!dt[i][row].valid) {
+                            indx = i;
+                            found_empty = true;
+                        }
+                    }
+                    if (!found_empty) {
+                        indx = rand() % cnf.associativity();
+                    }
+                }
+                break;
+            case MachineConfigCache::ReplacementPolicy::RP_LRU:
+                indx = replc.lru[row][0];
+                break;
+            case MachineConfigCache::ReplacementPolicy::RP_LFU: {
                 uint32_t lowest = replc.lfu[row][0];
                 indx = 0;
                 for (size_t i = 1; i < cnf.associativity(); i++) {

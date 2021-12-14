@@ -39,6 +39,7 @@
 #include "utils.h"
 
 #include <cassert>
+#include <cstdlib>
 #include <QDebug>
 
 using namespace machine;
@@ -311,7 +312,8 @@ struct Core::dtFetch Core::fetch(bool skip_break, bool signal, bool mem_access) 
             .inst_addr = inst_addr,
             .excause = excause,
             .in_delay_slot = false,
-            .is_valid = true
+            .is_valid = true,
+            .predicted = false
     };
 }
 
@@ -700,6 +702,7 @@ void Core::dtFetchInit(struct dtFetch &dt, bool stall) {
     dt.excause = EXCAUSE_NONE;
     dt.in_delay_slot = false;
     dt.is_valid = false;
+    dt.predicted = false;
 }
 
 void Core::dtDecodeInit(struct dtDecode &dt, bool stall) {
@@ -884,8 +887,7 @@ void CorePipelined::flush_stages(bool is_branch) {
     bp_stalls++;
     if (!branch_res_id && is_branch) {
         // We evaluate branches on EX stage, flush ID too if the instruction was a branch.
-        if (!mem_program_bubbles)
-            dtDecodeInit(dt_d, true);
+        dtDecodeInit(dt_d, true);
         bp_stalls++;
     }
 }
@@ -1190,8 +1192,7 @@ void CorePipelined::do_step(bool skip_break) {
             }
         }
 
-        if (!mem_program_bubbles) {
-            // Memory bubbles should be added, do not increment PC.
+        if (!mem_program_bubbles || ((branch_res_id ? dt_d.branch : dt_e.branch) || dt_d.jump)) {
             switch (chunit) {
                 case MachineConfig::CHU_STALL:
                     handle_fetch_stall(check_branch_stall);
@@ -1199,19 +1200,18 @@ void CorePipelined::do_step(bool skip_break) {
                     break;
                 case MachineConfig::CHU_DELAY_SLOT:
                     handle_fetch_dls();
+                    if (mem_program_bubbles)
+                        resolved_branch_mem_prog_bubbles = true;
                     break;
                 case MachineConfig::CHU_ONE_BIT_BP:
                 case MachineConfig::CHU_TWO_BIT_BP:
                     handle_fetch_bp();
+                    if (mem_program_bubbles)
+                        resolved_branch_mem_prog_bubbles = true;
                     break;
                 default:
                     SANITY_ASSERT(0, "Undefined control hazard unit!");
             }
-        } else if (((branch_res_id ? dt_d.branch : dt_e.branch) || dt_d.jump) &&
-                    (chunit == MachineConfig::CHU_ONE_BIT_BP || chunit == MachineConfig::CHU_TWO_BIT_BP)) {
-            // if its a branch instruction on resolution stage, it should be resolved!
-            handle_fetch_bp();
-            resolved_branch_mem_prog_bubbles = true;
         }
     } else if (data_hazard) {
         if (control_hazard) {
@@ -1400,23 +1400,26 @@ void CorePipelined::handle_fetch_bp() {
     emit fetch_jump_reg_value(jump_reg_value);
     emit fetch_branch_value(branch_value);
 
-    if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
-        // Instruction is branch or jump, we need to save pc in case we predict wrong.
-        if (dt_f.inst.flags() & IMF_JUMP) {
-            // Instruction is a jump, save pc before jumping.
-            pc_before_jmp = regs->read_pc();
+    if (!dt_f.predicted) {
+        if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
+            // Instruction is branch or jump, we need to save pc in case we predict wrong.
+            if (dt_f.inst.flags() & IMF_JUMP) {
+                // Instruction is a jump, save pc before jumping.
+                pc_before_jmp = regs->read_pc();
+            } else {
+                // Instruction is a branch, store pc in a queue because we need to cover resolutions both in ID and EX.
+                enqueue_pc(regs->read_pc());
+            }
+            bool accessed_btb;
+            regs->pc_abs_jmp(bp->predict(dt_f.inst, regs->read_pc(), accessed_btb));
+            emit fetch_predictor_value(accessed_btb ? 1 : 0);
         } else {
-            // Instruction is a branch, store pc in a queue because we need to cover resolutions both in ID and EX.
-            enqueue_pc(regs->read_pc());
+            if (!mispredict) {
+                regs->pc_inc();
+                emit fetch_predictor_value(0);
+            }
         }
-        bool accessed_btb;
-        regs->pc_abs_jmp(bp->predict(dt_f.inst, regs->read_pc(), accessed_btb));
-        emit fetch_predictor_value(accessed_btb ? 1 : 0);
-    } else {
-        if (!mispredict) {
-            regs->pc_inc();
-            emit fetch_predictor_value(0);
-        }
+        dt_f.predicted = true;
     }
 }
 
