@@ -67,25 +67,25 @@ Cache::Cache(const MachineConfigCache &cc, MemoryAccess *m, uint32_t acc_read, u
     }
     // Allocate replacement policy data
     switch (cnf.replacement_policy()) {
-    case MachineConfigCache::ReplacementPolicy::RP_LFU:
-        replc.lfu = new std::uint32_t *[cnf.sets()];
-        for (size_t row = 0; row < cnf.sets(); row++) {
-            replc.lfu[row] = new std::uint32_t[cnf.associativity()];
-            for (size_t  i = 0; i < cnf.associativity(); i++)
-                 replc.lfu[row][i] = 0;
-        }
-        break;
-    case MachineConfigCache::ReplacementPolicy::RP_LRU:
-        replc.lru = new std::uint32_t*[cnf.sets()];
-        for (size_t row = 0; row < cnf.sets(); row++) {
-            replc.lru[row] = new std::uint32_t[cnf.associativity()];
-            for (size_t i = 0; i < cnf.associativity(); i++)
-                replc.lru[row][i] = i;
-        }
-        break;
-    case MachineConfigCache::ReplacementPolicy::RP_RAND:
-    default:
-        break;
+        case MachineConfigCache::ReplacementPolicy::RP_LFU:
+            replc.lfu = new std::uint32_t *[cnf.sets()];
+            for (size_t row = 0; row < cnf.sets(); row++) {
+                replc.lfu[row] = new std::uint32_t[cnf.associativity()];
+                for (size_t  i = 0; i < cnf.associativity(); i++)
+                     replc.lfu[row][i] = 0;
+            }
+            break;
+        case MachineConfigCache::ReplacementPolicy::RP_LRU:
+            replc.lru = new std::uint32_t*[cnf.sets()];
+            for (size_t row = 0; row < cnf.sets(); row++) {
+                replc.lru[row] = new std::uint32_t[cnf.associativity()];
+                for (size_t i = 0; i < cnf.associativity(); i++)
+                    replc.lru[row][i] = i;
+            }
+            break;
+        case MachineConfigCache::ReplacementPolicy::RP_RAND:
+        default:
+            break;
     }
 }
 
