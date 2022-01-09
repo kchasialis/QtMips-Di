@@ -1206,8 +1206,9 @@ void CorePipelined::do_step(bool skip_break) {
                 case MachineConfig::CHU_ONE_BIT_BP:
                 case MachineConfig::CHU_TWO_BIT_BP:
                     handle_fetch_bp();
-                    if (mem_program_bubbles)
+                    if (mem_program_bubbles) {
                         resolved_branch_mem_prog_bubbles = true;
+                    }
                     break;
                 default:
                     SANITY_ASSERT(0, "Undefined control hazard unit!");
@@ -1379,7 +1380,7 @@ void CorePipelined::handle_fetch_bp() {
         correct_address = get_correct_address(pc_before_jmp, false, true);
         pred_addr = bp->prediction(false);
         if (correct_address != pred_addr) {
-            // We had a BTB miss, flush appropriate stages and update BTB.
+            // We had a BTB miss, flush appropriate stages `and update BTB.
             flush_stages(false);
             regs->pc_abs_jmp(correct_address);
             mispredict = true;
@@ -1400,7 +1401,7 @@ void CorePipelined::handle_fetch_bp() {
     emit fetch_jump_reg_value(jump_reg_value);
     emit fetch_branch_value(branch_value);
 
-    if (!dt_f.predicted) {
+    if (!dt_f.predicted && !mem_program_bubbles) {
         if ((dt_f.inst.flags() & IMF_BRANCH) || (dt_f.inst.flags() & IMF_JUMP)) {
             // Instruction is branch or jump, we need to save pc in case we predict wrong.
             if (dt_f.inst.flags() & IMF_JUMP) {

@@ -97,27 +97,27 @@ Cache::~Cache(){
                         delete[] dt[i][y].data;
                     }
                     delete[] dt[i];
-                }
+            }
         }
         delete[] dt;
     }
 
     switch (cnf.replacement_policy()) {
-    case MachineConfigCache::ReplacementPolicy::RP_LFU:
-        if (replc.lfu == nullptr)
+        case MachineConfigCache::ReplacementPolicy::RP_LFU:
+            if (replc.lfu == nullptr)
+                break;
+            for (std::uint32_t row = 0; row < cnf.sets(); row++)
+                delete[] replc.lfu[row];
+            delete [] replc.lfu;
             break;
-        for (std::uint32_t row = 0; row < cnf.sets(); row++)
-            delete[] replc.lfu[row];
-        delete [] replc.lfu;
-        break;
-    case MachineConfigCache::ReplacementPolicy::RP_LRU:
-        if (replc.lru == nullptr)
+        case MachineConfigCache::ReplacementPolicy::RP_LRU:
+            if (replc.lru == nullptr)
+                break;
+            for (std::uint32_t row = 0; row < cnf.sets(); row++)
+                delete[] replc.lru[row];
+            delete[] replc.lru;
+        default:
             break;
-        for (std::uint32_t row = 0; row < cnf.sets(); row++)
-            delete[] replc.lru[row];
-        delete[] replc.lru;
-    default:
-        break;
     }
 }
 
