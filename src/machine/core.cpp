@@ -918,8 +918,6 @@ void CorePipelined::do_step(bool skip_break) {
 
     if (inc_data_hazards && !mem_data_bubbles) {
         ++cycle_stats.data_hazard_stalls;
-    } else if (!control_hazard && !mem_program_bubbles && !mem_data_bubbles) {
-        ++cycle_stats.instructions;
     }
 
     if (bp_stalls) {
@@ -1165,6 +1163,7 @@ void CorePipelined::do_step(bool skip_break) {
                     dt_f = fetch(skip_break, true, false);
                 } else {
                     dt_f = fetch(skip_break);
+                    ++cycle_stats.instructions;
                     resolved_branch_mem_prog_bubbles = false;
                 }
             } else if (!control_hazard) {
@@ -1174,6 +1173,7 @@ void CorePipelined::do_step(bool skip_break) {
                         // Its a new instruction, run fetch normally.
                         prev_mem_cycles = cycle_stats.memory_cycles;
                         dt_f = fetch(skip_break);
+                        ++cycle_stats.instructions;
                         mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
                         fetched_instr = tmp;
                     } else {
@@ -1233,6 +1233,7 @@ void CorePipelined::do_step(bool skip_break) {
                 assert(mem_program_bubbles == 0);
                 prev_mem_cycles = cycle_stats.memory_cycles;
                 fetch(skip_break);
+                ++cycle_stats.instructions;
                 mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
                 fetched_instr = tmp;
             } else {
@@ -1248,6 +1249,7 @@ void CorePipelined::do_step(bool skip_break) {
             assert(mem_program_bubbles == 0);
             prev_mem_cycles = cycle_stats.memory_cycles;
             fetch(skip_break);
+            ++cycle_stats.instructions;
             mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
             fetched_instr = tmp;
         } else {
@@ -1412,7 +1414,8 @@ void CorePipelined::handle_fetch_bp() {
                 enqueue_pc(regs->read_pc());
             }
             bool accessed_btb;
-            regs->pc_abs_jmp(bp->predict(dt_f.inst, regs->read_pc(), accessed_btb));
+            uint32_t dbg = bp->predict(dt_f.inst, regs->read_pc(), accessed_btb);
+            regs->pc_abs_jmp(dbg);
             emit fetch_predictor_value(accessed_btb ? 1 : 0);
         } else {
             if (!mispredict) {

@@ -35,6 +35,8 @@
 
 #include "cache.h"
 
+#include <QDebug>
+
 using namespace machine;
 
 extern CycleStatistics cycle_stats;
@@ -137,7 +139,7 @@ bool Cache::wword(std::uint32_t address, std::uint32_t value) {
     writes++;
     changed = access(address, &data, true, value);
 
-    if (cnf.write_alloc() == MachineConfigCache::WritePolicy::WP_THROUGH) {
+    if (cnf.write_policy() == MachineConfigCache::WritePolicy::WP_THROUGH) {
         mem_lower_writes++;
         emit_mem_lower_signal(false);
         update_statistics();
@@ -428,6 +430,7 @@ bool Cache::access(std::uint32_t address, std::uint32_t *data, bool write, std::
             for (size_t i = 0; i < cnf.blocks(); i++) {
                 mem_lower->set_update_stats(i == 0);
                 cd.data[i] = mem_lower->read_word(base_address(tag, row) + (4 * i));
+
                 change_counter++;
             }
 
@@ -488,6 +491,16 @@ void Cache::kick(std::uint32_t associat_indx, std::uint32_t row) const {
             for (size_t i = 0; i < cnf.blocks(); i++) {
                 mem_lower->set_update_stats(i == 0);
                 mem_lower->write_word(base_address(cd.tag, row) + (4*i), cd.data[i]);
+
+                switch (type()) {
+                    case MemoryType::L1_PROGRAM_CACHE:
+                        qDebug() << "(1) Replacing in L1 Program Cache: " << QString::number(cd.data[i], 16);
+                        if (QString::number(cd.data[i], 16) == 0x1720000f) {
+                            qDebug() << "FUCK (1)";
+                        }
+                    default:
+                        break;
+                }
             }
 
             ++mem_lower_writes;
