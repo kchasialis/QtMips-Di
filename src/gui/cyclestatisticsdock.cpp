@@ -13,6 +13,7 @@ CycleStatisticsDock::CycleStatisticsDock(QWidget *parent) : QDockWidget(parent) 
         "CPI:",
         "Data Hazard Stalls:",
         "Control Hazard Stalls:",
+        "RAM Stalls:",
         "L1 Data Stalls:",
         "L1 Program Stalls:",
         "L2 Unified Stalls:"
@@ -42,13 +43,17 @@ void CycleStatisticsDock::setup(machine::QtMipsMachine *machine) const {
 }
 
 void CycleStatisticsDock::cycle_stats_update(const machine::CycleStatistics &cycle_stats) {
-    double cpi = cycle_stats.instructions != 0 ? (double) cycle_stats.total_cycles / (double) cycle_stats.instructions : 0;
+    uint32_t instructions = cycle_stats.total_cycles - (cycle_stats.data_hazard_stalls + cycle_stats.control_hazard_stalls +
+            cycle_stats.l1_data_stall_cycles_total + cycle_stats.l1_program_stall_cycles_total + cycle_stats.l2_unified_stall_cycles_total +
+            cycle_stats.ram_program_stall_cycles_total + cycle_stats.ram_data_stall_cycles_total);
+    double cpi = instructions != 0 ? (double) cycle_stats.total_cycles / (double) instructions : 0;
 
     cycle_stats_labels[TOTAL_CYCLES]->setText(QString::number(cycle_stats.total_cycles));
-    cycle_stats_labels[INSTRUCTIONS]->setText(QString::number(cycle_stats.instructions));
+    cycle_stats_labels[INSTRUCTIONS]->setText(QString::number(instructions));
     cycle_stats_labels[CPI]->setText(QString::number(cpi));
     cycle_stats_labels[DATA_HAZARD_STALLS]->setText(QString::number(cycle_stats.data_hazard_stalls));
     cycle_stats_labels[CONTROL_HAZARD_STALLS]->setText(QString::number(cycle_stats.control_hazard_stalls));
+    cycle_stats_labels[DRAM_STALLS]->setText(QString::number(cycle_stats.ram_program_stall_cycles_total + cycle_stats.ram_data_stall_cycles_total));
     cycle_stats_labels[L1_DATA_STALLS]->setText(QString::number(cycle_stats.l1_data_stall_cycles_total));
     cycle_stats_labels[L1_PROGRAM_STALLS]->setText(QString::number(cycle_stats.l1_program_stall_cycles_total));
     cycle_stats_labels[L2_UNIFIED_STALLS]->setText(QString::number(cycle_stats.l2_unified_stall_cycles_total));

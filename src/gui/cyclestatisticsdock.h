@@ -24,12 +24,13 @@ private:
         CPI,
         DATA_HAZARD_STALLS,
         CONTROL_HAZARD_STALLS,
+        DRAM_STALLS,
         L1_DATA_STALLS,
         L1_PROGRAM_STALLS,
         L2_UNIFIED_STALLS
     };
 
-   QLabel *cycle_stats_labels[8]{};
+   QLabel *cycle_stats_labels[9]{};
 };
 
 #endif

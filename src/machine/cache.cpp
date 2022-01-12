@@ -231,7 +231,7 @@ double Cache::speed_improvement() const {
         return 100.0;
 
     lookup_time = read_hits + read_misses;
-    if (cnf.write_alloc() == MachineConfigCache::WritePolicy::WP_BACK)
+    if (cnf.write_policy() == MachineConfigCache::WritePolicy::WP_BACK)
         lookup_time += write_hits + write_misses;
 
     lower_access_time = mem_lower_reads * access_pen_read +
@@ -487,20 +487,10 @@ void Cache::kick(std::uint32_t associat_indx, std::uint32_t row) const {
     cache_data &cd = dt[associat_indx][row];
 
     if (cd.dirty) {
-        if (cnf.write_alloc() == MachineConfigCache::WritePolicy::WP_BACK) {
+        if (cnf.write_policy() == MachineConfigCache::WritePolicy::WP_BACK) {
             for (size_t i = 0; i < cnf.blocks(); i++) {
                 mem_lower->set_update_stats(i == 0);
                 mem_lower->write_word(base_address(cd.tag, row) + (4*i), cd.data[i]);
-
-                switch (type()) {
-                    case MemoryType::L1_PROGRAM_CACHE:
-                        qDebug() << "(1) Replacing in L1 Program Cache: " << QString::number(cd.data[i], 16);
-                        if (QString::number(cd.data[i], 16) == 0x1720000f) {
-                            qDebug() << "FUCK (1)";
-                        }
-                    default:
-                        break;
-                }
             }
 
             ++mem_lower_writes;

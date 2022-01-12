@@ -799,8 +799,6 @@ void CoreSingle::do_step(bool skip_break) {
     struct dtMemory m = memory(e);
     writeback(m);
 
-    ++cycle_stats.instructions;
-
     // Handle PC before instruction following jump leaves decode stage
 
     if ((m.stop_if || (m.excause != EXCAUSE_NONE)) && dt_f != nullptr) {
@@ -882,9 +880,10 @@ void CorePipelined::flush_stages(bool is_branch) {
         remove_pc(dt_d.inst_addr);
     }
 
-    if (!mem_program_bubbles)
+    if (!mem_program_bubbles) {
         dtFetchInit(dt_f, true);
-    bp_stalls++;
+        bp_stalls++;
+    }
     if (!branch_res_id && is_branch) {
         // We evaluate branches on EX stage, flush ID too if the instruction was a branch.
         dtDecodeInit(dt_d, true);
@@ -921,7 +920,6 @@ void CorePipelined::do_step(bool skip_break) {
     }
 
     if (bp_stalls) {
-        cycle_stats.instructions -= bp_stalls;
         cycle_stats.control_hazard_stalls += bp_stalls;
         bp_stalls = 0;
     }
@@ -930,6 +928,8 @@ void CorePipelined::do_step(bool skip_break) {
         dtMemoryInit(dt_m, true);
         writeback(dt_m);
         --mem_data_bubbles;
+        // If we have caches enabled we count these stalls as cache stalls.
+        ++cycle_stats.ram_data_stall_cycles_total;
         if (!mem_data_bubbles) {
             dt_m = cache_mem_instr;
         }
@@ -944,6 +944,7 @@ void CorePipelined::do_step(bool skip_break) {
         // Handle other hazards first, then program memory.
         dtFetchInit(dt_f, true);
         --mem_program_bubbles;
+        ++cycle_stats.ram_program_stall_cycles_total;
         if (mem_program_bubbles == 0) {
             last_mem_prog_bubble = true;
         }
@@ -1163,7 +1164,6 @@ void CorePipelined::do_step(bool skip_break) {
                     dt_f = fetch(skip_break, true, false);
                 } else {
                     dt_f = fetch(skip_break);
-                    ++cycle_stats.instructions;
                     resolved_branch_mem_prog_bubbles = false;
                 }
             } else if (!control_hazard) {
@@ -1173,7 +1173,6 @@ void CorePipelined::do_step(bool skip_break) {
                         // Its a new instruction, run fetch normally.
                         prev_mem_cycles = cycle_stats.memory_cycles;
                         dt_f = fetch(skip_break);
-                        ++cycle_stats.instructions;
                         mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
                         fetched_instr = tmp;
                     } else {
@@ -1233,7 +1232,6 @@ void CorePipelined::do_step(bool skip_break) {
                 assert(mem_program_bubbles == 0);
                 prev_mem_cycles = cycle_stats.memory_cycles;
                 fetch(skip_break);
-                ++cycle_stats.instructions;
                 mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
                 fetched_instr = tmp;
             } else {
@@ -1249,7 +1247,6 @@ void CorePipelined::do_step(bool skip_break) {
             assert(mem_program_bubbles == 0);
             prev_mem_cycles = cycle_stats.memory_cycles;
             fetch(skip_break);
-            ++cycle_stats.instructions;
             mem_program_bubbles = cycle_stats.memory_cycles - prev_mem_cycles;
             fetched_instr = tmp;
         } else {
@@ -1414,8 +1411,7 @@ void CorePipelined::handle_fetch_bp() {
                 enqueue_pc(regs->read_pc());
             }
             bool accessed_btb;
-            uint32_t dbg = bp->predict(dt_f.inst, regs->read_pc(), accessed_btb);
-            regs->pc_abs_jmp(dbg);
+            regs->pc_abs_jmp(bp->predict(dt_f.inst, regs->read_pc(), accessed_btb));
             emit fetch_predictor_value(accessed_btb ? 1 : 0);
         } else {
             if (!mispredict) {
