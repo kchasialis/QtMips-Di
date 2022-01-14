@@ -348,6 +348,7 @@ class CorePipelined : public Core {
 public:
     CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
                   MemoryAccess *mem_program1,
+                  bool data_cache_enabled, bool program_cache_enabled,
                   MachineConfig::DataHazardUnit hazard_unit = MachineConfig::DHU_STALL_FORWARD,
                   MachineConfig::ControlHazardUnit branch_unit = MachineConfig::CHU_DELAY_SLOT,
                   int8_t bp_bits = -1, bool branch_res_id = true,
@@ -377,6 +378,7 @@ private:
     bool inc_data_hazards;
     bool control_hazard;
     bool branch_res_id;
+    bool data_cache_enabled, program_cache_enabled;
     uint32_t bp_stalls;
     Instruction fetched_instr; // I can't bother explaining why.
     enum MachineConfig::DataHazardUnit dhunit;

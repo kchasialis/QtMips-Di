@@ -842,6 +842,7 @@ BranchPredictor *CoreSingle::predictor() {
 
 CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
                              MemoryAccess *mem_program1,
+                             bool data_cache_enabled, bool program_cache_enabled,
                              MachineConfig::DataHazardUnit dhunit,
                              MachineConfig::ControlHazardUnit chunit,
                              int8_t bp_bits, bool branch_res_id,
@@ -849,6 +850,8 @@ CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryA
                              Cop0State *cop0state) :
         Core(regs, mem_program, mem_data, mem_program1, min_cache_row_size, cop0state) {
 
+    this->data_cache_enabled = data_cache_enabled;
+    this->program_cache_enabled = program_cache_enabled;
     this->dhunit = dhunit;
     this->chunit = chunit;
     this->branch_res_id = branch_res_id;
@@ -928,8 +931,9 @@ void CorePipelined::do_step(bool skip_break) {
         dtMemoryInit(dt_m, true);
         writeback(dt_m);
         --mem_data_bubbles;
-        // If we have caches enabled we count these stalls as cache stalls.
-        ++cycle_stats.ram_data_stall_cycles_total;
+        if (!data_cache_enabled)
+            // If we have caches enabled we count these stalls as cache stalls.
+            ++cycle_stats.ram_data_stall_cycles_total;
         if (!mem_data_bubbles) {
             dt_m = cache_mem_instr;
         }
@@ -944,7 +948,8 @@ void CorePipelined::do_step(bool skip_break) {
         // Handle other hazards first, then program memory.
         dtFetchInit(dt_f, true);
         --mem_program_bubbles;
-        ++cycle_stats.ram_program_stall_cycles_total;
+        if (!program_cache_enabled)
+            ++cycle_stats.ram_program_stall_cycles_total;
         if (mem_program_bubbles == 0) {
             last_mem_prog_bubble = true;
         }
