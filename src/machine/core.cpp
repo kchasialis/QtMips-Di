@@ -992,6 +992,11 @@ void CorePipelined::do_step(bool skip_break) {
     }
 
     // Resolve exceptions
+    if (dt_m.excause == EXCAUSE_BREAK || dt_e.excause == EXCAUSE_BREAK) {
+        // Program is about to end, sync memories.
+        mem_program->sync();
+        mem_data->sync();
+    }
     excpt_in_progress = dt_m.excause != EXCAUSE_NONE;
     if (excpt_in_progress) {
         dtExecuteInit(dt_e);
@@ -1004,7 +1009,6 @@ void CorePipelined::do_step(bool skip_break) {
         emit instruction_decoded(dt_d.inst, dt_d.inst_addr, dt_d.excause, dt_d.is_valid);
         emit decode_inst_addr_value(STAGEADDR_NONE);
     }
-    excpt_in_progress = excpt_in_progress || dt_e.excause != EXCAUSE_NONE;
     if (excpt_in_progress) {
         dtFetchInit(dt_f);
         emit instruction_fetched(dt_f.inst, dt_f.inst_addr, dt_f.excause, dt_f.is_valid);

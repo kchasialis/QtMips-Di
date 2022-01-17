@@ -198,6 +198,8 @@ void Cache::flush() {
 
     change_counter++;
     update_statistics();
+
+    mem_lower->sync();
 }
 
 void Cache::sync() {
