@@ -890,7 +890,9 @@ void CorePipelined::flush_stages(bool is_branch) {
     if (!branch_res_id && is_branch) {
         // We evaluate branches on EX stage, flush ID too if the instruction was a branch.
         dtDecodeInit(dt_d, true);
-        bp_stalls++;
+        if (!mem_program_bubbles) {
+            bp_stalls++;
+        }
     }
 }
 
@@ -941,6 +943,10 @@ void CorePipelined::do_step(bool skip_break) {
             ++cycle_stats.l1_data_stall_cycles_total;
             --cycle_stats.l1_data_stall_cycles;
         }
+        if (cycle_stats.l2_unified_stall_cycles) {
+            ++cycle_stats.l2_unified_stall_cycles_total;
+            --cycle_stats.l2_unified_stall_cycles;
+        }
         return;
     }
 
@@ -956,7 +962,8 @@ void CorePipelined::do_step(bool skip_break) {
         if (cycle_stats.l1_program_stall_cycles) {
             ++cycle_stats.l1_program_stall_cycles_total;
             --cycle_stats.l1_program_stall_cycles;
-        } else if (cycle_stats.l2_unified_stall_cycles) {
+        }
+        if (cycle_stats.l2_unified_stall_cycles) {
             ++cycle_stats.l2_unified_stall_cycles_total;
             --cycle_stats.l2_unified_stall_cycles;
         }
