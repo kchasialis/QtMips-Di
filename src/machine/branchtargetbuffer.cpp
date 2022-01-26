@@ -1,5 +1,7 @@
 #include "branchtargetbuffer.h"
 
+#include <QDebug>
+
 using namespace machine;
 
 BranchTargetBuffer::BranchTargetBuffer(std::uint8_t btb_bits) {

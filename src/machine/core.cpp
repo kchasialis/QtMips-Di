@@ -289,6 +289,8 @@ struct Core::dtFetch Core::fetch(bool skip_break, bool signal, bool mem_access) 
     }
 
     Instruction inst(cache_instr);
+//    uint32_t mem_cycles = mem_program->type() == MemoryAccess::MemoryType::DRAM ? mem_program->get_access_read() - 1 : 0;
+//    cycle_stats.memory_cycles += mem_cycles;
 
     if (!skip_break) {
         hwBreak *brk = hw_breaks.value(inst_addr);
@@ -1180,6 +1182,7 @@ void CorePipelined::do_step(bool skip_break) {
                     dt_f = fetch(skip_break, true, false);
                 } else {
                     dt_f = fetch(skip_break);
+                    fetched_instr = dt_f.inst;
                     resolved_branch_mem_prog_bubbles = false;
                 }
             } else if (!control_hazard) {

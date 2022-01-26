@@ -1,6 +1,8 @@
 #include "branchpredictor.h"
 #include "branchtargetbuffer.h"
 
+#include <QDebug>
+
 using namespace machine;
 
 BranchPredictor::BranchPredictor(std::uint8_t bht_bits) {
