@@ -38,6 +38,8 @@
 
 #include <QObject>
 #include <QVector>
+#include <QFile>
+#include <QTextStream>
 #include <qtmipsexception.h>
 #include <machineconfig.h>
 #include <registers.h>
@@ -77,7 +79,7 @@ class Core : public QObject {
     Q_OBJECT
 public:
     Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
-         MemoryAccess *mem_program1, uint32_t min_cache_row_size = 1,
+         MemoryAccess *mem_program1, const QString& trace_dir_path, uint32_t min_cache_row_size = 1,
          Cop0State *cop0state = nullptr);
     ~Core();
 
@@ -323,6 +325,9 @@ private:
     uint32_t min_cache_row_size;
     uint32_t hwr_userlocal;
     QMap<std::uint32_t, hwBreak *> hw_breaks;
+protected:
+    QFile trace_file;
+private:
     bool stop_on_exception[EXCAUSE_COUNT];
     bool step_over_exception[EXCAUSE_COUNT];
 };
@@ -330,7 +335,7 @@ private:
 class CoreSingle : public Core {
 public:
     CoreSingle(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data, bool jmp_delay_slot,
-               std::uint32_t min_cache_row_size = 1, Cop0State *cop0state = nullptr);
+               const QString& trace_dir_path, std::uint32_t min_cache_row_size = 1, Cop0State *cop0state = nullptr);
     ~CoreSingle();
 
 protected:
@@ -349,6 +354,7 @@ public:
     CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
                   MemoryAccess *mem_program1,
                   bool data_cache_enabled, bool program_cache_enabled,
+                  const QString& trace_dir_path,
                   MachineConfig::DataHazardUnit hazard_unit = MachineConfig::DHU_STALL_FORWARD,
                   MachineConfig::ControlHazardUnit branch_unit = MachineConfig::CHU_DELAY_SLOT,
                   int8_t bp_bits = -1, bool branch_res_id = true,

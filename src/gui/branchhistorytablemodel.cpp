@@ -34,8 +34,6 @@ QVariant BranchHistoryTableModel::headerData(int section, Qt::Orientation orient
     return Super::headerData(section, orientation, role);
 }
 
-#include <QDebug>
-
 QVariant BranchHistoryTableModel::data(const QModelIndex &index, int role) const {
     // This function works only if we already have a machine.
     // The code for case 1 and 2 is nearly identical, except in the 2-bit branch predictor.

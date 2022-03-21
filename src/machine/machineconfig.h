@@ -165,7 +165,9 @@ public:
     // reset machine befor internal compile/reload after external make
     void set_reset_at_compile(bool);
     // Set path to source elf file. This has to be set before core is initialized.
-    void set_elf(QString);
+    void set_elf(const QString&);
+    // Set path to trace file.
+    void set_trace(const QString&);
     // Configure DRAM access times.
     void set_ram_access_read(std::uint32_t);
     void set_ram_access_write(std::uint32_t);
@@ -191,6 +193,7 @@ public:
     QString osemu_fs_root() const;
     bool reset_at_compile() const;
     QString elf() const;
+    QString trace() const;
     std::uint32_t ram_access_read() const;
     std::uint32_t ram_access_write() const;
     std::uint32_t ram_access_burst() const;
@@ -216,7 +219,7 @@ private:
     bool osem_interrupt_stop, osem_exception_stop;
     QString osem_fs_root;
     bool res_at_compile;
-    QString elf_path;
+    QString elf_path, trace_path;
     std::uint32_t dram_access_read, dram_access_write, dram_access_burst;
     // L1 cache is split to data/program cache.
     MachineConfigCache l1_program, l1_data;

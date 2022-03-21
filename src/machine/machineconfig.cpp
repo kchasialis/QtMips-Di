@@ -51,6 +51,7 @@ using namespace machine;
 #define DF_DRAM_ACC_WRITE 80
 #define DF_DRAM_ACC_BURST 0
 #define DF_ELF QString("")
+#define DF_TRACE QString(".")
 //////////////////////////////////////////////////////////////////////////////
 /// Default config of MachineConfigCache
 #define DFC_EN false
@@ -304,7 +305,7 @@ MachineConfig::MachineConfig() : pipeline(DF_PIPELINE), dhunit(DF_DHUNIT), chuni
                                  b_res_id(DF_B_RES_ID), exec_protect(DF_EXEC_PROTEC), write_protect(DF_WRITE_PROTEC),
                                  osem_enable(true), osem_known_syscall_stop(true), osem_unknown_syscall_stop(true),
                                  osem_interrupt_stop(true), osem_exception_stop(true), osem_fs_root(""),
-                                 res_at_compile(true), elf_path(DF_ELF), dram_access_read(DF_DRAM_ACC_READ),
+                                 res_at_compile(true), elf_path(DF_ELF), trace_path(DF_TRACE), dram_access_read(DF_DRAM_ACC_READ),
                                  dram_access_write(DF_DRAM_ACC_WRITE), dram_access_burst(DF_DRAM_ACC_BURST),
                                  l1_program(MemoryAccess::MemoryType::L1_PROGRAM_CACHE), l1_data(MemoryAccess::MemoryType::L1_DATA_CACHE),
                                  l2_unified(MemoryAccess::MemoryType::L2_UNIFIED_CACHE) {}
@@ -315,7 +316,7 @@ MachineConfig::MachineConfig(const MachineConfig& cc) noexcept :
                                             write_protect(cc.memory_write_protection()), osem_enable(cc.osemu_enable()),
                                             osem_known_syscall_stop(cc.osemu_known_syscall_stop()), osem_unknown_syscall_stop(cc.osemu_unknown_syscall_stop()),
                                             osem_interrupt_stop(cc.osemu_interrupt_stop()), osem_exception_stop(cc.osemu_exception_stop()),
-                                            osem_fs_root(cc.osemu_fs_root()), res_at_compile(cc.reset_at_compile()), elf_path(cc.elf()),
+                                            osem_fs_root(cc.osemu_fs_root()), res_at_compile(cc.reset_at_compile()), elf_path(cc.elf()), trace_path(cc.trace()),
                                             dram_access_read(cc.ram_access_read()), dram_access_write(cc.ram_access_write()),
                                             dram_access_burst(cc.ram_access_burst()), l1_program(cc.l1_program_cache()),
                                             l1_data(cc.l1_data_cache()), l2_unified(cc.l2_unified_cache()) {}
@@ -341,6 +342,7 @@ MachineConfig::MachineConfig(const QSettings *sts, const QString &prefix) :
     osem_fs_root = sts->value(N("OsemuFilesystemRoot"), "").toString();
     res_at_compile = sts->value(N("ResetAtCompile"), true).toBool();
     elf_path = sts->value(N("Elf"), DF_ELF).toString();
+    trace_path = sts->value(N("Trace"), DF_TRACE).toString();
     dram_access_read = sts->value(N("DRAMAccessRead"), DF_DRAM_ACC_READ).toUInt();
     dram_access_write = sts->value(N("DRAMAccessWrite"), DF_DRAM_ACC_WRITE).toUInt();
     dram_access_burst = sts->value(N("DRAMAccessBurst"), DF_DRAM_ACC_BURST).toUInt();
@@ -360,6 +362,7 @@ void MachineConfig::store(QSettings *sts, const QString &prefix) {
     sts->setValue(N("OsemuFilesystemRoot"), osemu_fs_root());
     sts->setValue(N("ResetAtCompile"), reset_at_compile());
     sts->setValue(N("Elf"), elf());
+    sts->setValue(N("Trace"), trace());
     sts->setValue(N("DRAMAccessRead"), ram_access_read());
     sts->setValue(N("DRAMAccessWrite"), ram_access_write());
     sts->setValue(N("DRAMAccessBurst"), ram_access_burst());
@@ -470,9 +473,14 @@ void MachineConfig::set_reset_at_compile(bool r) {
     res_at_compile = r;
 }
 
-void MachineConfig::set_elf(QString path) {
+void MachineConfig::set_elf(const QString& path) {
     elf_path = path;
 }
+
+void MachineConfig::set_trace(const QString& path) {
+    trace_path = path;
+}
+
 
 void MachineConfig::set_ram_access_read(std::uint32_t dar) {
     dram_access_read = dar;
@@ -560,6 +568,10 @@ bool MachineConfig::reset_at_compile() const {
 
 QString MachineConfig::elf() const {
     return elf_path;
+}
+
+QString MachineConfig::trace() const {
+    return trace_path;
 }
 
 std::uint32_t MachineConfig::ram_access_read() const {

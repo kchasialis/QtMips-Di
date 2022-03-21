@@ -45,9 +45,11 @@
 using namespace machine;
 extern CycleStatistics cycle_stats;
 
+#include <QDebug>
+
 Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
-           MemoryAccess *mem_program1, uint32_t min_cache_row_size, Cop0State *cop0state) :
-        ex_handlers(), hw_breaks() {
+           MemoryAccess *mem_program1, const QString& trace_dir_path, uint32_t min_cache_row_size, Cop0State *cop0state) :
+        ex_handlers(), hw_breaks(), trace_file(trace_dir_path + "/program.trace") {
     this->cycles = 0;
     this->stalls = 0;
     this->regs = regs;
@@ -65,6 +67,8 @@ Core::Core(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
         step_over_exception[i] = true;
     }
     step_over_exception[EXCAUSE_INT] = false;
+    if (!trace_file.open(QIODevice::WriteOnly | QIODevice::Text))
+        throw QTMIPS_EXCEPTION(Runtime, "Failed to create trace file", trace_dir_path + "program.trace");
 }
 
 Core::~Core() {
@@ -289,6 +293,16 @@ struct Core::dtFetch Core::fetch(bool skip_break, bool signal, bool mem_access) 
     }
 
     Instruction inst(cache_instr);
+
+    if (mem_access) {
+        QTextStream out(&trace_file);
+        QString s,t, text;
+        t = QString::number(inst.address(), 16);
+        s.fill('0', 8 - t.count());
+        text = "0x" + s + t.toUpper();
+        out << text << ": " << inst.to_str() << "\n";
+    }
+
 //    uint32_t mem_cycles = mem_program->type() == MemoryAccess::MemoryType::DRAM ? mem_program->get_access_read() - 1 : 0;
 //    cycle_stats.memory_cycles += mem_cycles;
 
@@ -773,8 +787,8 @@ void Core::dtMemoryInit(struct dtMemory &dt, bool stall) {
 }
 
 CoreSingle::CoreSingle(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
-                       bool jmp_delay_slot, unsigned int min_cache_row_size, Cop0State *cop0state) :
-        Core(regs, mem_program, mem_data, nullptr, min_cache_row_size, cop0state), delay_slot(jmp_delay_slot) {
+                       bool jmp_delay_slot, const QString& trace_dir_path, unsigned int min_cache_row_size, Cop0State *cop0state) :
+        Core(regs, mem_program, mem_data, nullptr, trace_dir_path, min_cache_row_size, cop0state), delay_slot(jmp_delay_slot) {
     if (jmp_delay_slot)
         dt_f = new struct Core::dtFetch();
     else
@@ -845,12 +859,13 @@ BranchPredictor *CoreSingle::predictor() {
 CorePipelined::CorePipelined(Registers *regs, MemoryAccess *mem_program, MemoryAccess *mem_data,
                              MemoryAccess *mem_program1,
                              bool data_cache_enabled, bool program_cache_enabled,
+                             const QString& trace_dir_path,
                              MachineConfig::DataHazardUnit dhunit,
                              MachineConfig::ControlHazardUnit chunit,
                              int8_t bp_bits, bool branch_res_id,
                              unsigned int min_cache_row_size,
                              Cop0State *cop0state) :
-        Core(regs, mem_program, mem_data, mem_program1, min_cache_row_size, cop0state) {
+        Core(regs, mem_program, mem_data, mem_program1, trace_dir_path, min_cache_row_size, cop0state) {
 
     this->data_cache_enabled = data_cache_enabled;
     this->program_cache_enabled = program_cache_enabled;

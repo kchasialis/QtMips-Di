@@ -67,7 +67,8 @@ private slots:
     void create();
     void create_empty();
     void browse_elf();
-    void elf_change(QString val);
+    void browse_trace();
+    void elf_change(const QString& val);
     void set_preset();
     void pipelined_change(bool);
     void data_hazard_unit_change();

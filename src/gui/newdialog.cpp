@@ -79,7 +79,8 @@ NewDialog::NewDialog(QWidget *parent, QSettings *settings) : QDialog(parent) {
     connect(ui->pushButton_start_empty, SIGNAL(clicked(bool)), this, SLOT(create_empty()));
     connect(ui->pushButton_load, SIGNAL(clicked(bool)), this, SLOT(create()));
     connect(ui->pushButton_cancel, SIGNAL(clicked(bool)), this, SLOT(cancel()));
-    connect(ui->pushButton_browse, SIGNAL(clicked(bool)), this, SLOT(browse_elf()));
+    connect(ui->pushButton_browse_elf, SIGNAL(clicked(bool)), this, SLOT(browse_elf()));
+    connect(ui->pushButton_browse_trace, SIGNAL(clicked(bool)), this, SLOT(browse_trace()));
     connect(ui->elf_file, SIGNAL(textChanged(QString)), this, SLOT(elf_change(QString)));
     connect(ui->preset_no_pipeline, SIGNAL(toggled(bool)), this, SLOT(set_preset()));
     connect(ui->preset_no_pipeline_cache, SIGNAL(toggled(bool)), this, SLOT(set_preset()));
@@ -215,7 +216,31 @@ void NewDialog::browse_elf() {
 #endif
 }
 
-void NewDialog::elf_change(QString val) {
+void NewDialog::browse_trace() {
+#ifndef __EMSCRIPTEN__
+    QFileDialog elf_dialog(this);
+    elf_dialog.setFileMode(QFileDialog::Directory);
+    if (elf_dialog.exec()) {
+        QString path = elf_dialog.selectedFiles()[0];
+        ui->trace_directory->setText(path);
+        config->set_trace(path);
+    }
+    // Elf shouldn't have any other effect so we skip config_gui here
+#else
+    QHtml5File::load("*", [&](const QByteArray &content, const QString &fileName) {
+                QFileInfo fi(fileName);
+                QString trace_name = fi.fileName();
+                QFile file(trace_name);
+                file.open(QIODevice::WriteOnly | QIODevice::Truncate);
+                file.write(content);
+                file.close();
+                ui->trace_directory->setText(trace_name);
+                config->set_trace(trace_name);
+            });
+#endif
+}
+
+void NewDialog::elf_change(const QString& val) {
     config->set_elf(val);
 }
 
@@ -347,6 +372,7 @@ void NewDialog::reset_at_compile_change(bool v) {
 void NewDialog::config_gui() {
     // Basic
     ui->elf_file->setText(config->elf());
+    ui->trace_directory->setText(config->trace());
     ui->reset_at_compile->setChecked(config->reset_at_compile());
     // Core
     ui->pipelined->setChecked(config->pipelined());

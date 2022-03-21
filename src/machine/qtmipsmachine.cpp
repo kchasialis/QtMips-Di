@@ -124,7 +124,7 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
         // Control hazard unit cannot be none if we are in pipeline mode.
         SANITY_ASSERT(cc.control_hazard_unit() != MachineConfig::CHU_NONE, "Invalid configuration for control branch unit.");
         cr = new CorePipelined(regs, core_mem_program, core_mem_data, cpu_mem, cc.l1_data_cache().enabled(),
-                               cc.l1_program_cache().enabled(), cc.data_hazard_unit(),
+                               cc.l1_program_cache().enabled(), cc.trace(), cc.data_hazard_unit(),
                                cc.control_hazard_unit(), cc.bht_bits(), cc.branch_res_id(),
                                min_cache_row_size, cop0st);
     }
@@ -133,7 +133,7 @@ QtMipsMachine::QtMipsMachine(const MachineConfig &cc, bool load_symtab, bool loa
                         || cc.control_hazard_unit() == MachineConfig::CHU_DELAY_SLOT, "Invalid configuration for control branch unit.");
         cr = new CoreSingle(regs, core_mem_program, core_mem_data,
                             cc.control_hazard_unit() == machine::MachineConfig::CHU_DELAY_SLOT,
-                            min_cache_row_size, cop0st);
+                            cc.trace(), min_cache_row_size, cop0st);
     }
 
     connect(this, SIGNAL(set_interrupt_signal(uint,bool)),
