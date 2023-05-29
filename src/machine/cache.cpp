@@ -163,7 +163,6 @@ std::uint32_t Cache::rword(std::uint32_t address, bool debug_access) const {
     }
 
     if (debug_access) {
-        SANITY_ASSERT(0, "I dont want this to be executed now.");
         if (!(location_status(address) & LOCSTAT_CACHED))
             return mem_lower->read_word(address, debug_access);
         return debug_rword(address);

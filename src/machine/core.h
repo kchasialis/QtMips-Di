@@ -287,6 +287,7 @@ protected:
         bool is_valid;
     };
 
+    /* Pipeline. */
     struct dtFetch fetch(bool skip_break = false, bool signal = true, bool mem_access = true);
     struct dtDecode decode(const struct dtFetch&, bool inc_8 = true);
     struct dtExecute execute(const struct dtDecode&);
