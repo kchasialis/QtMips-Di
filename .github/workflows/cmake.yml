@@ -22,12 +22,6 @@ jobs:
             cc: "gcc", cxx: "g++", qt_version: "5.11.2"
           }
           - {
-            name: "Ubuntu 18 GCC",
-            os: ubuntu-18.04,
-            build_type: "Release",
-            cc: "gcc", cxx: "g++", qt_version: "5.9.6"
-          }
-          - {
             name: "macOS Latest Clang",
             os: macos-latest,
             build_type: "Release",
